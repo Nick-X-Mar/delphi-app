@@ -1,0 +1,9 @@
+{
+    "UserName": "terraform-deployer",
+    "Policies": [
+        "user-policy"
+    ],
+    "Groups": [
+        "terraform-group"
+    ]
+}

@@ -1,0 +1,6 @@
+{
+    "GroupName": "terraform-group",
+    "Policies": [
+        "user-policy"
+    ]
+}

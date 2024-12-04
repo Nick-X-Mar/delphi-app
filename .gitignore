@@ -68,3 +68,14 @@ terraform.tfvars
 
 # Optionally ignore any other .tfvars files
 *.tfvars
+
+# Ignore Terraform state files
+terraform.tfstate
+terraform.tfstate.backup
+
+# Ignore Terraform working directory
+.terraform/
+
+# Optionally ignore any other state files
+*.tfstate
+*.tfstate.backup
