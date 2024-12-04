@@ -38,3 +38,33 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Ignore environment files
+.env
+.env.local
+.env.*.local
+
+# Ignore configuration files
+config/*.yml
+config/*.yaml
+config/*.json
+
+# Ignore private keys
+*.pem
+*.key
+
+# Ignore database files
+*.sqlite
+*.db
+
+# Ignore log files
+*.log
+
+# Ignore any other sensitive files
+secrets/
+
+# Ignore Terraform variable files
+terraform.tfvars
+
+# Optionally ignore any other .tfvars files
+*.tfvars
