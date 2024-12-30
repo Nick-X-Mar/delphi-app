@@ -1,0 +1,26 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:ListBucket",
+                "s3:DeleteObject"
+            ],
+            "Resource": [
+                "arn:aws:s3:::${var.bucket_name}",
+                "arn:aws:s3:::${var.bucket_name}/*"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "rds-db:connect",
+                "rds:DescribeDBInstances"
+            ],
+            "Resource": "arn:aws:rds:${var.aws_region}:${data.aws_caller_identity.current.account_id}:db:${aws_db_instance.postgres.id}"
+        }
+    ]
+} 

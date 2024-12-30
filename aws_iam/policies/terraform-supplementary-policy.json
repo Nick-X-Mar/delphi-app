@@ -1,0 +1,21 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ec2:CreateSecurityGroup",
+                "ec2:DeleteSecurityGroup",
+                "ec2:AuthorizeSecurityGroupIngress",
+                "ec2:AuthorizeSecurityGroupEgress",
+                "ec2:RevokeSecurityGroupIngress",
+                "ec2:RevokeSecurityGroupEgress",
+                "ec2:ModifySecurityGroupRules"
+            ],
+            "Resource": [
+                "arn:aws:ec2:eu-central-1:529088278315:security-group/*",
+                "arn:aws:ec2:eu-central-1:529088278315:vpc/*"
+            ]
+        }
+    ]
+} 

@@ -1,9 +1,17 @@
 {
-    "UserName": "terraform-deployer",
-    "Policies": [
-        "user-policy"
-    ],
-    "Groups": [
-        "terraform-group"
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "Statement1",
+            "Effect": "Allow",
+            "Action": [
+                "s3:CreateBucket",
+                "s3:PutBucketPolicy",
+                "s3:PutBucketPublicAccessBlock",
+                "s3:PutEncryptionConfiguration",
+                "s3:PutBucketVersioning"
+            ],
+            "Resource": "arn:aws:s3:::*"
+        }
     ]
 }

@@ -1,12 +1,15 @@
+AmazonEC2FullAccess
+AmazonRDSFullAccess
+AmazonS3FullAccess
+AmplifyBackendDeployFullAccess
+TerraformAssumeRolePolicy
 {
     "Version": "2012-10-17",
     "Statement": [
         {
             "Effect": "Allow",
-            "Principal": {
-                "Service": "ec2.amazonaws.com"
-            },
-            "Action": "sts:AssumeRole"
+            "Action": "sts:AssumeRole",
+            "Resource": "arn:aws:iam::529088278315:role/TerraformExecutionRole"
         }
     ]
 }

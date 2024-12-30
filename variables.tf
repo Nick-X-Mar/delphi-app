@@ -14,20 +14,14 @@ variable "iam_role_arn" {
   type        = string
 }
 
-# VPC Configuration
 variable "vpc_id" {
-  description = "ID of the VPC where RDS will be deployed"
+  description = "ID of the VPC"
   type        = string
 }
 
-variable "private_subnet_ids" {
-  description = "List of private subnet IDs for RDS"
+variable "subnet_ids" {
+  description = "List of subnet IDs for RDS"
   type        = list(string)
-}
-
-variable "app_security_group_id" {
-  description = "Security group ID of the application"
-  type        = string
 }
 
 # Database Configuration

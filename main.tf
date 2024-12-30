@@ -39,6 +39,12 @@ resource "aws_s3_bucket_versioning" "app_bucket_versioning" {
   }
 }
 
+# Create RDS subnet group
+resource "aws_db_subnet_group" "postgres" {
+  name       = "delphi-app-postgres-subnet"
+  subnet_ids = var.subnet_ids
+}
+
 # Create a security group for RDS
 resource "aws_security_group" "rds" {
   name        = "delphi-app-postgres-sg"
@@ -49,14 +55,30 @@ resource "aws_security_group" "rds" {
     from_port       = 5432
     to_port         = 5432
     protocol        = "tcp"
-    security_groups = [var.app_security_group_id]
+    security_groups = [aws_security_group.app.id]
+  }
+
+  # Allow access from any IP for development
+  ingress {
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
-# Create RDS subnet group
-resource "aws_db_subnet_group" "postgres" {
-  name       = "delphi-app-postgres-subnet"
-  subnet_ids = var.private_subnet_ids
+# Create Application Security Group
+resource "aws_security_group" "app" {
+  name        = "delphi-app-sg"
+  description = "Security group for Delphi application"
+  vpc_id      = var.vpc_id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
 # Create RDS PostgreSQL instance
@@ -76,7 +98,7 @@ resource "aws_db_instance" "postgres" {
   vpc_security_group_ids = [aws_security_group.rds.id]
 
   skip_final_snapshot    = true
-  publicly_accessible    = false
+  publicly_accessible    = true
 
   backup_retention_period = 7
   backup_window          = "03:00-04:00"
