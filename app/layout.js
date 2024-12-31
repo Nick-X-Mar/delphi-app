@@ -1,6 +1,6 @@
 import "./globals.css"; // Tailwind styles
-import Header from "./components/Header";
-import Footer from "./components/Footer";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
 
 export const metadata = {
   title: "Delphi Economic Forum",

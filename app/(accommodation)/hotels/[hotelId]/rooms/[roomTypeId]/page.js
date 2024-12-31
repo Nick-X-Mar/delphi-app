@@ -6,20 +6,21 @@ import { toast } from 'sonner';
 import RoomTypeForm from '@/components/RoomTypeForm';
 import RoomAvailabilityCalendar from '@/components/RoomAvailabilityCalendar';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function EditRoomTypePage() {
-  const { id, roomId } = useParams();
+  const { hotelId, roomTypeId } = useParams();
   const router = useRouter();
   const [roomType, setRoomType] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchRoomType();
-  }, [id, roomId]);
+  }, [hotelId, roomTypeId]);
 
   const fetchRoomType = async () => {
     try {
-      const response = await fetch(`/api/hotels/${id}/room-types/${roomId}`);
+      const response = await fetch(`/api/hotels/${hotelId}/room-types/${roomTypeId}`);
       const data = await response.json();
       
       if (data.error) {
@@ -30,14 +31,14 @@ export default function EditRoomTypePage() {
     } catch (error) {
       console.error('Error fetching room type:', error);
       toast.error('Failed to fetch room type details');
-      router.push(`/hotels/${id}`);
+      router.push(`/hotels/${hotelId}`);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleSuccess = () => {
-    router.push(`/hotels/${id}`);
+    router.push(`/hotels/${hotelId}`);
   };
 
   if (isLoading) {
@@ -68,35 +69,38 @@ export default function EditRoomTypePage() {
         <h1 className="text-2xl font-bold text-gray-900">Edit Room Type</h1>
         <Button
           variant="outline"
-          onClick={() => router.push(`/hotels/${id}`)}
+          onClick={() => router.push(`/hotels/${hotelId}`)}
         >
           Back to Hotel
         </Button>
       </div>
       
       <div className="space-y-8">
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Room Type Details</h2>
+        <Card>
+          <CardHeader>
+            <CardTitle>Room Type Details</CardTitle>
+          </CardHeader>
+          <CardContent>
             <RoomTypeForm
-              hotelId={id}
+              hotelId={hotelId}
               roomType={roomType}
               onSuccess={handleSuccess}
             />
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Availability & Pricing</h2>
+        <Card>
+          <CardHeader>
+            <CardTitle>Availability & Pricing</CardTitle>
+          </CardHeader>
+          <CardContent>
             <RoomAvailabilityCalendar
-              hotelId={id}
-              roomTypeId={roomId}
-              totalRooms={roomType.total_rooms}
+              hotelId={hotelId}
+              roomTypeId={roomTypeId}
               basePrice={roomType.base_price_per_night}
             />
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

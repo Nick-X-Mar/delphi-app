@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import RoomTypeForm from '@/components/RoomTypeForm';
 
 export default function NewRoomTypePage() {
-  const { id: hotelId } = useParams();
+  const { hotelId } = useParams();
   const router = useRouter();
 
   const handleSuccess = () => {
