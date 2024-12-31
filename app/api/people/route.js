@@ -79,7 +79,7 @@ export async function POST(request) {
       VALUES ($1, $2, $3)
       RETURNING *
     `;
-    
+
     const { rows } = await pool.query(query, [first_name, last_name, email]);
     return NextResponse.json(rows[0], { status: 201 });
   } catch (error) {

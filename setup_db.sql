@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS people_details (
     department VARCHAR(100),
     position VARCHAR(100),
     start_date DATE,
+    end_date DATE,
     notes TEXT,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
     FOREIGN KEY (person_id) REFERENCES people(person_id) ON DELETE CASCADE

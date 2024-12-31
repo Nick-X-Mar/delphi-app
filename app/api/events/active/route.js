@@ -8,7 +8,8 @@ export async function GET() {
       SELECT *
       FROM events
       WHERE is_active = true
-      ORDER BY created_at DESC
+      AND end_date >= CURRENT_DATE
+      ORDER BY start_date ASC
       LIMIT 1
     `;
 
@@ -20,7 +21,7 @@ export async function GET() {
     
     return NextResponse.json(rows[0]);
   } catch (error) {
-    console.error('Database Error:', error);
+    console.error('Error getting active event:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 } 
