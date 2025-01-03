@@ -125,12 +125,16 @@ export default function AccommodationHotelList({ personId, onRoomSelection }) {
     // If all dates are available, notify success
     toast.success('Room is available for selected dates!');
     if (onRoomSelection) {
+      // Get the price for the first selected date (or base price if not found)
+      const firstDateAvailability = getAvailabilityForDate(roomType, checkIn);
+      
       onRoomSelection({
         roomTypeId: selection.roomTypeId,
         checkIn,
         checkOut,
         roomType: {
           ...roomType,
+          price_per_night: firstDateAvailability.price_per_night || roomType.base_price_per_night,
           hotel: {
             name: selectedHotel.name,
             stars: selectedHotel.stars,

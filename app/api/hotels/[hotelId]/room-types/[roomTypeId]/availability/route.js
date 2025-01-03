@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
 // GET availability for a room type
-export async function GET(request, { params: { id, roomId } }) {
+export async function GET(request, { params }) {
   try {
+    const { hotelId, roomTypeId } = params;
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('start_date');
     const endDate = searchParams.get('end_date');
@@ -21,7 +22,7 @@ export async function GET(request, { params: { id, roomId } }) {
       ORDER BY date
     `;
 
-    const { rows } = await pool.query(query, [roomId, startDate, endDate]);
+    const { rows } = await pool.query(query, [roomTypeId, startDate, endDate]);
     return NextResponse.json(rows);
   } catch (error) {
     console.error('Error getting availability:', error);

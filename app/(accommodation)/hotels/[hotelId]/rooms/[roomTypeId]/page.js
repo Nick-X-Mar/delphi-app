@@ -9,51 +9,46 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function EditRoomTypePage() {
-  const { hotelId, roomTypeId } = useParams();
+  const params = useParams();
   const router = useRouter();
+  const hotelId = params.hotelId;
+  const roomTypeId = params.roomTypeId;
   const [roomType, setRoomType] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [activeEvent, setActiveEvent] = useState(null);
 
   useEffect(() => {
     fetchRoomType();
-  }, [hotelId, roomTypeId]);
+    fetchActiveEvent();
+  }, []);
+
+  const fetchActiveEvent = async () => {
+    try {
+      const res = await fetch('/api/events/active');
+      if (!res.ok) throw new Error('Failed to fetch active event');
+      const data = await res.json();
+      setActiveEvent(data);
+    } catch (error) {
+      console.error('Error fetching active event:', error);
+      toast.error('Failed to load active event');
+    }
+  };
 
   const fetchRoomType = async () => {
     try {
-      const response = await fetch(`/api/hotels/${hotelId}/room-types/${roomTypeId}`);
-      const data = await response.json();
-      
-      if (data.error) {
-        throw new Error(data.error);
-      }
-      
+      const res = await fetch(`/api/hotels/${hotelId}/room-types/${roomTypeId}`);
+      if (!res.ok) throw new Error('Failed to fetch room type');
+      const data = await res.json();
       setRoomType(data);
     } catch (error) {
       console.error('Error fetching room type:', error);
-      toast.error('Failed to fetch room type details');
-      router.push(`/hotels/${hotelId}`);
-    } finally {
-      setIsLoading(false);
+      toast.error('Failed to load room type');
     }
   };
 
   const handleSuccess = () => {
-    router.push(`/hotels/${hotelId}`);
+    toast.success('Room type updated successfully');
+    fetchRoomType();
   };
-
-  if (isLoading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6" />
-          <div className="space-y-4">
-            <div className="h-4 bg-gray-200 rounded w-1/2" />
-            <div className="h-4 bg-gray-200 rounded w-3/4" />
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   if (!roomType) {
     return (
@@ -92,13 +87,25 @@ export default function EditRoomTypePage() {
         <Card>
           <CardHeader>
             <CardTitle>Availability & Pricing</CardTitle>
+            {activeEvent && (
+              <p className="text-sm text-gray-600">
+                Event Period: {new Date(activeEvent.accommodation_start_date).toLocaleDateString()} - {new Date(activeEvent.accommodation_end_date).toLocaleDateString()}
+              </p>
+            )}
           </CardHeader>
           <CardContent>
-            <RoomAvailabilityCalendar
-              hotelId={hotelId}
-              roomTypeId={roomTypeId}
-              basePrice={roomType.base_price_per_night}
-            />
+            {activeEvent ? (
+              <RoomAvailabilityCalendar
+                hotelId={hotelId}
+                roomTypeId={roomTypeId}
+                basePrice={roomType.base_price_per_night}
+                totalRooms={roomType.total_rooms}
+                eventStartDate={activeEvent.accommodation_start_date}
+                eventEndDate={activeEvent.accommodation_end_date}
+              />
+            ) : (
+              <p className="text-center text-gray-600">Loading event dates...</p>
+            )}
           </CardContent>
         </Card>
       </div>

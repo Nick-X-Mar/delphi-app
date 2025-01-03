@@ -75,6 +75,52 @@ CREATE TABLE IF NOT EXISTS room_availability (
     PRIMARY KEY (room_type_id, date)
 );
 
+-- Create bookings table (managed by our system)
+CREATE TABLE IF NOT EXISTS bookings (
+    booking_id SERIAL PRIMARY KEY,
+    event_id INTEGER NOT NULL REFERENCES events(event_id),
+    person_id INTEGER NOT NULL REFERENCES people(person_id),
+    room_type_id INTEGER NOT NULL REFERENCES room_types(room_type_id),
+    check_in_date DATE NOT NULL,
+    check_out_date DATE NOT NULL,
+    price_per_night DECIMAL(10,2) NOT NULL,
+    total_cost DECIMAL(10,2) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT valid_dates CHECK (check_out_date > check_in_date)
+);
+
+-- Create trigger function to validate booking dates against event dates
+CREATE OR REPLACE FUNCTION validate_booking_dates()
+RETURNS TRIGGER AS $$
+DECLARE
+    acc_start_date DATE;
+    acc_end_date DATE;
+BEGIN
+    -- Get event's accommodation dates
+    SELECT accommodation_start_date, accommodation_end_date 
+    INTO acc_start_date, acc_end_date
+    FROM events 
+    WHERE event_id = NEW.event_id;
+
+    -- Check if booking dates are within event's accommodation period
+    IF NEW.check_in_date < acc_start_date OR NEW.check_out_date > acc_end_date THEN
+        RAISE EXCEPTION 'Booking dates must be within event accommodation period (% to %)', 
+            acc_start_date, acc_end_date;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Create trigger for bookings table to validate dates
+DROP TRIGGER IF EXISTS validate_booking_dates ON bookings;
+CREATE TRIGGER validate_booking_dates
+    BEFORE INSERT OR UPDATE ON bookings
+    FOR EACH ROW
+    EXECUTE FUNCTION validate_booking_dates();
+
 -- Create trigger function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -105,85 +151,38 @@ CREATE TRIGGER update_events_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- Insert example people (simulating external system data)
-INSERT INTO people (person_id, first_name, last_name, email) VALUES
-    (1, 'John', 'Doe', 'john.doe@example.com'),
-    (2, 'Jane', 'Smith', 'jane.smith@example.com'),
-    (3, 'Michael', 'Johnson', 'michael.johnson@example.com')
-ON CONFLICT (email) DO NOTHING;
+-- Create triggers for bookings table
+DROP TRIGGER IF EXISTS update_bookings_updated_at ON bookings;
+CREATE TRIGGER update_bookings_updated_at
+    BEFORE UPDATE ON bookings
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
 
--- Insert example people details
-INSERT INTO people_details (person_id, department, position, start_date, notes) VALUES
-    (1, 'Engineering', 'Software Engineer', '2023-01-15', 'Full stack developer'),
-    (2, 'Marketing', 'Marketing Manager', '2023-02-01', 'Digital marketing specialist'),
-    (3, 'Sales', 'Sales Representative', '2023-03-01', 'Enterprise accounts')
-ON CONFLICT (person_id) DO NOTHING;
-
--- Insert example hotels
-INSERT INTO hotels (
-    name, area, stars, address, phone_number, email, website_link, map_link, 
-    category, agreement_file_link, contact_name, contact_phone, contact_mobile, contact_email
-) VALUES
-    (
-        'Grand Resort & Spa', 
-        'Seaside', 
-        5, 
-        '123 Beach Road, Coastal City', 
-        '+30 2310 123456', 
-        'info@grandresort.com',
-        'https://www.grandresort.com',
-        'https://maps.google.com/grandresort',
-        'VIP',
-        'https://agreements.com/grand-resort-2024.pdf',
-        'George Papadopoulos',
-        '+30 2310 123457',
-        '+30 694 5555555',
-        'g.papadopoulos@grandresort.com'
-    ),
-    (
-        'City Center Hotel', 
-        'Downtown', 
-        4, 
-        '45 Main Street, City Center', 
-        '+30 2310 654321', 
-        'info@citycenterhotel.com',
-        'https://www.citycenterhotel.com',
-        'https://maps.google.com/citycenter',
-        'Very Good',
-        'https://agreements.com/city-center-2024.pdf',
-        'Maria Nikolaou',
-        '+30 2310 654322',
-        '+30 697 7777777',
-        'm.nikolaou@citycenterhotel.com'
+-- Create trigger function to handle event date changes
+CREATE OR REPLACE FUNCTION handle_event_date_changes()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Update status of bookings that are now outside the event's accommodation dates
+    UPDATE bookings
+    SET status = 'invalidated',
+        updated_at = CURRENT_TIMESTAMP
+    WHERE event_id = NEW.event_id
+    AND (
+        check_in_date < NEW.accommodation_start_date OR
+        check_out_date > NEW.accommodation_end_date
     );
+    
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
 
--- Insert example room types
-INSERT INTO room_types (hotel_id, name, description, total_rooms) VALUES
-    (1, 'Standard Double', 'Comfortable room with double bed and city view', 20),
-    (1, 'Deluxe Sea View', 'Luxurious room with king-size bed and sea view', 15),
-    (1, 'Executive Suite', 'Spacious suite with separate living area', 5),
-    (2, 'Standard Single', 'Cozy room with single bed', 10),
-    (2, 'Business Double', 'Modern room with work desk and double bed', 25);
-
--- Insert example room availability (for the next 10 days)
-WITH RECURSIVE dates AS (
-    SELECT CURRENT_DATE as date
-    UNION ALL
-    SELECT date + 1
-    FROM dates
-    WHERE date < CURRENT_DATE + 9
-)
-INSERT INTO room_availability (room_type_id, date, available_rooms, price_per_night)
-SELECT 
-    rt.room_type_id,
-    d.date,
-    rt.total_rooms, -- Initially all rooms are available
-    CASE 
-        WHEN rt.name LIKE '%Suite%' THEN 300.00
-        WHEN rt.name LIKE '%Deluxe%' THEN 200.00
-        WHEN rt.name LIKE '%Business%' THEN 150.00
-        ELSE 100.00
-    END as price_per_night
-FROM room_types rt
-CROSS JOIN dates d
-ON CONFLICT (room_type_id, date) DO NOTHING; 
+-- Create trigger for events table to handle date changes
+DROP TRIGGER IF EXISTS handle_event_date_changes ON events;
+CREATE TRIGGER handle_event_date_changes
+    AFTER UPDATE OF start_date, end_date ON events
+    FOR EACH ROW
+    WHEN (
+        OLD.start_date != NEW.start_date OR 
+        OLD.end_date != NEW.end_date
+    )
+    EXECUTE FUNCTION handle_event_date_changes();
