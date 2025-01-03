@@ -93,6 +93,11 @@ export default function RoomAvailabilityCalendar({
   };
 
   const handleInputChange = (date, field, value) => {
+    // Prevent changes to past dates
+    if (isPastDate(date)) {
+      return;
+    }
+
     const formattedDate = formatDate(date);
     let newValue = field === 'available_rooms' ? parseInt(value) : parseFloat(value);
     
@@ -213,7 +218,7 @@ export default function RoomAvailabilityCalendar({
               key={date.toISOString()}
               className={cn(
                 "p-3 border rounded-lg space-y-2",
-                isPast ? "bg-gray-50" : "hover:border-gray-400",
+                isPast ? "bg-gray-100" : "hover:border-gray-400",
                 hasChanges && "border-blue-500"
               )}
             >
@@ -233,6 +238,7 @@ export default function RoomAvailabilityCalendar({
                     value={dayAvailability.available_rooms}
                     onChange={(e) => handleInputChange(date, 'available_rooms', e.target.value)}
                     className="h-8 text-sm"
+                    disabled={isPast}
                   />
                 </div>
                 <div>
@@ -244,6 +250,7 @@ export default function RoomAvailabilityCalendar({
                     value={dayAvailability.price_per_night}
                     onChange={(e) => handleInputChange(date, 'price_per_night', e.target.value)}
                     className="h-8 text-sm"
+                    disabled={isPast}
                   />
                 </div>
               </div>
