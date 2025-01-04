@@ -11,31 +11,11 @@ export default function AccommodationTable() {
   const [expandedRoomTypes, setExpandedRoomTypes] = useState(new Set());
   const [hotels, setHotels] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeEvent, setActiveEvent] = useState(null);
-
-  // Fetch active event first
-  const fetchActiveEvent = async () => {
-    try {
-      const response = await fetch('/api/events/active');
-      if (!response.ok) throw new Error('Failed to fetch active event');
-      const data = await response.json();
-      setActiveEvent(data);
-      return data;
-    } catch (error) {
-      console.error('Error fetching active event:', error);
-      toast.error('Failed to load active event');
-      return null;
-    }
-  };
 
   // Fetch hotels data with room types and bookings
-  const fetchData = async (event) => {
-    if (!event) return;
-    
+  const fetchData = async () => {
     try {
-      const response = await fetch(
-        `/api/hotels/availability?startDate=${event.accommodation_start_date}&endDate=${event.accommodation_end_date}`
-      );
+      const response = await fetch('/api/hotels/bookings');
       if (!response.ok) throw new Error('Failed to fetch hotels');
       const data = await response.json();
       setHotels(Array.isArray(data) ? data : []);
@@ -49,15 +29,7 @@ export default function AccommodationTable() {
   };
 
   useEffect(() => {
-    const init = async () => {
-      const event = await fetchActiveEvent();
-      if (event) {
-        await fetchData(event);
-      } else {
-        setIsLoading(false);
-      }
-    };
-    init();
+    fetchData();
   }, []);
 
   const toggleHotel = (hotelId) => {
@@ -84,14 +56,6 @@ export default function AccommodationTable() {
     });
   };
 
-  const getAvailabilityForDate = (roomType, date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    return roomType.availability?.find(a => a.date === dateStr) || {
-      available_rooms: roomType.total_rooms,
-      price_per_night: roomType.base_price_per_night
-    };
-  };
-
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -102,10 +66,10 @@ export default function AccommodationTable() {
         <TableRow>
           <TableHead className="w-[50px]"></TableHead>
           <TableHead>Name</TableHead>
-          <TableHead>Type</TableHead>
           <TableHead>Category</TableHead>
-          <TableHead>Dates</TableHead>
-          <TableHead className="text-right">Price</TableHead>
+          <TableHead>Area</TableHead>
+          <TableHead>Total Bookings</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -126,9 +90,9 @@ export default function AccommodationTable() {
                 </Button>
               </TableCell>
               <TableCell className="font-medium">{hotel.name}</TableCell>
-              <TableCell>Hotel</TableCell>
               <TableCell>{hotel.category}</TableCell>
-              <TableCell>-</TableCell>
+              <TableCell>{hotel.area}</TableCell>
+              <TableCell>{hotel.total_bookings || 0} bookings</TableCell>
               <TableCell className="text-right">-</TableCell>
             </TableRow>
             {expandedHotels.has(hotel.hotel_id) &&
@@ -148,12 +112,11 @@ export default function AccommodationTable() {
                         )}
                       </Button>
                     </TableCell>
-                    <TableCell className="font-medium">{roomType.name}</TableCell>
-                    <TableCell>Room Type</TableCell>
-                    <TableCell>{roomType.availability_count} available</TableCell>
-                    <TableCell>-</TableCell>
+                    <TableCell className="font-medium" colSpan={4}>
+                      {roomType.name} - {roomType.bookings?.length || 0} bookings
+                    </TableCell>
                     <TableCell className="text-right">
-                      ${roomType.price_per_night}/night
+                      €{roomType.base_price_per_night}/night
                     </TableCell>
                   </TableRow>
                   {expandedRoomTypes.has(roomType.room_type_id) &&
@@ -163,22 +126,18 @@ export default function AccommodationTable() {
                         className="bg-gray-100 hover:bg-gray-200"
                       >
                         <TableCell className="pl-12"></TableCell>
-                        <TableCell className="font-medium">
-                          {booking.person.first_name} {booking.person.last_name}
+                        <TableCell className="font-medium" colSpan={4}>
+                          {booking.first_name} {booking.last_name}
                           <div className="text-sm text-gray-500">
+                            {booking.email}
+                            <br />
                             Check-in: {new Date(booking.check_in_date).toLocaleDateString()}
                             <br />
                             Check-out: {new Date(booking.check_out_date).toLocaleDateString()}
                           </div>
                         </TableCell>
-                        <TableCell>Booking</TableCell>
-                        <TableCell>{booking.status}</TableCell>
-                        <TableCell>
-                          {new Date(booking.check_in_date).toLocaleDateString()} -{' '}
-                          {new Date(booking.check_out_date).toLocaleDateString()}
-                        </TableCell>
                         <TableCell className="text-right">
-                          ${booking.total_cost}
+                          €{booking.total_cost}
                         </TableCell>
                       </TableRow>
                     ))}
