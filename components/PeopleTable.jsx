@@ -6,6 +6,10 @@ import { toast } from 'sonner';
 import { formatDate, formatDateTime } from '@/utils/dateFormatters';
 import { format, parseISO } from 'date-fns';
 import Pagination from '@/components/Pagination';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Edit } from 'lucide-react';
+import PersonForm from './PersonForm';
 
 export default function PeopleTable() {
   const [people, setPeople] = useState([]);
@@ -17,7 +21,8 @@ export default function PeopleTable() {
   const [formData, setFormData] = useState({
     department: '',
     position: '',
-    start_date: '',
+    checkin_date: '',
+    checkout_date: '',
     notes: ''
   });
   const [currentPage, setCurrentPage] = useState(1);
@@ -32,6 +37,11 @@ export default function PeopleTable() {
           debouncedSearchTerm
         )}`
       );
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch people');
+      }
+      
       const data = await response.json();
       
       if (data.error) {
@@ -58,7 +68,8 @@ export default function PeopleTable() {
     setFormData({
       department: person.department || '',
       position: person.position || '',
-      start_date: person.start_date ? format(parseISO(person.start_date), 'yyyy-MM-dd') : '',
+      checkin_date: person.checkin_date ? format(parseISO(person.checkin_date), 'yyyy-MM-dd') : '',
+      checkout_date: person.checkout_date ? format(parseISO(person.checkout_date), 'yyyy-MM-dd') : '',
       notes: person.notes || ''
     });
     setShowModal(true);
@@ -105,147 +116,46 @@ export default function PeopleTable() {
         />
       </div>
 
-      {/* Edit Modal */}
-      {showModal && editPerson && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h2 className="text-xl font-semibold mb-4">Edit Details</h2>
-            
-            {/* Source Fields (Read-only) */}
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-              <h3 className="text-sm font-medium text-gray-500 mb-3">Source Information</h3>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">ID</label>
-                  <div className="mt-1 text-sm text-gray-900">{editPerson.person_id}</div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Name</label>
-                  <div className="mt-1 text-sm text-gray-900">
-                    {editPerson.first_name} {editPerson.last_name}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Email</label>
-                  <div className="mt-1 text-sm text-gray-900">{editPerson.email}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Custom Fields (Editable) */}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <h3 className="text-sm font-medium text-gray-500 mb-3">Custom Fields</h3>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Department</label>
-                <input
-                  type="text"
-                  value={formData.department}
-                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Position</label>
-                <input
-                  type="text"
-                  value={formData.position}
-                  onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Start Date</label>
-                <input
-                  type="date"
-                  value={formData.start_date}
-                  onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Notes</label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  rows={3}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                />
-              </div>
-              <div className="flex justify-end space-x-3 pt-4 mt-6 border-t">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>First Name</TableHead>
+            <TableHead>Last Name</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Department</TableHead>
+            <TableHead>Position</TableHead>
+            <TableHead>Checkin</TableHead>
+            <TableHead>Checkout</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {people.map((person) => (
+            <TableRow key={person.person_id}>
+              <TableCell>{person.first_name}</TableCell>
+              <TableCell>{person.last_name}</TableCell>
+              <TableCell>{person.email}</TableCell>
+              <TableCell>{person.department}</TableCell>
+              <TableCell>{person.position}</TableCell>
+              <TableCell>
+                {person.checkin_date && new Date(person.checkin_date).toLocaleDateString()}
+              </TableCell>
+              <TableCell>
+                {person.checkout_date && new Date(person.checkout_date).toLocaleDateString()}
+              </TableCell>
+              <TableCell className="text-right">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleEdit(person)}
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      <div className="overflow-x-auto border rounded-lg">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Updated</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {isLoading ? (
-              <tr>
-                <td colSpan={9} className="px-6 py-4 text-center">Loading...</td>
-              </tr>
-            ) : !people || people.length === 0 ? (
-              <tr>
-                <td colSpan={9} className="px-6 py-4 text-center">No people found</td>
-              </tr>
-            ) : (
-              people.map((person) => (
-                <tr key={person.person_id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">{person.person_id}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {person.first_name} {person.last_name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">{person.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{person.department || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{person.position || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {formatDate(person.start_date)}
-                  </td>
-                  <td className="px-6 py-4">{person.notes || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {formatDateTime(person.updated_at)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <button
-                      onClick={() => handleEdit(person)}
-                      className="px-3 py-1 text-sm border rounded hover:bg-gray-100"
-                    >
-                      Edit Details
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
 
       <Pagination
         currentPage={currentPage}

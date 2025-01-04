@@ -5,15 +5,26 @@ export async function GET() {
   try {
     const query = `
       SELECT 
-        p.*,
+        p.person_id,
+        p.first_name,
+        p.last_name,
+        p.email,
         pd.department,
         pd.position,
-        pd.start_date,
-        pd.end_date,
-        pd.notes
+        pd.checkin_date,
+        pd.checkout_date,
+        pd.notes,
+        b.booking_id,
+        b.check_in_date as booking_check_in,
+        b.check_out_date as booking_check_out,
+        b.status as booking_status,
+        h.name as hotel_name,
+        rt.name as room_type_name
       FROM people p
       LEFT JOIN people_details pd ON p.person_id = pd.person_id
-      WHERE (pd.end_date IS NULL OR pd.end_date >= CURRENT_DATE)
+      LEFT JOIN bookings b ON p.person_id = b.person_id
+      LEFT JOIN room_types rt ON b.room_type_id = rt.room_type_id
+      LEFT JOIN hotels h ON rt.hotel_id = h.hotel_id
       ORDER BY p.last_name, p.first_name
     `;
 

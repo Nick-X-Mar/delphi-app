@@ -174,10 +174,12 @@ export default function AccommodationHotelList({ personId, onRoomSelection }) {
       const res = await fetch(`/api/hotels/availability?startDate=${activeEvent.accommodation_start_date}&endDate=${activeEvent.accommodation_end_date}`);
       if (!res.ok) throw new Error('Failed to fetch hotels');
       const data = await res.json();
-      setHotels(data);
+      // Ensure data is an array
+      setHotels(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching hotels:', error);
       toast.error('Failed to load hotels');
+      setHotels([]); // Set empty array on error
     } finally {
       setIsLoading(false);
     }

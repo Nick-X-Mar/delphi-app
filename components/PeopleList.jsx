@@ -1,106 +1,104 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell
-} from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { toast } from 'sonner';
+import { useDebounce } from 'use-debounce';
 
 export default function PeopleList({ onPersonSelect, selectedPerson }) {
   const [people, setPeople] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const fetchPeople = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch('/api/accommodation/people');
+        if (!response.ok) {
+          throw new Error('Failed to fetch people');
+        }
+        const data = await response.json();
+        setPeople(data);
+      } catch (error) {
+        console.error('Error fetching people:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     fetchPeople();
   }, []);
 
-  const fetchPeople = async () => {
-    try {
-      const res = await fetch('/api/accommodation/people');
-      if (!res.ok) throw new Error('Failed to fetch people');
-      const data = await res.json();
-      setPeople(data);
-    } catch (error) {
-      console.error('Error fetching people:', error);
-      toast.error('Failed to load people');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const filteredPeople = people.filter(person => 
-    person.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    person.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    person.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    person.department?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    person.position?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredPeople = people.filter(person => {
+    const searchLower = debouncedSearchTerm.toLowerCase();
+    return (
+      person.first_name?.toLowerCase().includes(searchLower) ||
+      person.last_name?.toLowerCase().includes(searchLower) ||
+      person.email?.toLowerCase().includes(searchLower) ||
+      person.department?.toLowerCase().includes(searchLower)
+    );
+  });
 
   return (
     <div className="space-y-4">
       <Input
         type="text"
-        placeholder="Search people..."
+        placeholder="Search by name, email, or department..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         className="max-w-sm"
       />
 
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Department</TableHead>
-              <TableHead>Position</TableHead>
-              <TableHead>Start Date</TableHead>
-              <TableHead>End Date</TableHead>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Department</TableHead>
+            <TableHead>Checkin</TableHead>
+            <TableHead>Checkout</TableHead>
+            <TableHead>Current Booking</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {filteredPeople.map((person) => (
+            <TableRow 
+              key={person.person_id}
+              className={`cursor-pointer hover:bg-gray-100 ${
+                selectedPerson?.person_id === person.person_id ? 'bg-blue-50' : ''
+              }`}
+              onClick={() => onPersonSelect(person)}
+            >
+              <TableCell>
+                {person.first_name} {person.last_name}
+              </TableCell>
+              <TableCell>{person.email}</TableCell>
+              <TableCell>{person.department}</TableCell>
+              <TableCell>
+                {person.checkin_date && new Date(person.checkin_date).toLocaleDateString()}
+              </TableCell>
+              <TableCell>
+                {person.checkout_date && new Date(person.checkout_date).toLocaleDateString()}
+              </TableCell>
+              <TableCell>
+                {person.booking_id ? (
+                  <span className="text-sm">
+                    {person.hotel_name} - {person.room_type_name}
+                    <br />
+                    <span className="text-gray-500">
+                      {new Date(person.booking_check_in).toLocaleDateString()} - {new Date(person.booking_check_out).toLocaleDateString()}
+                    </span>
+                  </span>
+                ) : (
+                  <span className="text-gray-500">No current booking</span>
+                )}
+              </TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan="6" className="text-center">Loading...</TableCell>
-              </TableRow>
-            ) : filteredPeople.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan="6" className="text-center">No people found</TableCell>
-              </TableRow>
-            ) : (
-              filteredPeople.map((person) => (
-                <TableRow 
-                  key={person.person_id}
-                  onClick={() => onPersonSelect(person)}
-                  className={`cursor-pointer hover:bg-gray-50 ${
-                    selectedPerson?.person_id === person.person_id ? 'bg-blue-50' : ''
-                  }`}
-                >
-                  <TableCell>
-                    {person.first_name} {person.last_name}
-                  </TableCell>
-                  <TableCell>{person.email}</TableCell>
-                  <TableCell>{person.department || '-'}</TableCell>
-                  <TableCell>{person.position || '-'}</TableCell>
-                  <TableCell>
-                    {person.start_date ? new Date(person.start_date).toLocaleDateString() : '-'}
-                  </TableCell>
-                  <TableCell>
-                    {person.end_date ? new Date(person.end_date).toLocaleDateString() : '-'}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 } 

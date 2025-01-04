@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
 export async function GET(request) {
@@ -8,7 +7,7 @@ export async function GET(request) {
     const endDate = searchParams.get('endDate');
 
     if (!startDate || !endDate) {
-      return NextResponse.json({ 
+      return Response.json({ 
         error: 'Start date and end date are required' 
       }, { status: 400 });
     }
@@ -50,9 +49,9 @@ export async function GET(request) {
     `;
 
     const { rows } = await pool.query(query, [startDate, endDate]);
-    return NextResponse.json(rows);
+    return Response.json(rows);
   } catch (error) {
     console.error('Error getting hotels availability:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return Response.json({ error: error.message }, { status: 500 });
   }
 } 

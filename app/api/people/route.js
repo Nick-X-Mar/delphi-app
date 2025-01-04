@@ -5,26 +5,13 @@ import pool from '@/lib/db';
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search')?.toLowerCase() || '';
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const page = parseInt(searchParams.get('page')) || 1;
+    const limit = parseInt(searchParams.get('limit')) || 10;
+    const search = searchParams.get('search') || '';
     const offset = (page - 1) * limit;
 
-    // Get total count for pagination
-    const countQuery = `
-      SELECT COUNT(*) 
-      FROM people p
-      WHERE LOWER(first_name) LIKE $1 
-      OR LOWER(last_name) LIKE $1 
-      OR LOWER(email) LIKE $1 
-      OR CAST(p.person_id AS TEXT) LIKE $1
-    `;
-
-    const countResult = await pool.query(countQuery, [`%${search}%`]);
-    const totalCount = parseInt(countResult.rows[0].count);
-
-    // Get paginated results with joined details
-    const query = `
+    // Base query
+    let query = `
       SELECT 
         p.person_id,
         p.first_name,
@@ -32,32 +19,59 @@ export async function GET(request) {
         p.email,
         pd.department,
         pd.position,
-        pd.start_date,
-        pd.notes,
-        pd.updated_at
+        pd.checkin_date,
+        pd.checkout_date,
+        pd.notes
       FROM people p
       LEFT JOIN people_details pd ON p.person_id = pd.person_id
-      WHERE LOWER(first_name) LIKE $1 
-      OR LOWER(last_name) LIKE $1 
-      OR LOWER(email) LIKE $1 
-      OR CAST(p.person_id AS TEXT) LIKE $1
-      ORDER BY pd.updated_at DESC NULLS LAST, p.person_id DESC
-      LIMIT $2 OFFSET $3
     `;
 
-    const { rows } = await pool.query(query, [`%${search}%`, limit, offset]);
+    // Add search condition if search term exists
+    const searchConditions = [];
+    const queryParams = [];
+    if (search) {
+      searchConditions.push(`
+        (p.first_name ILIKE $1 
+        OR p.last_name ILIKE $1 
+        OR p.email ILIKE $1 
+        OR CAST(p.person_id AS TEXT) = $2)
+      `);
+      queryParams.push(`%${search}%`, search);
+    }
+
+    // Add WHERE clause if we have search conditions
+    if (searchConditions.length > 0) {
+      query += ` WHERE ${searchConditions.join(' AND ')}`;
+    }
+
+    // Add pagination
+    query += ` ORDER BY p.last_name, p.first_name
+               LIMIT $${queryParams.length + 1} 
+               OFFSET $${queryParams.length + 2}`;
+    queryParams.push(limit, offset);
+
+    // Get total count for pagination
+    const countQuery = `
+      SELECT COUNT(*)
+      FROM people p
+      ${searchConditions.length > 0 ? `WHERE ${searchConditions.join(' AND ')}` : ''}
+    `;
+
+    const [{ rows }, { rows: countRows }] = await Promise.all([
+      pool.query(query, queryParams),
+      pool.query(countQuery, searchConditions.length > 0 ? [queryParams[0], queryParams[1]] : [])
+    ]);
 
     return NextResponse.json({
       data: rows,
       pagination: {
-        total: totalCount,
+        total: parseInt(countRows[0].count),
         page,
-        limit,
-        totalPages: Math.ceil(totalCount / limit)
+        limit
       }
     });
   } catch (error) {
-    console.error('Database Error:', error);
+    console.error('Error fetching people:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
