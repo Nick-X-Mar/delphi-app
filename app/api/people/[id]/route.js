@@ -3,7 +3,7 @@ import pool from '@/lib/db';
 
 // GET single person
 export async function GET(request, { params }) {
-  const { id } = params;
+  const { id } = await params;
   try {
     const { rows } = await pool.query('SELECT * FROM people WHERE person_id = $1', [id]);
     
@@ -19,7 +19,7 @@ export async function GET(request, { params }) {
 
 // PUT update person
 export async function PUT(request, { params }) {
-  const { id } = params;
+  const { id } = await params;
   try {
     const { first_name, last_name, email } = await request.json();
     
@@ -52,7 +52,7 @@ export async function PUT(request, { params }) {
 
 // DELETE person
 export async function DELETE(request, { params }) {
-  const { id } = params;
+  const { id } = await params;
   try {
     // First delete from people_details if exists (due to foreign key)
     await pool.query('DELETE FROM people_details WHERE person_id = $1', [id]);

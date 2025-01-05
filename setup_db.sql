@@ -66,28 +66,52 @@ CREATE TABLE IF NOT EXISTS room_types (
     CONSTRAINT positive_base_price CHECK (base_price_per_night > 0)
 );
 
--- Create room_availability table (managed by our system)
-CREATE TABLE IF NOT EXISTS room_availability (
-    room_type_id INTEGER REFERENCES room_types(room_type_id) ON DELETE CASCADE,
-    date DATE NOT NULL,
-    available_rooms INTEGER NOT NULL,
-    price_per_night DECIMAL(10, 2) NOT NULL,
-    PRIMARY KEY (room_type_id, date)
-);
+CREATE TABLE IF NOT EXISTS room_availability
+(
+    room_type_id integer NOT NULL,
+    date date NOT NULL,
+    available_rooms integer NOT NULL,
+    price_per_night numeric(10,2) NOT NULL,
+    event_id integer NOT NULL,
+    CONSTRAINT room_availability_pkey PRIMARY KEY (room_type_id, date, event_id),
+    CONSTRAINT fk_event_id FOREIGN KEY (event_id)
+        REFERENCES events (event_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE CASCADE,
+    CONSTRAINT room_availability_room_type_id_fkey FOREIGN KEY (room_type_id)
+        REFERENCES room_types (room_type_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE CASCADE
+)
 
 -- Create bookings table (managed by our system)
-CREATE TABLE IF NOT EXISTS bookings (
-    booking_id SERIAL PRIMARY KEY,
-    event_id INTEGER NOT NULL REFERENCES events(event_id),
-    person_id INTEGER NOT NULL REFERENCES people(person_id),
-    room_type_id INTEGER NOT NULL REFERENCES room_types(room_type_id),
-    check_in_date DATE NOT NULL,
-    check_out_date DATE NOT NULL,
-    price_per_night DECIMAL(10,2) NOT NULL,
-    total_cost DECIMAL(10,2) NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'pending',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+CREATE TABLE IF NOT EXISTS bookings
+(
+    booking_id integer NOT NULL DEFAULT nextval('bookings_booking_id_seq'::regclass),
+    event_id integer NOT NULL,
+    person_id integer NOT NULL,
+    room_type_id integer NOT NULL,
+    check_in_date date NOT NULL,
+    check_out_date date NOT NULL,
+    status character varying(50) COLLATE pg_catalog."default" NOT NULL DEFAULT 'pending'::character varying,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    payable boolean NOT NULL DEFAULT true,
+    total_cost numeric(10,2) NOT NULL DEFAULT 0.00,
+    CONSTRAINT bookings_pkey PRIMARY KEY (booking_id),
+    CONSTRAINT bookings_event_id_fkey FOREIGN KEY (event_id)
+        REFERENCES events (event_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT bookings_person_id_fkey FOREIGN KEY (person_id)
+        REFERENCES people (person_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT bookings_room_type_id_fkey FOREIGN KEY (room_type_id)
+        REFERENCES room_types (room_type_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION,
+    CONSTRAINT bookings_status_check CHECK (status::text = ANY (ARRAY['pending'::character varying, 'confirmed'::character varying, 'cancelled'::character varying, 'invalidated'::character varying]::text[])),
     CONSTRAINT valid_dates CHECK (check_out_date > check_in_date)
 );
 
@@ -113,6 +137,20 @@ BEGIN
     RETURN NEW;
 END;
 $$ language 'plpgsql';
+
+CREATE TABLE IF NOT EXISTS event_hotels (
+    event_id INTEGER NOT NULL REFERENCES events(event_id) ON DELETE CASCADE,
+    hotel_id INTEGER NOT NULL REFERENCES hotels(hotel_id) ON DELETE CASCADE,
+    PRIMARY KEY (event_id, hotel_id)
+);
+
+-- Create event_room_types table
+CREATE TABLE IF NOT EXISTS event_room_types (
+    event_id INTEGER NOT NULL REFERENCES events(event_id) ON DELETE CASCADE,
+    hotel_id INTEGER NOT NULL REFERENCES hotels(hotel_id) ON DELETE CASCADE,
+    room_type_id INTEGER NOT NULL REFERENCES room_types(room_type_id) ON DELETE CASCADE,
+    PRIMARY KEY (event_id, hotel_id, room_type_id)
+);
 
 -- Create trigger for bookings table to validate dates
 DROP TRIGGER IF EXISTS validate_booking_dates ON bookings;

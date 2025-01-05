@@ -164,6 +164,23 @@ export default function PeopleTable() {
         totalItems={totalItems}
         itemsPerPage={itemsPerPage}
       />
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-[85%] max-h-[90vh] overflow-y-auto border">
+            <div className="p-8">
+              <h2 className="text-2xl font-semibold text-gray-800 mb-6">Edit Person Details</h2>
+              <PersonForm
+                person={editPerson}
+                formData={formData}
+                setFormData={setFormData}
+                onSubmit={handleSubmit}
+                onCancel={() => setShowModal(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

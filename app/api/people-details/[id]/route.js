@@ -3,7 +3,7 @@ import pool from '@/lib/db';
 
 // GET single person's details
 export async function GET(request, { params }) {
-  const { id } = params;
+  const { id } = await params;
   try {
     const { rows } = await pool.query(`
       SELECT 
@@ -28,25 +28,28 @@ export async function GET(request, { params }) {
 
 // PUT/Update details
 export async function PUT(request, { params }) {
-  const { id } = params;
+  const { id } = await params;
   try {
-    const { department, position, start_date, notes } = await request.json();
+    const { department, position, checkin_date, checkout_date, notes } = await request.json();
     
     const query = `
       INSERT INTO people_details (
         person_id,
         department,
         position,
-        start_date,
-        notes
-      ) 
-      VALUES ($1, $2, $3, $4, $5)
+        checkin_date,
+        checkout_date,
+        notes,
+        updated_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
       ON CONFLICT (person_id) 
-      DO UPDATE SET 
+      DO UPDATE SET
         department = $2,
         position = $3,
-        start_date = $4,
-        notes = $5,
+        checkin_date = $4,
+        checkout_date = $5,
+        notes = $6,
         updated_at = CURRENT_TIMESTAMP
       RETURNING *
     `;
@@ -55,7 +58,8 @@ export async function PUT(request, { params }) {
       id,
       department,
       position,
-      start_date,
+      checkin_date,
+      checkout_date,
       notes
     ]);
     
@@ -68,7 +72,7 @@ export async function PUT(request, { params }) {
 
 // DELETE details
 export async function DELETE(request, { params }) {
-  const { id } = params;
+  const { id } = await params;
   try {
     const { rows } = await pool.query('DELETE FROM people_details WHERE person_id = $1 RETURNING *', [id]);
     
