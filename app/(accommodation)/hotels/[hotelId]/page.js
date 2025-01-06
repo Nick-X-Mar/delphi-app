@@ -644,7 +644,7 @@ export default function HotelDetailPage() {
                       <div className="mt-4">
                         <span className="text-gray-500">Agreement:</span>
                         <a
-                          href={hotel.agreement_file_link}
+                          href={`/api/hotels/${hotelId}/agreement`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="ml-2 text-blue-600 hover:text-blue-800 flex items-center"
