@@ -4,7 +4,7 @@ import pool from '@/lib/db';
 // GET availability for a room type
 export async function GET(request, { params }) {
   try {
-    const { hotelId, roomTypeId } = params;
+    const { hotelId, roomTypeId } = await params;
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('start_date');
     const endDate = searchParams.get('end_date');

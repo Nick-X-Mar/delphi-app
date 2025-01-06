@@ -3,7 +3,7 @@ import pool from '@/lib/db';
 
 // GET single event
 export async function GET(request, { params }) {
-  const { id } = params;
+  const { id } = await params;
   try {
     const { rows } = await pool.query('SELECT * FROM events WHERE event_id = $1', [id]);
     
@@ -19,7 +19,7 @@ export async function GET(request, { params }) {
 
 // PUT update event
 export async function PUT(request, { params }) {
-  const { id } = params;
+  const { id } = await params;
   try {
     const { name, start_date, end_date, is_active } = await request.json();
     
@@ -73,7 +73,7 @@ export async function PUT(request, { params }) {
 
 // DELETE event
 export async function DELETE(request, { params }) {
-  const { id } = params;
+  const { id } = await params;
   try {
     const { rows } = await pool.query(
       'DELETE FROM events WHERE event_id = $1 RETURNING *',

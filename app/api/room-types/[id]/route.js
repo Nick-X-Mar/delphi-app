@@ -3,7 +3,7 @@ import pool from '@/lib/db';
 
 // GET single room type with availability
 export async function GET(request, { params }) {
-  const { id } = params;
+  const { id } = await params;
   try {
     const query = `
       SELECT 
@@ -38,7 +38,7 @@ export async function GET(request, { params }) {
 
 // PUT update room type and availability
 export async function PUT(request, { params }) {
-  const { id } = params;
+  const { id } = await params;
   try {
     const { name, description, total_rooms, availability } = await request.json();
 
@@ -140,7 +140,7 @@ export async function PUT(request, { params }) {
 
 // DELETE room type
 export async function DELETE(request, { params }) {
-  const { id } = params;
+  const { id } = await params;
   try {
     // Room availability will be deleted automatically due to CASCADE
     const { rows } = await pool.query(

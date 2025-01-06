@@ -4,7 +4,7 @@ import pool from '@/lib/db';
 // GET hotels associated with an event
 export async function GET(request, { params }) {
   try {
-    const eventId = params.id;
+    const eventId = await params.id;
     const query = `
       SELECT h.*
       FROM hotels h
@@ -24,7 +24,7 @@ export async function GET(request, { params }) {
 // POST associate hotels with an event
 export async function POST(request, { params }) {
   try {
-    const eventId = params.id;
+    const eventId = await params.id;
     const { hotelIds } = await request.json();
 
     if (!Array.isArray(hotelIds)) {
@@ -65,7 +65,7 @@ export async function POST(request, { params }) {
 // DELETE remove all hotel associations for an event
 export async function DELETE(request, { params }) {
   try {
-    const eventId = params.id;
+    const eventId = await params.id;
     await pool.query('DELETE FROM event_hotels WHERE event_id = $1', [eventId]);
     return NextResponse.json({ message: 'Hotel associations removed successfully' });
   } catch (error) {
