@@ -1,14 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { StarIcon, MapPinIcon, PhoneIcon, EnvelopeIcon, DocumentIcon, XCircleIcon } from '@heroicons/react/24/solid';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { DocumentIcon, XCircleIcon, MapPinIcon, PhoneIcon, EnvelopeIcon } from '@heroicons/react/24/solid';
+import { StarIcon } from '@heroicons/react/24/solid';
 import { StarIcon as StarOutline } from '@heroicons/react/24/outline';
+import hotelConfig from '@/config/hotels.json';
+import { StarRating } from '@/components/ui/star-rating';
 
 export default function HotelDetailPage() {
   const router = useRouter();
@@ -19,14 +28,33 @@ export default function HotelDetailPage() {
   const [formData, setFormData] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [tempFile, setTempFile] = useState(null);
+  const [originalFileUrl, setOriginalFileUrl] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [selectedEventId, setSelectedEventId] = useState('');
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     fetchHotel();
+    fetchEvents();
   }, [hotelId]);
+
+  const fetchEvents = async () => {
+    try {
+      const response = await fetch('/api/events');
+      if (!response.ok) throw new Error('Failed to fetch events');
+      const data = await response.json();
+      setEvents(data);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      toast.error('Failed to load events');
+    }
+  };
 
   const fetchHotel = async () => {
     try {
       setIsLoading(true);
+      // Fetch hotel details
       const response = await fetch(`/api/hotels/${hotelId}`);
       const data = await response.json();
       
@@ -36,6 +64,16 @@ export default function HotelDetailPage() {
       
       setHotel(data);
       setFormData(data);
+      setOriginalFileUrl(data.agreement_file_link);
+
+      // Fetch associated event
+      const eventResponse = await fetch(`/api/hotels/${hotelId}/event`);
+      if (eventResponse.ok) {
+        const eventData = await eventResponse.json();
+        if (eventData.event_id) {
+          setSelectedEventId(eventData.event_id.toString());
+        }
+      }
     } catch (error) {
       console.error('Error fetching hotel:', error);
       toast.error('Failed to fetch hotel details');
@@ -44,38 +82,64 @@ export default function HotelDetailPage() {
     }
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!formData.name) newErrors.name = 'Name is required';
+    if (!formData.area) newErrors.area = 'Area is required';
+    if (!formData.stars) newErrors.stars = 'Stars rating is required';
+    if (!formData.category) newErrors.category = 'Category is required';
+    if (!selectedEventId) newErrors.event = 'Event selection is required';
 
-  const handleCategoryChange = (value) => {
-    setFormData(prev => ({
-      ...prev,
-      category: value
-    }));
+    if (formData.stars) {
+      const starsNum = Number(formData.stars);
+      if (isNaN(starsNum) || starsNum < 0.5 || starsNum > 5.0) {
+        newErrors.stars = 'Stars must be between 0.5 and 5.0';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate form
+    if (!validateForm()) {
+      toast.error('Please fill in all required fields correctly');
+      return;
+    }
+
     try {
       setIsSaving(true);
 
-      // Validate required fields
-      if (!formData.name || !formData.area || !formData.stars || !formData.category) {
-        toast.error('Please fill in all required fields');
-        return;
+      // If we have a new file to upload
+      if (tempFile) {
+        const fileFormData = new FormData();
+        fileFormData.append('file', tempFile);
+
+        const uploadResponse = await fetch(`/api/hotels/${hotelId}/agreement`, {
+          method: 'POST',
+          body: fileFormData,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error('Failed to upload agreement file');
+        }
+
+        const { fileUrl } = await uploadResponse.json();
+        formData.agreement_file_link = fileUrl;
+      } else if (formData.agreement_file_link !== originalFileUrl) {
+        // If file was deleted, remove it from S3
+        if (originalFileUrl) {
+          await fetch(`/api/hotels/${hotelId}/agreement`, {
+            method: 'DELETE',
+          });
+        }
       }
 
-      // Validate stars range
-      if (formData.stars < 1 || formData.stars > 5) {
-        toast.error('Stars must be between 1 and 5');
-        return;
-      }
-
+      // Update hotel details
       const response = await fetch(`/api/hotels/${hotelId}`, {
         method: 'PUT',
         headers: {
@@ -90,8 +154,23 @@ export default function HotelDetailPage() {
         throw new Error(data.error);
       }
 
+      // Update event association
+      const eventAssocResponse = await fetch(`/api/events/${selectedEventId}/hotels`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ hotelIds: [hotelId] }),
+      });
+
+      if (!eventAssocResponse.ok) {
+        throw new Error('Failed to update event association');
+      }
+
       setHotel(data);
       setIsEditing(false);
+      setTempFile(null);
+      setOriginalFileUrl(data.agreement_file_link);
       toast.success('Hotel updated successfully');
     } catch (error) {
       console.error('Error updating hotel:', error);
@@ -99,6 +178,47 @@ export default function HotelDetailPage() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    // Clear error when field is changed
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: undefined
+      }));
+    }
+  };
+
+  const handleCategoryChange = (value) => {
+    setFormData(prev => ({
+      ...prev,
+      category: value
+    }));
+    // Clear category error
+    if (errors.category) {
+      setErrors(prev => ({
+        ...prev,
+        category: undefined
+      }));
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setFormData({...hotel}); // Reset form data
+    setTempFile(null); // Clear any temporary file
+    if (hotel.agreement_file_link !== originalFileUrl) {
+      setFormData(prev => ({
+        ...prev,
+        agreement_file_link: originalFileUrl
+      }));
+    }
+    setIsEditing(false);
   };
 
   const handleAddRoomType = () => {
@@ -125,70 +245,57 @@ export default function HotelDetailPage() {
       return;
     }
 
-    try {
-      setIsUploadingFile(true);
-
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch(`/api/hotels/${hotelId}/agreement`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to upload file');
-      }
-
-      const data = await response.json();
-      setFormData(prev => ({
-        ...prev,
-        agreement_file_link: data.fileUrl
-      }));
-
-      toast.success('Agreement file uploaded successfully');
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      toast.error('Failed to upload file');
-    } finally {
-      setIsUploadingFile(false);
-    }
+    // Store the file temporarily
+    setTempFile(file);
+    // Create a temporary URL for preview
+    const tempUrl = URL.createObjectURL(file);
+    setFormData(prev => ({
+      ...prev,
+      agreement_file_link: tempUrl
+    }));
   };
 
-  const handleDeleteFile = async () => {
-    try {
-      setIsUploadingFile(true);
-
-      const response = await fetch(`/api/hotels/${hotelId}/agreement`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete file');
-      }
-
-      setFormData(prev => ({
-        ...prev,
-        agreement_file_link: null
-      }));
-
-      toast.success('Agreement file deleted successfully');
-    } catch (error) {
-      console.error('Error deleting file:', error);
-      toast.error('Failed to delete file');
-    } finally {
-      setIsUploadingFile(false);
-    }
+  const handleDeleteFile = () => {
+    setTempFile(null);
+    setFormData(prev => ({
+      ...prev,
+      agreement_file_link: null
+    }));
   };
 
   const renderStars = (count) => {
-    return [...Array(5)].map((_, index) => (
-      index < count ? (
-        <StarIcon key={index} className="h-5 w-5 text-yellow-400" />
-      ) : (
-        <StarOutline key={index} className="h-5 w-5 text-gray-300" />
-      )
-    ));
+    const stars = [];
+    const fullStars = Math.floor(count);
+    const hasHalfStar = count % 1 !== 0;
+
+    // Add full stars
+    for (let i = 0; i < fullStars; i++) {
+      stars.push(
+        <StarIcon key={`full-${i}`} className="h-5 w-5 text-yellow-400" />
+      );
+    }
+
+    // Add half star if needed
+    if (hasHalfStar) {
+      stars.push(
+        <div key="half" className="relative" style={{ width: '1.25rem', height: '1.25rem' }}>
+          <StarOutline className="absolute h-5 w-5 text-yellow-400" />
+          <div className="absolute overflow-hidden" style={{ width: '50%' }}>
+            <StarIcon className="h-5 w-5 text-yellow-400" />
+          </div>
+        </div>
+      );
+    }
+
+    // Add remaining empty stars
+    const remainingStars = 5 - Math.ceil(count);
+    for (let i = 0; i < remainingStars; i++) {
+      stars.push(
+        <StarOutline key={`empty-${i}`} className="h-5 w-5 text-gray-300" />
+      );
+    }
+
+    return stars;
   };
 
   if (isLoading) {
@@ -243,45 +350,101 @@ export default function HotelDetailPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Name *</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Name *
+                    {errors.name && (
+                      <span className="text-red-500 text-xs ml-1">{errors.name}</span>
+                    )}
+                  </label>
                   <Input
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
                     required
+                    placeholder="Hotel name"
+                    className={errors.name ? 'border-red-500' : ''}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Area *</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Area *
+                    {errors.area && (
+                      <span className="text-red-500 text-xs ml-1">{errors.area}</span>
+                    )}
+                  </label>
                   <Input
                     name="area"
                     value={formData.area}
                     onChange={handleInputChange}
                     required
+                    placeholder="Hotel area"
+                    className={errors.area ? 'border-red-500' : ''}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Stars *</label>
-                  <Input
-                    type="number"
-                    name="stars"
-                    value={formData.stars}
-                    onChange={handleInputChange}
-                    min="1"
-                    max="5"
+                  <label className="block text-sm font-medium text-gray-700">
+                    Stars *
+                    {errors.stars && (
+                      <span className="text-red-500 text-xs ml-1">{errors.stars}</span>
+                    )}
+                  </label>
+                  <StarRating
+                    value={Number(formData.stars)}
+                    onChange={(value) => handleInputChange({
+                      target: { name: 'stars', value: value.toString() }
+                    })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Category *
+                    {errors.category && (
+                      <span className="text-red-500 text-xs ml-1">{errors.category}</span>
+                    )}
+                  </label>
+                  <Select
+                    value={formData.category}
+                    onValueChange={handleCategoryChange}
                     required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Category *</label>
-                  <Select name="category" value={formData.category} onValueChange={handleCategoryChange} required>
-                    <SelectTrigger>
+                  >
+                    <SelectTrigger className={errors.category ? 'border-red-500' : ''}>
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="VIP">VIP</SelectItem>
-                      <SelectItem value="Very Good">Very Good</SelectItem>
-                      <SelectItem value="Good">Good</SelectItem>
+                      {hotelConfig.categories.map(category => (
+                        <SelectItem key={category.value} value={category.value}>
+                          {category.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Event *
+                    {errors.event && (
+                      <span className="text-red-500 text-xs ml-1">{errors.event}</span>
+                    )}
+                  </label>
+                  <Select
+                    value={selectedEventId}
+                    onValueChange={(value) => {
+                      setSelectedEventId(value);
+                      if (errors.event) {
+                        setErrors(prev => ({ ...prev, event: undefined }));
+                      }
+                    }}
+                    required
+                  >
+                    <SelectTrigger className={errors.event ? 'border-red-500' : ''}>
+                      <SelectValue placeholder="Select an event" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {events.map(event => (
+                        <SelectItem key={event.event_id} value={event.event_id.toString()}>
+                          {event.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -429,7 +592,7 @@ export default function HotelDetailPage() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => setIsEditing(false)}
+              onClick={handleCancelEdit}
               disabled={isSaving}
             >
               Cancel

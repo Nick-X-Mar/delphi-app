@@ -1,5 +1,15 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
 
 // GET single hotel
 export async function GET(request, { params }) {
@@ -22,6 +32,28 @@ export async function GET(request, { params }) {
 
         if (rows.length === 0) {
             return NextResponse.json({ error: 'Hotel not found' }, { status: 404 });
+        }
+
+        // If there's an agreement file, generate a pre-signed URL
+        if (rows[0].agreement_file_link) {
+            try {
+                // Extract the key from the full S3 URL
+                const url = new URL(rows[0].agreement_file_link);
+                const key = url.pathname.substring(1); // Remove leading slash
+
+                const command = new GetObjectCommand({
+                    Bucket: process.env.AWS_BUCKET_NAME,
+                    Key: key,
+                });
+
+                // Generate pre-signed URL valid for 1 hour
+                const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+                rows[0].agreement_file_link = signedUrl;
+            } catch (error) {
+                console.error('Error generating pre-signed URL:', error);
+                // Don't fail the whole request if we can't generate the URL
+                rows[0].agreement_file_link = null;
+            }
         }
 
         return NextResponse.json(rows[0]);
@@ -59,10 +91,11 @@ export async function PUT(request, { params }) {
             }, { status: 400 });
         }
 
-        // Validate stars range
-        if (stars < 1 || stars > 5) {
+        // Convert stars to numeric and validate range
+        const starsNumeric = Number(stars);
+        if (isNaN(starsNumeric) || starsNumeric < 0.5 || starsNumeric > 5.0) {
             return NextResponse.json({
-                error: 'Stars must be between 1 and 5'
+                error: 'Stars must be between 0.5 and 5.0'
             }, { status: 400 });
         }
 
@@ -79,7 +112,7 @@ export async function PUT(request, { params }) {
       SET 
         name = $1,
         area = $2,
-        stars = $3,
+        stars = $3::numeric(2,1),
         category = $4,
         address = $5,
         phone_number = $6,
@@ -98,7 +131,7 @@ export async function PUT(request, { params }) {
         const values = [
             name,
             area,
-            stars,
+            stars.toString(),
             category,
             address || null,
             phone_number || null,

@@ -10,7 +10,7 @@ import {
   TableRow,
   TableCell
 } from '@/components/ui/table';
-import { StarIcon } from 'lucide-react';
+import { StarIcon, StarOutline } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AccommodationHotelList({ personId, onRoomSelection }) {
@@ -186,11 +186,38 @@ export default function AccommodationHotelList({ personId, onRoomSelection }) {
   };
 
   const renderStars = (count) => {
-    return Array(count)
-      .fill(null)
-      .map((_, index) => (
-        <StarIcon key={index} className="h-4 w-4 text-yellow-400 fill-current" />
-      ));
+    const stars = [];
+    const fullStars = Math.floor(count);
+    const hasHalfStar = count % 1 !== 0;
+
+    // Add full stars
+    for (let i = 0; i < fullStars; i++) {
+      stars.push(
+        <StarIcon key={`full-${i}`} className="h-4 w-4 text-yellow-400 fill-current" />
+      );
+    }
+
+    // Add half star if needed
+    if (hasHalfStar) {
+      stars.push(
+        <div key="half" className="relative" style={{ width: '1rem', height: '1rem' }}>
+          <StarOutline className="absolute h-4 w-4 text-yellow-400" />
+          <div className="absolute overflow-hidden" style={{ width: '50%' }}>
+            <StarIcon className="h-4 w-4 text-yellow-400 fill-current" />
+          </div>
+        </div>
+      );
+    }
+
+    // Add remaining empty stars
+    const remainingStars = 5 - Math.ceil(count);
+    for (let i = 0; i < remainingStars; i++) {
+      stars.push(
+        <StarOutline key={`empty-${i}`} className="h-4 w-4 text-gray-300" />
+      );
+    }
+
+    return stars;
   };
 
   const getAvailabilityForDate = (roomType, date) => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -13,12 +13,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DocumentIcon, XCircleIcon } from '@heroicons/react/24/solid';
 import hotelConfig from '@/config/hotels.json';
 import { StarRating } from '@/components/ui/star-rating';
 
 export default function NewHotelPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [tempFile, setTempFile] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [selectedEventId, setSelectedEventId] = useState('');
+  const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
     name: '',
     area: '',
@@ -32,34 +38,99 @@ export default function NewHotelPage() {
     contact_name: '',
     contact_phone: '',
     contact_mobile: '',
-    contact_email: ''
+    contact_email: '',
+    agreement_file_link: null
   });
+
+  // Fetch events when component mounts
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const response = await fetch('/api/events');
+        if (!response.ok) throw new Error('Failed to fetch events');
+        const data = await response.json();
+        setEvents(data);
+      } catch (error) {
+        console.error('Error fetching events:', error);
+        toast.error('Failed to load events');
+      }
+    };
+
+    fetchEvents();
+  }, []);
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (file.type !== 'application/pdf') {
+      toast.error('Please upload a PDF file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File size should be less than 5MB');
+      return;
+    }
+
+    // Store the file temporarily
+    setTempFile(file);
+    // Create a temporary URL for preview
+    const tempUrl = URL.createObjectURL(file);
+    setFormData(prev => ({
+      ...prev,
+      agreement_file_link: tempUrl
+    }));
+  };
+
+  const handleDeleteFile = () => {
+    // Clear the file input
+    const fileInput = document.querySelector('input[type="file"]');
+    if (fileInput) {
+      fileInput.value = '';
+    }
+    setTempFile(null);
+    setFormData(prev => ({
+      ...prev,
+      agreement_file_link: null
+    }));
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!formData.name) newErrors.name = 'Name is required';
+    if (!formData.area) newErrors.area = 'Area is required';
+    if (!formData.stars) newErrors.stars = 'Stars rating is required';
+    if (!formData.category) newErrors.category = 'Category is required';
+    if (!selectedEventId) newErrors.event = 'Event selection is required';
+
+    if (formData.stars) {
+      const starsNum = Number(formData.stars);
+      if (isNaN(starsNum) || starsNum < 0.5 || starsNum > 5.0) {
+        newErrors.stars = 'Stars must be between 0.5 and 5.0';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Validate form
+    if (!validateForm()) {
+      toast.error('Please fill in all required fields correctly');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
 
-      // Validate required fields
-      if (!formData.name || !formData.area || !formData.stars || !formData.category) {
-        toast.error('Please fill in all required fields');
-        return;
-      }
-
-      // Validate stars range
-      if (formData.stars < 1 || formData.stars > 5) {
-        toast.error('Stars must be between 1 and 5');
-        return;
-      }
-
-      // Validate category
-      const validCategories = hotelConfig.categories.map(cat => cat.value);
-      if (!validCategories.includes(formData.category)) {
-        toast.error('Invalid category selected');
-        return;
-      }
-
+      // First create the hotel
       const response = await fetch('/api/hotels', {
         method: 'POST',
         headers: {
@@ -74,10 +145,55 @@ export default function NewHotelPage() {
         throw new Error(data.error);
       }
 
-      toast.success('Hotel created successfully');
-      router.push(`/hotels/${data.hotel_id}`);
+      // Associate hotel with event
+      const eventAssocResponse = await fetch(`/api/events/${selectedEventId}/hotels`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ hotelIds: [data.hotel_id] }),
+      });
+
+      if (!eventAssocResponse.ok) {
+        throw new Error('Failed to associate hotel with event');
+      }
+
+      let uploadError = null;
+
+      // If we have a file to upload
+      if (tempFile) {
+        try {
+          const fileFormData = new FormData();
+          fileFormData.append('file', tempFile);
+
+          const uploadResponse = await fetch(`/api/hotels/${data.hotel_id}/agreement`, {
+            method: 'POST',
+            body: fileFormData,
+          });
+
+          if (!uploadResponse.ok) {
+            uploadError = 'Failed to upload agreement file';
+          }
+        } catch (error) {
+          console.error('File upload error:', error);
+          uploadError = error.message || 'Failed to upload agreement file';
+        }
+      }
+
+      if (uploadError) {
+        toast.warning(
+          <div>
+            <p>Hotel created successfully, but file upload failed.</p>
+            <p className="text-sm mt-1">You can upload the agreement file later from the hotel details page.</p>
+          </div>
+        );
+        router.push(`/hotels/${data.hotel_id}`);
+      } else {
+        toast.success('Hotel created successfully');
+        router.push('/hotels');
+      }
     } catch (error) {
-      console.error('Submit error:', error);
+      console.error('Error creating hotel:', error);
       toast.error(error.message || 'Failed to create hotel');
     } finally {
       setIsSubmitting(false);
@@ -90,6 +206,13 @@ export default function NewHotelPage() {
       ...prev,
       [name]: value
     }));
+    // Clear error when field is changed
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: undefined
+      }));
+    }
   };
 
   const handleCategoryChange = (value) => {
@@ -97,6 +220,13 @@ export default function NewHotelPage() {
       ...prev,
       category: value
     }));
+    // Clear category error
+    if (errors.category) {
+      setErrors(prev => ({
+        ...prev,
+        category: undefined
+      }));
+    }
   };
 
   return (
@@ -119,27 +249,44 @@ export default function NewHotelPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Name *</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Name *
+                  {errors.name && (
+                    <span className="text-red-500 text-xs ml-1">{errors.name}</span>
+                  )}
+                </label>
                 <Input
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
                   required
                   placeholder="Hotel name"
+                  className={errors.name ? 'border-red-500' : ''}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Area *</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Area *
+                  {errors.area && (
+                    <span className="text-red-500 text-xs ml-1">{errors.area}</span>
+                  )}
+                </label>
                 <Input
                   name="area"
                   value={formData.area}
                   onChange={handleChange}
                   required
                   placeholder="Hotel area"
+                  className={errors.area ? 'border-red-500' : ''}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Stars *</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Stars *
+                  {errors.stars && (
+                    <span className="text-red-500 text-xs ml-1">{errors.stars}</span>
+                  )}
+                </label>
                 <StarRating
                   value={Number(formData.stars)}
                   onChange={(value) => handleChange({
@@ -148,19 +295,53 @@ export default function NewHotelPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Category *</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Category *
+                  {errors.category && (
+                    <span className="text-red-500 text-xs ml-1">{errors.category}</span>
+                  )}
+                </label>
                 <Select
                   value={formData.category}
                   onValueChange={handleCategoryChange}
                   required
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={errors.category ? 'border-red-500' : ''}>
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
                     {hotelConfig.categories.map(category => (
                       <SelectItem key={category.value} value={category.value}>
                         {category.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Event *
+                  {errors.event && (
+                    <span className="text-red-500 text-xs ml-1">{errors.event}</span>
+                  )}
+                </label>
+                <Select
+                  value={selectedEventId}
+                  onValueChange={(value) => {
+                    setSelectedEventId(value);
+                    if (errors.event) {
+                      setErrors(prev => ({ ...prev, event: undefined }));
+                    }
+                  }}
+                  required
+                >
+                  <SelectTrigger className={errors.event ? 'border-red-500' : ''}>
+                    <SelectValue placeholder="Select an event" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {events.map(event => (
+                      <SelectItem key={event.event_id} value={event.event_id.toString()}>
+                        {event.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -174,6 +355,41 @@ export default function NewHotelPage() {
                   onChange={handleChange}
                   placeholder="Full address"
                 />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700">Agreement File (PDF)</label>
+                <div className="mt-1 flex items-center space-x-4">
+                  {formData.agreement_file_link ? (
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center text-blue-600">
+                        <DocumentIcon className="h-5 w-5 mr-2" />
+                        <span className="text-sm">{tempFile?.name || 'Selected file'}</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleDeleteFile}
+                        disabled={isUploadingFile}
+                        className="text-red-600 hover:text-red-800"
+                      >
+                        <XCircleIcon className="h-5 w-5 mr-2" />
+                        Remove
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center">
+                      <Input
+                        type="file"
+                        accept=".pdf"
+                        onChange={handleFileChange}
+                        disabled={isUploadingFile}
+                        className="max-w-xs"
+                      />
+                      {isUploadingFile && <span className="ml-2">Uploading...</span>}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </CardContent>

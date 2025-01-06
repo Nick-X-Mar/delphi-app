@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { STSClient, AssumeRoleCommand } from "@aws-sdk/client-sts";
 import pool from '@/lib/db';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const stsClient = new STSClient({
   region: process.env.AWS_REGION,
@@ -140,6 +141,41 @@ export async function DELETE(request, { params }) {
     return NextResponse.json({ message: 'Agreement file deleted successfully' });
   } catch (error) {
     console.error('Error deleting file:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function GET(request, { params }) {
+  try {
+    const { hotelId } = await params;
+
+    // First, get the agreement file link from the database
+    const query = 'SELECT agreement_file_link FROM hotels WHERE hotel_id = $1';
+    const { rows } = await pool.query(query, [hotelId]);
+
+    if (rows.length === 0 || !rows[0].agreement_file_link) {
+      return NextResponse.json({ error: 'Agreement file not found' }, { status: 404 });
+    }
+
+    // Extract the key from the URL
+    const urlParts = rows[0].agreement_file_link.split('.amazonaws.com/');
+    const fileKey = urlParts[1];
+
+    // Get S3 client with assumed role
+    const s3Client = await getS3Client();
+
+    // Generate a pre-signed URL for the S3 object
+    const command = new GetObjectCommand({
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: fileKey,
+    });
+
+    const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // URL expires in 1 hour
+
+    // Redirect to the signed URL
+    return NextResponse.redirect(signedUrl);
+  } catch (error) {
+    console.error('Error getting agreement file:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 } 

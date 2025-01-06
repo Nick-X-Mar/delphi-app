@@ -1,15 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDebounce } from 'use-debounce';
 import { useRouter } from 'next/navigation';
 import HotelList from '@/components/HotelList';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function HotelsPage() {
   const router = useRouter();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearch] = useDebounce(searchTerm, 300);
 
   const handleAddHotel = () => {
     router.push('/hotels/new');
@@ -24,17 +29,7 @@ export default function HotelsPage() {
         </Button>
       </div>
 
-      <div className="mb-6">
-        <input
-          type="text"
-          placeholder="Search hotels by name, area..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-md w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-        />
-      </div>
-
-      <HotelList searchTerm={debouncedSearch} />
+      <HotelList />
     </div>
   );
 }
