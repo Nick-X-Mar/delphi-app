@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import EventList from '@/components/EventList';
 import EventForm from '@/components/EventForm';
 
@@ -14,6 +14,7 @@ export default function EventsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [events, setEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     fetchEvents();
@@ -52,6 +53,27 @@ export default function EventsPage() {
     setEvents(prev => prev.filter(event => event.event_id !== eventId));
   };
 
+  const handleUpdateEvents = async () => {
+    try {
+      setIsUpdating(true);
+      const response = await fetch('/api/events/update-active-status', {
+        method: 'POST'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update events');
+      }
+
+      await fetchEvents(); // Refresh the events list
+      toast.success('Events updated successfully');
+    } catch (error) {
+      console.error('Error updating events:', error);
+      toast.error('Failed to update events');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -70,13 +92,24 @@ export default function EventsPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Events</h1>
-        <Button
-          onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center"
-        >
-          <PlusIcon className="h-5 w-5 mr-2" />
-          Add Event
-        </Button>
+        <div className="flex gap-4">
+          <Button
+            variant="outline"
+            onClick={handleUpdateEvents}
+            disabled={isUpdating}
+            className="inline-flex items-center"
+          >
+            <ArrowPathIcon className={`h-5 w-5 mr-2 ${isUpdating ? 'animate-spin' : ''}`} />
+            {isUpdating ? 'Updating...' : 'Update Events'}
+          </Button>
+          <Button
+            onClick={() => setShowCreateModal(true)}
+            className="inline-flex items-center"
+          >
+            <PlusIcon className="h-5 w-5 mr-2" />
+            Add Event
+          </Button>
+        </div>
       </div>
 
       <EventList

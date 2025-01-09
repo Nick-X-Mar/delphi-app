@@ -224,3 +224,40 @@ CREATE TRIGGER handle_event_date_changes
         OLD.end_date != NEW.end_date
     )
     EXECUTE FUNCTION handle_event_date_changes();
+
+-- Create trigger function to update event active status
+CREATE OR REPLACE FUNCTION update_event_active_status()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Set is_active based on accommodation period
+    -- An event is active only during its accommodation period
+    NEW.is_active = (
+        CURRENT_DATE >= NEW.accommodation_start_date AND 
+        CURRENT_DATE <= NEW.accommodation_end_date
+    );
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Create trigger for events table to update active status
+DROP TRIGGER IF EXISTS update_event_active_status ON events;
+CREATE TRIGGER update_event_active_status
+    BEFORE INSERT OR UPDATE ON events
+    FOR EACH ROW
+    EXECUTE FUNCTION update_event_active_status();
+
+-- Create function to update all events' active status
+CREATE OR REPLACE FUNCTION update_all_events_active_status()
+RETURNS void AS $$
+BEGIN
+    UPDATE events
+    SET is_active = (
+        CURRENT_DATE >= accommodation_start_date AND 
+        CURRENT_DATE <= accommodation_end_date
+    )
+    WHERE is_active != (
+        CURRENT_DATE >= accommodation_start_date AND 
+        CURRENT_DATE <= accommodation_end_date
+    );
+END;
+$$ language 'plpgsql';
