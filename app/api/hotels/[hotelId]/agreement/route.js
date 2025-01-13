@@ -86,7 +86,7 @@ export async function DELETE(request, { params }) {
 // GET - Get agreement file
 export async function GET(request, { params }) {
   try {
-    const { hotelId } = params;
+    const { hotelId } = await params;
 
     // First, get the agreement file link from the database
     const query = 'SELECT agreement_file_link FROM hotels WHERE hotel_id = $1';
