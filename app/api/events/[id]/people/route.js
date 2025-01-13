@@ -5,18 +5,25 @@ import pool from '@/lib/db';
 export async function GET(request, { params }) {
   try {
     const eventId = await params.id;
+    
     const query = `
       SELECT 
         p.*,
-        pd.department,
-        pd.position
+        b.booking_id,
+        b.check_in_date,
+        b.check_out_date,
+        h.name as hotel_name,
+        rt.name as room_type_name
       FROM people p
-      LEFT JOIN people_details pd ON p.person_id = pd.person_id
       INNER JOIN event_people ep ON p.person_id = ep.person_id
+      LEFT JOIN bookings b ON p.person_id = b.person_id 
+        AND b.event_id = ep.event_id
+      LEFT JOIN room_types rt ON b.room_type_id = rt.room_type_id
+      LEFT JOIN hotels h ON rt.hotel_id = h.hotel_id
       WHERE ep.event_id = $1
-      ORDER BY p.last_name, p.first_name
+      ORDER BY p.first_name, p.last_name
     `;
-    
+
     const { rows } = await pool.query(query, [eventId]);
     return NextResponse.json(rows);
   } catch (error) {

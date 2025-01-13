@@ -167,10 +167,10 @@ export default function AccommodationTable({ eventId }) {
       <TableHeader>
         <TableRow>
           <TableHead className="w-[50px]"></TableHead>
-          <TableHead>Name</TableHead>
-          <TableHead>Category</TableHead>
-          <TableHead>Area</TableHead>
-          <TableHead>Total Bookings</TableHead>
+          <TableHead>Guest</TableHead>
+          <TableHead>Period</TableHead>
+          <TableHead>Cost</TableHead>
+          <TableHead>Status</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
@@ -226,16 +226,26 @@ export default function AccommodationTable({ eventId }) {
                       <React.Fragment key={booking.booking_id}>
                         <TableRow className="bg-gray-100 hover:bg-gray-200">
                           <TableCell className="pl-12"></TableCell>
-                          <TableCell className="font-medium" colSpan={4}>
+                          <TableCell className="font-medium">
                             {booking.first_name} {booking.last_name}
                             <div className="text-sm text-gray-500">
                               {booking.email}
-                              <br />
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
                               Check-in: {formatDisplayDate(booking.check_in_date)}
-                              <br />
+                            </div>
+                            <div className="text-sm">
                               Check-out: {formatDisplayDate(booking.check_out_date)}
                             </div>
                           </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              €{booking.total_cost}
+                            </div>
+                          </TableCell>
+                          <TableCell></TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
                               {editingBooking?.booking_id === booking.booking_id ? (
@@ -262,9 +272,6 @@ export default function AccommodationTable({ eventId }) {
                               >
                                 <Trash2 className="h-4 w-4 text-red-500" />
                               </Button>
-                            </div>
-                            <div className="text-sm mt-1">
-                              €{booking.total_cost}
                             </div>
                           </TableCell>
                         </TableRow>
