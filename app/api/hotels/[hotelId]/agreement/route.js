@@ -1,45 +1,10 @@
 import { NextResponse } from 'next/server';
-import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
-import { STSClient, AssumeRoleCommand } from "@aws-sdk/client-sts";
 import pool from '@/lib/db';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-
-const stsClient = new STSClient({
-  region: process.env.AWS_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  },
-});
-
-// Function to get temporary credentials
-async function getTemporaryCredentials() {
-  const command = new AssumeRoleCommand({
-    RoleArn: "arn:aws:iam::529088278315:role/TerraformExecutionRole",
-    RoleSessionName: "DelphiAppS3Session",
-    DurationSeconds: 3600, // 1 hour
-  });
-
-  const response = await stsClient.send(command);
-  return {
-    accessKeyId: response.Credentials.AccessKeyId,
-    secretAccessKey: response.Credentials.SecretAccessKey,
-    sessionToken: response.Credentials.SessionToken,
-  };
-}
-
-// Initialize S3 client with role assumption
-async function getS3Client() {
-  const credentials = await getTemporaryCredentials();
-  return new S3Client({
-    region: process.env.AWS_REGION,
-    credentials: credentials,
-  });
-}
+import { uploadAgreement, getAgreementUrl, deleteAgreement } from '@/lib/s3';
 
 // POST - Upload agreement file
 export async function POST(request, { params }) {
-  const { hotelId } = await params;
+  const { hotelId } = params;
 
   try {
     const formData = await request.formData();
@@ -49,25 +14,8 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Convert file to buffer
-    const buffer = Buffer.from(await file.arrayBuffer());
-
-    // Generate unique filename
-    const filename = `hotels/${hotelId}/agreement/${Date.now()}-${file.name}`;
-
-    // Get S3 client with assumed role
-    const s3Client = await getS3Client();
-
-    // Upload to S3
-    await s3Client.send(new PutObjectCommand({
-      Bucket: process.env.AWS_BUCKET_NAME,
-      Key: filename,
-      Body: buffer,
-      ContentType: file.type,
-    }));
-
-    // Generate file URL
-    const fileUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${filename}`;
+    // Upload to S3 using our centralized function
+    const fileUrl = await uploadAgreement(hotelId, file);
 
     // Update hotel record with new agreement file link
     const query = `
@@ -94,7 +42,7 @@ export async function POST(request, { params }) {
 
 // DELETE - Remove agreement file
 export async function DELETE(request, { params }) {
-  const { hotelId } = await params;
+  const { hotelId } = params;
 
   try {
     // First get the current file URL
@@ -108,18 +56,8 @@ export async function DELETE(request, { params }) {
     const currentFileUrl = rows[0].agreement_file_link;
 
     if (currentFileUrl) {
-      // Extract the key from the URL
-      const urlParts = currentFileUrl.split('.amazonaws.com/');
-      const key = urlParts[1];
-
-      // Get S3 client with assumed role
-      const s3Client = await getS3Client();
-
-      // Delete from S3
-      await s3Client.send(new DeleteObjectCommand({
-        Bucket: process.env.AWS_BUCKET_NAME,
-        Key: key,
-      }));
+      // Delete from S3 using our centralized function
+      await deleteAgreement(currentFileUrl);
     }
 
     // Update hotel record to remove agreement file link
@@ -145,9 +83,10 @@ export async function DELETE(request, { params }) {
   }
 }
 
+// GET - Get agreement file
 export async function GET(request, { params }) {
   try {
-    const { hotelId } = await params;
+    const { hotelId } = params;
 
     // First, get the agreement file link from the database
     const query = 'SELECT agreement_file_link FROM hotels WHERE hotel_id = $1';
@@ -157,20 +96,8 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Agreement file not found' }, { status: 404 });
     }
 
-    // Extract the key from the URL
-    const urlParts = rows[0].agreement_file_link.split('.amazonaws.com/');
-    const fileKey = urlParts[1];
-
-    // Get S3 client with assumed role
-    const s3Client = await getS3Client();
-
-    // Generate a pre-signed URL for the S3 object
-    const command = new GetObjectCommand({
-      Bucket: process.env.AWS_BUCKET_NAME,
-      Key: fileKey,
-    });
-
-    const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // URL expires in 1 hour
+    // Get signed URL using our centralized function
+    const signedUrl = await getAgreementUrl(rows[0].agreement_file_link);
 
     // Redirect to the signed URL
     return NextResponse.redirect(signedUrl);

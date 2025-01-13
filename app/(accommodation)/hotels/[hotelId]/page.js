@@ -462,7 +462,7 @@ export default function HotelDetailPage() {
                     {formData.agreement_file_link ? (
                       <>
                         <a
-                          href={formData.agreement_file_link}
+                          href={`/api/hotels/${hotelId}/agreement`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center text-blue-600 hover:text-blue-800"

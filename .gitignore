@@ -104,3 +104,6 @@ override.tf.json
 # CLI configuration files
 .terraformrc
 terraform.rc.env
+
+# AWS credentials
+.aws/
