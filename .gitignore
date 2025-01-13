@@ -107,3 +107,4 @@ terraform.rc.env
 
 # AWS credentials
 .aws/
+package-lock.json
