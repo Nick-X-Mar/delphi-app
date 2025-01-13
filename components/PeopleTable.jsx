@@ -8,14 +8,30 @@ import { format, parseISO } from 'date-fns';
 import Pagination from '@/components/Pagination';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Edit } from 'lucide-react';
+import { Edit, UserPlus, UserMinus } from 'lucide-react';
 import PersonForm from './PersonForm';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function PeopleTable() {
   const [people, setPeople] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
+  const [events, setEvents] = useState([]);
+  const [filters, setFilters] = useState({
+    eventId: 'all',
+    firstName: '',
+    lastName: '',
+    email: '',
+  });
+  const [selectedPeople, setSelectedPeople] = useState(new Set());
+  const [debouncedFilters] = useDebounce(filters, 300);
   const [showModal, setShowModal] = useState(false);
   const [editPerson, setEditPerson] = useState(null);
   const [formData, setFormData] = useState({
@@ -29,14 +45,36 @@ export default function PeopleTable() {
   const [totalItems, setTotalItems] = useState(0);
   const itemsPerPage = 10;
 
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const response = await fetch('/api/events');
+        if (!response.ok) throw new Error('Failed to fetch events');
+        const data = await response.json();
+        setEvents(data);
+      } catch (error) {
+        console.error('Error fetching events:', error);
+        toast.error('Failed to load events');
+      }
+    };
+
+    fetchEvents();
+  }, []);
+
   const fetchPeople = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(
-        `/api/people?page=${currentPage}&limit=${itemsPerPage}&search=${encodeURIComponent(
-          debouncedSearchTerm
-        )}`
-      );
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: itemsPerPage.toString(),
+      });
+
+      if (debouncedFilters.eventId && debouncedFilters.eventId !== 'all') params.append('eventId', debouncedFilters.eventId);
+      if (debouncedFilters.firstName) params.append('firstName', debouncedFilters.firstName);
+      if (debouncedFilters.lastName) params.append('lastName', debouncedFilters.lastName);
+      if (debouncedFilters.email) params.append('email', debouncedFilters.email);
+      
+      const response = await fetch(`/api/people?${params.toString()}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch people');
@@ -50,6 +88,7 @@ export default function PeopleTable() {
       
       setPeople(data.data || []); // Ensure we always set an array
       setTotalItems(data.pagination.total);
+      setSelectedPeople(new Set()); // Clear selection when data changes
     } catch (error) {
       console.error('Error fetching people:', error);
       toast.error('Failed to fetch people');
@@ -61,7 +100,7 @@ export default function PeopleTable() {
 
   useEffect(() => {
     fetchPeople();
-  }, [currentPage, debouncedSearchTerm]);
+  }, [currentPage, debouncedFilters]);
 
   const handleEdit = (person) => {
     setEditPerson(person);
@@ -104,21 +143,203 @@ export default function PeopleTable() {
     setCurrentPage(page);
   };
 
+  const handleFilterChange = (field, value) => {
+    setFilters(prev => ({ ...prev, [field]: value }));
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      setSelectedPeople(new Set(people.map(p => p.person_id)));
+    } else {
+      setSelectedPeople(new Set());
+    }
+  };
+
+  const handleSelectPerson = (personId) => {
+    const newSelected = new Set(selectedPeople);
+    if (newSelected.has(personId)) {
+      newSelected.delete(personId);
+    } else {
+      newSelected.add(personId);
+    }
+    setSelectedPeople(newSelected);
+  };
+
+  const handleAssignToEvent = async (eventId) => {
+    if (selectedPeople.size === 0) {
+      toast.error('Please select at least one person');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/events/${eventId}/people`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          personIds: Array.from(selectedPeople),
+          action: 'add'
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to assign people to event');
+      }
+
+      toast.success('Successfully assigned people to event');
+      setSelectedPeople(new Set());
+      fetchPeople();
+    } catch (error) {
+      console.error('Assignment error:', error);
+      toast.error(error.message || 'Failed to assign people to event');
+    }
+  };
+
+  const handleRemoveFromEvent = async () => {
+    if (selectedPeople.size === 0) {
+      toast.error('Please select at least one person');
+      return;
+    }
+
+    if (!filters.eventId || filters.eventId === 'all') {
+      toast.error('Please select an event first');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/events/${filters.eventId}/people`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          personIds: Array.from(selectedPeople),
+          action: 'remove'
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to remove people from event');
+      }
+
+      toast.success('Successfully removed people from event');
+      setSelectedPeople(new Set());
+      fetchPeople();
+    } catch (error) {
+      console.error('Removal error:', error);
+      toast.error(error.message || 'Failed to remove people from event');
+    }
+  };
+
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <input
-          type="text"
-          placeholder="Search by name, email, or ID..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="px-4 py-2 border rounded-lg max-w-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+    <div className="space-y-6">
+      <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Filter People</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Event
+            </label>
+            <Select
+              value={filters.eventId}
+              onValueChange={(value) => handleFilterChange('eventId', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select event" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Events</SelectItem>
+                {events.map(event => (
+                  <SelectItem key={event.event_id} value={event.event_id.toString()}>
+                    {event.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              First Name
+            </label>
+            <Input
+              type="text"
+              value={filters.firstName}
+              onChange={(e) => handleFilterChange('firstName', e.target.value)}
+              placeholder="Filter by first name..."
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Last Name
+            </label>
+            <Input
+              type="text"
+              value={filters.lastName}
+              onChange={(e) => handleFilterChange('lastName', e.target.value)}
+              placeholder="Filter by last name..."
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Email
+            </label>
+            <Input
+              type="text"
+              value={filters.email}
+              onChange={(e) => handleFilterChange('email', e.target.value)}
+              placeholder="Filter by email..."
+            />
+          </div>
+        </div>
+
+        {selectedPeople.size > 0 && (
+          <div className="mt-4 flex items-center gap-4">
+            <span className="text-sm text-gray-500">
+              {selectedPeople.size} people selected
+            </span>
+            {filters.eventId === 'all' ? (
+              <Select
+                onValueChange={handleAssignToEvent}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Assign to event..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {events.map(event => (
+                    <SelectItem key={event.event_id} value={event.event_id.toString()}>
+                      {event.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleRemoveFromEvent}
+                className="flex items-center gap-2"
+              >
+                <UserMinus className="h-4 w-4" />
+                Remove from Event
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-[50px]">
+              <Checkbox
+                checked={selectedPeople.size === people.length && people.length > 0}
+                onCheckedChange={handleSelectAll}
+              />
+            </TableHead>
             <TableHead>First Name</TableHead>
             <TableHead>Last Name</TableHead>
             <TableHead>Email</TableHead>
@@ -131,7 +352,16 @@ export default function PeopleTable() {
         </TableHeader>
         <TableBody>
           {people.map((person) => (
-            <TableRow key={person.person_id}>
+            <TableRow 
+              key={person.person_id}
+              className={person.is_in_event ? 'bg-blue-50' : ''}
+            >
+              <TableCell>
+                <Checkbox
+                  checked={selectedPeople.has(person.person_id)}
+                  onCheckedChange={() => handleSelectPerson(person.person_id)}
+                />
+              </TableCell>
               <TableCell>{person.first_name}</TableCell>
               <TableCell>{person.last_name}</TableCell>
               <TableCell>{person.email}</TableCell>

@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { useDebounce } from 'use-debounce';
 
-export default function PeopleList({ onPersonSelect, selectedPerson }) {
+export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) {
   const [people, setPeople] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
@@ -15,7 +15,7 @@ export default function PeopleList({ onPersonSelect, selectedPerson }) {
     const fetchPeople = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch('/api/accommodation/people');
+        const response = await fetch(`/api/events/${eventId}/people`);
         if (!response.ok) {
           throw new Error('Failed to fetch people');
         }
@@ -28,8 +28,10 @@ export default function PeopleList({ onPersonSelect, selectedPerson }) {
       }
     };
 
-    fetchPeople();
-  }, []);
+    if (eventId) {
+      fetchPeople();
+    }
+  }, [eventId]);
 
   const filteredPeople = people.filter(person => {
     const searchLower = debouncedSearchTerm.toLowerCase();
@@ -40,6 +42,18 @@ export default function PeopleList({ onPersonSelect, selectedPerson }) {
       person.department?.toLowerCase().includes(searchLower)
     );
   });
+
+  if (isLoading) {
+    return <div className="text-center py-4">Loading people...</div>;
+  }
+
+  if (people.length === 0) {
+    return (
+      <div className="text-center py-4 text-gray-500">
+        No people assigned to this event. Please assign people to the event first.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

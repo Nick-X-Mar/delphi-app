@@ -144,6 +144,14 @@ CREATE TABLE IF NOT EXISTS event_hotels (
     PRIMARY KEY (event_id, hotel_id)
 );
 
+-- Create event_people table
+CREATE TABLE IF NOT EXISTS event_people (
+    event_id INTEGER NOT NULL REFERENCES events(event_id) ON DELETE CASCADE,
+    person_id INTEGER NOT NULL REFERENCES people(person_id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
+    PRIMARY KEY (event_id, person_id)
+);
+
 -- Create event_room_types table
 CREATE TABLE IF NOT EXISTS event_room_types (
     event_id INTEGER NOT NULL REFERENCES events(event_id) ON DELETE CASCADE,

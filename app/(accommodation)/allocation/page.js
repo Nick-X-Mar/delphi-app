@@ -7,14 +7,24 @@ import { CheckCircle2, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react'
 import PeopleList from '@/components/PeopleList';
 import AccommodationHotelList from '@/components/AccommodationHotelList';
 import AccommodationConfirmation from '@/components/AccommodationConfirmation';
+import EventSelector from '@/components/EventSelector';
 import { toast } from 'sonner';
 
 export default function Allocation() {
+  const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [roomSelection, setRoomSelection] = useState(null);
   const [expandedStep, setExpandedStep] = useState(1);
   const [bookingResult, setBookingResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const handleEventChange = (eventId) => {
+    setSelectedEvent(eventId);
+    setSelectedPerson(null);
+    setRoomSelection(null);
+    setBookingResult(null);
+    setExpandedStep(1);
+  };
 
   const handleRoomSelection = (selection) => {
     setRoomSelection(selection);
@@ -22,6 +32,11 @@ export default function Allocation() {
   };
 
   const handleConfirm = async ({ isPayable }) => {
+    if (!selectedEvent) {
+      toast.error('Please select an event first');
+      return;
+    }
+
     setIsLoading(true);
     try {
       // Format dates to YYYY-MM-DD in local timezone
@@ -45,7 +60,7 @@ export default function Allocation() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          eventId: 1, // TODO: Get this from context/props
+          eventId: selectedEvent,
           personId: selectedPerson.person_id,
           roomTypeId: roomSelection.roomType.room_type_id,
           checkInDate: formatDate(checkIn),
@@ -104,14 +119,22 @@ export default function Allocation() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">Accommodation Allocation</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Accommodation Allocation</h1>
+        <div className="w-[300px]">
+          <EventSelector
+            value={selectedEvent}
+            onChange={handleEventChange}
+          />
+        </div>
+      </div>
       
       <div className="space-y-4">
         {/* Step 1: Select Person */}
-        <Card>
+        <Card className={!selectedEvent ? 'opacity-50' : ''}>
           <CardHeader 
-            className="cursor-pointer hover:bg-gray-50"
-            onClick={() => toggleStep(1)}
+            className={`${selectedEvent ? 'cursor-pointer hover:bg-gray-50' : ''}`}
+            onClick={() => selectedEvent && toggleStep(1)}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -139,9 +162,10 @@ export default function Allocation() {
               )}
             </div>
           </CardHeader>
-          {expandedStep === 1 && (
+          {expandedStep === 1 && selectedEvent && (
             <CardContent>
               <PeopleList 
+                eventId={selectedEvent}
                 onPersonSelect={(person) => {
                   setSelectedPerson(person);
                   setExpandedStep(2);
@@ -187,6 +211,7 @@ export default function Allocation() {
           {expandedStep === 2 && selectedPerson && (
             <CardContent>
               <AccommodationHotelList 
+                eventId={selectedEvent}
                 personId={selectedPerson.person_id}
                 onRoomSelection={handleRoomSelection}
               />
@@ -250,37 +275,33 @@ export default function Allocation() {
               <CardContent>
                 {bookingResult.success ? (
                   <div className="space-y-4">
-                    <div className="rounded-lg bg-green-50 p-4">
-                      <p className="text-green-800">
-                        Successfully allocated {selectedPerson.first_name} {selectedPerson.last_name} to{' '}
-                        {bookingResult.booking.hotel_name} - {bookingResult.booking.room_type_name}
+                    <div className="rounded-lg bg-green-50 p-4 text-green-700">
+                      <h3 className="font-medium">Booking Confirmed</h3>
+                      <p className="mt-1 text-sm">
+                        Successfully booked room for {selectedPerson.first_name} {selectedPerson.last_name}
                       </p>
-                      <p className="text-sm text-green-600 mt-2">
-                        Booking ID: {bookingResult.booking.booking_id}
-                      </p>
-                      <p className="text-sm text-green-600">
-                        Status: {bookingResult.booking.status}
+                      <p className="mt-2 text-sm">
+                        Hotel: {bookingResult.booking.hotel_name}<br />
+                        Room Type: {bookingResult.booking.room_type_name}<br />
+                        Total Cost: €{bookingResult.booking.total_cost}
                       </p>
                     </div>
-                    <div className="flex justify-end gap-4">
-                      <Button onClick={handleReset}>
-                        Allocate Another Person
-                      </Button>
-                    </div>
+                    <Button onClick={handleReset}>
+                      Make Another Booking
+                    </Button>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div className="rounded-lg bg-red-50 p-4">
-                      <p className="text-red-800">
-                        Failed to create booking: {bookingResult.error}
-                      </p>
+                    <div className="rounded-lg bg-red-50 p-4 text-red-700">
+                      <h3 className="font-medium">Booking Failed</h3>
+                      <p className="mt-1 text-sm">{bookingResult.error}</p>
                     </div>
-                    <div className="flex justify-end gap-4">
-                      <Button variant="outline" onClick={handleCancel}>
-                        Try Again
-                      </Button>
-                      <Button onClick={handleReset}>
+                    <div className="flex gap-4">
+                      <Button onClick={handleReset} variant="outline">
                         Start Over
+                      </Button>
+                      <Button onClick={() => setExpandedStep(3)} variant="default">
+                        Try Again
                       </Button>
                     </div>
                   </div>

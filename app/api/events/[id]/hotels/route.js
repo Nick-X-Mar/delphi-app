@@ -6,7 +6,36 @@ export async function GET(request, { params }) {
   try {
     const eventId = await params.id;
     const query = `
-      SELECT h.*
+      WITH date_range AS (
+        SELECT generate_series(
+          (SELECT accommodation_start_date FROM events WHERE event_id = $1),
+          (SELECT accommodation_end_date FROM events WHERE event_id = $1),
+          '1 day'::interval
+        )::date AS date
+      )
+      SELECT h.*,
+        (
+          SELECT json_agg(room_type_info)
+          FROM (
+            SELECT 
+              rt.*,
+              (
+                SELECT json_agg(availability_info)
+                FROM (
+                  SELECT 
+                    dr.date,
+                    COALESCE(ra.available_rooms, rt.total_rooms) as available_rooms,
+                    COALESCE(ra.price_per_night, rt.base_price_per_night) as price_per_night
+                  FROM date_range dr
+                  LEFT JOIN room_availability ra ON ra.room_type_id = rt.room_type_id 
+                    AND ra.date = dr.date
+                  ORDER BY dr.date
+                ) availability_info
+              ) as availability
+            FROM room_types rt
+            WHERE rt.hotel_id = h.hotel_id
+          ) room_type_info
+        ) as room_types
       FROM hotels h
       INNER JOIN event_hotels eh ON h.hotel_id = eh.hotel_id
       WHERE eh.event_id = $1

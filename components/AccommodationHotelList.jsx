@@ -10,12 +10,12 @@ import {
   TableRow,
   TableCell
 } from '@/components/ui/table';
-import { StarIcon, StarOutline } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function AccommodationHotelList({ personId, onRoomSelection }) {
+export default function AccommodationHotelList({ eventId, personId, onRoomSelection }) {
   const [hotels, setHotels] = useState([]);
-  const [activeEvent, setActiveEvent] = useState(null);
+  const [event, setEvent] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [dates, setDates] = useState([]);
   const [selection, setSelection] = useState({
@@ -24,15 +24,29 @@ export default function AccommodationHotelList({ personId, onRoomSelection }) {
   });
 
   useEffect(() => {
-    fetchActiveEvent();
-  }, []);
+    const fetchEvent = async () => {
+      try {
+        const res = await fetch(`/api/events/${eventId}`);
+        if (!res.ok) throw new Error('Failed to fetch event');
+        const data = await res.json();
+        setEvent(data);
+      } catch (error) {
+        console.error('Error fetching event:', error);
+        toast.error('Failed to load event');
+      }
+    };
+
+    if (eventId) {
+      fetchEvent();
+    }
+  }, [eventId]);
 
   useEffect(() => {
-    if (activeEvent) {
+    if (event) {
       fetchHotelsWithAvailability();
       generateDateRange();
     }
-  }, [activeEvent]);
+  }, [event]);
 
   // When we have two dates selected, validate and notify
   useEffect(() => {
@@ -42,8 +56,8 @@ export default function AccommodationHotelList({ personId, onRoomSelection }) {
   }, [selection.dates]);
 
   const generateDateRange = () => {
-    const start = new Date(activeEvent.accommodation_start_date);
-    const end = new Date(activeEvent.accommodation_end_date);
+    const start = new Date(event.accommodation_start_date);
+    const end = new Date(event.accommodation_end_date);
     const dateArray = [];
     let currentDate = start;
 
@@ -157,21 +171,9 @@ export default function AccommodationHotelList({ personId, onRoomSelection }) {
     return date >= start && date <= end;
   };
 
-  const fetchActiveEvent = async () => {
-    try {
-      const res = await fetch('/api/events/active');
-      if (!res.ok) throw new Error('Failed to fetch active event');
-      const data = await res.json();
-      setActiveEvent(data);
-    } catch (error) {
-      console.error('Error fetching active event:', error);
-      toast.error('Failed to load active event');
-    }
-  };
-
   const fetchHotelsWithAvailability = async () => {
     try {
-      const res = await fetch(`/api/hotels/availability?startDate=${activeEvent.accommodation_start_date}&endDate=${activeEvent.accommodation_end_date}`);
+      const res = await fetch(`/api/events/${eventId}/hotels`);
       if (!res.ok) throw new Error('Failed to fetch hotels');
       const data = await res.json();
       // Ensure data is an array
@@ -193,7 +195,7 @@ export default function AccommodationHotelList({ personId, onRoomSelection }) {
     // Add full stars
     for (let i = 0; i < fullStars; i++) {
       stars.push(
-        <StarIcon key={`full-${i}`} className="h-4 w-4 text-yellow-400 fill-current" />
+        <Star key={`full-${i}`} className="h-4 w-4 text-yellow-400 fill-current" />
       );
     }
 
@@ -201,9 +203,9 @@ export default function AccommodationHotelList({ personId, onRoomSelection }) {
     if (hasHalfStar) {
       stars.push(
         <div key="half" className="relative" style={{ width: '1rem', height: '1rem' }}>
-          <StarOutline className="absolute h-4 w-4 text-yellow-400" />
+          <Star className="absolute h-4 w-4 text-yellow-400" />
           <div className="absolute overflow-hidden" style={{ width: '50%' }}>
-            <StarIcon className="h-4 w-4 text-yellow-400 fill-current" />
+            <Star className="h-4 w-4 text-yellow-400 fill-current" />
           </div>
         </div>
       );
@@ -213,7 +215,7 @@ export default function AccommodationHotelList({ personId, onRoomSelection }) {
     const remainingStars = 5 - Math.ceil(count);
     for (let i = 0; i < remainingStars; i++) {
       stars.push(
-        <StarOutline key={`empty-${i}`} className="h-4 w-4 text-gray-300" />
+        <Star key={`empty-${i}`} className="h-4 w-4 text-gray-300" />
       );
     }
 
@@ -232,16 +234,24 @@ export default function AccommodationHotelList({ personId, onRoomSelection }) {
     return <div className="text-center py-4">Loading hotels...</div>;
   }
 
-  if (!activeEvent) {
-    return <div className="text-center py-4">No active event found</div>;
+  if (!event) {
+    return <div className="text-center py-4">No event found</div>;
+  }
+
+  if (hotels.length === 0) {
+    return (
+      <div className="text-center py-4 text-gray-500">
+        No hotels assigned to this event. Please assign hotels to the event first.
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
       <div className="bg-blue-50 p-4 rounded-lg">
-        <h3 className="font-medium">Active Event: {activeEvent.name}</h3>
+        <h3 className="font-medium">Event: {event.name}</h3>
         <p className="text-sm text-gray-600">
-          Accommodation Period: {new Date(activeEvent.accommodation_start_date).toLocaleDateString()} - {new Date(activeEvent.accommodation_end_date).toLocaleDateString()}
+          Accommodation Period: {new Date(event.accommodation_start_date).toLocaleDateString()} - {new Date(event.accommodation_end_date).toLocaleDateString()}
         </p>
         {selection.roomTypeId && (
           <p className="text-sm text-blue-600 mt-2">
