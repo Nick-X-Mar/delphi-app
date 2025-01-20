@@ -51,16 +51,41 @@ export async function POST(request, { params }) {
             }, { status: 400 });
         }
 
-        const query = `
-      INSERT INTO room_types (hotel_id, name, description, total_rooms, base_price_per_night)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING *
-    `;
+        // 1. Create the room type
+        const createRoomTypeQuery = `
+            INSERT INTO room_types (hotel_id, name, description, total_rooms, base_price_per_night)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING *
+        `;
+        const roomTypeValues = [hotelId, name, description, parseInt(total_rooms), formattedBasePrice];
+        const roomTypeResult = await pool.query(createRoomTypeQuery, roomTypeValues);
+        const newRoomType = roomTypeResult.rows[0];
 
-        const values = [hotelId, name, description, parseInt(total_rooms), formattedBasePrice];
+        // 2. Get the event ID for this hotel
+        const getEventQuery = `
+            SELECT e.event_id 
+            FROM events e
+            JOIN event_hotels eh ON e.event_id = eh.event_id
+            WHERE eh.hotel_id = $1
+            ORDER BY e.start_date DESC
+            LIMIT 1
+        `;
+        const eventResult = await pool.query(getEventQuery, [hotelId]);
+        
+        if (eventResult.rows.length === 0) {
+            return NextResponse.json({ error: 'No event found for this hotel' }, { status: 404 });
+        }
+        
+        const eventId = eventResult.rows[0].event_id;
 
-        const { rows } = await pool.query(query, values);
-        return NextResponse.json(rows[0]);
+        // 3. Create the event_room_types association
+        const createAssociationQuery = `
+            INSERT INTO event_room_types (event_id, hotel_id, room_type_id)
+            VALUES ($1, $2, $3)
+        `;
+        await pool.query(createAssociationQuery, [eventId, hotelId, newRoomType.room_type_id]);
+
+        return NextResponse.json(newRoomType);
     } catch (error) {
         console.error('Creation error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });

@@ -14,22 +14,22 @@ export default function EditRoomTypePage() {
   const hotelId = params.hotelId;
   const roomTypeId = params.roomTypeId;
   const [roomType, setRoomType] = useState(null);
-  const [activeEvent, setActiveEvent] = useState(null);
+  const [eventDates, setEventDates] = useState(null);
 
   useEffect(() => {
     fetchRoomType();
-    fetchActiveEvent();
+    fetchEventDates();
   }, []);
 
-  const fetchActiveEvent = async () => {
+  const fetchEventDates = async () => {
     try {
-      const res = await fetch('/api/events/active');
-      if (!res.ok) throw new Error('Failed to fetch active event');
+      const res = await fetch(`/api/hotels/${hotelId}/room-types/${roomTypeId}/event-dates`);
+      if (!res.ok) throw new Error('Failed to fetch event dates');
       const data = await res.json();
-      setActiveEvent(data);
+      setEventDates(data);
     } catch (error) {
-      console.error('Error fetching active event:', error);
-      toast.error('Failed to load active event');
+      console.error('Error fetching event dates:', error);
+      toast.error('Failed to load event dates');
     }
   };
 
@@ -87,21 +87,21 @@ export default function EditRoomTypePage() {
         <Card>
           <CardHeader>
             <CardTitle>Availability & Pricing</CardTitle>
-            {activeEvent && (
+            {eventDates && (
               <p className="text-sm text-gray-600">
-                Event Period: {new Date(activeEvent.accommodation_start_date).toLocaleDateString()} - {new Date(activeEvent.accommodation_end_date).toLocaleDateString()}
+                Event Period: {new Date(eventDates.accommodation_start_date).toLocaleDateString()} - {new Date(eventDates.accommodation_end_date).toLocaleDateString()}
               </p>
             )}
           </CardHeader>
           <CardContent>
-            {activeEvent ? (
+            {eventDates ? (
               <RoomAvailabilityCalendar
                 hotelId={hotelId}
                 roomTypeId={roomTypeId}
                 basePrice={roomType.base_price_per_night}
                 totalRooms={roomType.total_rooms}
-                eventStartDate={activeEvent.accommodation_start_date}
-                eventEndDate={activeEvent.accommodation_end_date}
+                eventStartDate={eventDates.accommodation_start_date}
+                eventEndDate={eventDates.accommodation_end_date}
               />
             ) : (
               <p className="text-center text-gray-600">Loading event dates...</p>
