@@ -9,13 +9,21 @@ CREATE TABLE IF NOT EXISTS people (
 -- Create the people_details table (managed by our system)
 CREATE TABLE IF NOT EXISTS people_details (
     person_id INTEGER PRIMARY KEY REFERENCES people(person_id),
-    department VARCHAR(100),
-    position VARCHAR(100),
+    company VARCHAR(100),
+    job_title VARCHAR(100),
     checkin_date DATE,
     checkout_date DATE,
+    room_size INTEGER CHECK (room_size > 0),
+    group_id VARCHAR(100),
     notes TEXT,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
     FOREIGN KEY (person_id) REFERENCES people(person_id) ON DELETE CASCADE
+);
+
+-- Create stay_together table to manage room sharing preferences
+CREATE TABLE IF NOT EXISTS stay_together (
+    group_id SERIAL PRIMARY KEY,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')
 );
 
 -- Create hotels table (managed by our system)
@@ -72,12 +80,7 @@ CREATE TABLE IF NOT EXISTS room_availability
     date date NOT NULL,
     available_rooms integer NOT NULL,
     price_per_night numeric(10,2) NOT NULL,
-    event_id integer NOT NULL,
-    CONSTRAINT room_availability_pkey PRIMARY KEY (room_type_id, date, event_id),
-    CONSTRAINT fk_event_id FOREIGN KEY (event_id)
-        REFERENCES events (event_id) MATCH SIMPLE
-        ON UPDATE NO ACTION
-        ON DELETE CASCADE,
+    CONSTRAINT room_availability_pkey PRIMARY KEY (room_type_id, date),
     CONSTRAINT room_availability_room_type_id_fkey FOREIGN KEY (room_type_id)
         REFERENCES room_types (room_type_id) MATCH SIMPLE
         ON UPDATE NO ACTION
@@ -269,3 +272,8 @@ BEGIN
     );
 END;
 $$ language 'plpgsql';
+
+-- Modify group_id column in people_details
+ALTER TABLE people_details 
+  DROP COLUMN IF EXISTS group_id,
+  ADD COLUMN group_id VARCHAR(100);

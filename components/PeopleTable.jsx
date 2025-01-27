@@ -24,6 +24,7 @@ export default function PeopleTable() {
   const [people, setPeople] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [events, setEvents] = useState([]);
+  const [groupColors, setGroupColors] = useState({});
   const [filters, setFilters] = useState({
     eventId: 'all',
     firstName: '',
@@ -35,8 +36,9 @@ export default function PeopleTable() {
   const [showModal, setShowModal] = useState(false);
   const [editPerson, setEditPerson] = useState(null);
   const [formData, setFormData] = useState({
-    department: '',
-    position: '',
+    company: '',
+    job_title: '',
+    room_size: '',
     checkin_date: '',
     checkout_date: '',
     notes: ''
@@ -105,8 +107,9 @@ export default function PeopleTable() {
   const handleEdit = (person) => {
     setEditPerson(person);
     setFormData({
-      department: person.department || '',
-      position: person.position || '',
+      company: person.company || '',
+      job_title: person.job_title || '',
+      room_size: person.room_size || '',
       checkin_date: person.checkin_date ? format(parseISO(person.checkin_date), 'yyyy-MM-dd') : '',
       checkout_date: person.checkout_date ? format(parseISO(person.checkout_date), 'yyyy-MM-dd') : '',
       notes: person.notes || ''
@@ -235,6 +238,24 @@ export default function PeopleTable() {
     }
   };
 
+  const getGroupColor = (groupId) => {
+    if (!groupId) return '';
+    if (!groupColors[groupId]) {
+      const colors = [
+        'bg-blue-100 text-blue-800',
+        'bg-green-100 text-green-800',
+        'bg-purple-100 text-purple-800',
+        'bg-yellow-100 text-yellow-800',
+        'bg-pink-100 text-pink-800',
+        'bg-indigo-100 text-indigo-800',
+      ];
+      const colorIndex = Object.keys(groupColors).length % colors.length;
+      setGroupColors(prev => ({ ...prev, [groupId]: colors[colorIndex] }));
+      return colors[colorIndex];
+    }
+    return groupColors[groupId];
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow-sm border">
@@ -343,8 +364,10 @@ export default function PeopleTable() {
             <TableHead>First Name</TableHead>
             <TableHead>Last Name</TableHead>
             <TableHead>Email</TableHead>
-            <TableHead>Department</TableHead>
-            <TableHead>Position</TableHead>
+            <TableHead>Company</TableHead>
+            <TableHead>Job Title</TableHead>
+            <TableHead>Room Size</TableHead>
+            <TableHead>Stay Together</TableHead>
             <TableHead>Checkin</TableHead>
             <TableHead>Checkout</TableHead>
             <TableHead className="text-right">Actions</TableHead>
@@ -365,8 +388,16 @@ export default function PeopleTable() {
               <TableCell>{person.first_name}</TableCell>
               <TableCell>{person.last_name}</TableCell>
               <TableCell>{person.email}</TableCell>
-              <TableCell>{person.department}</TableCell>
-              <TableCell>{person.position}</TableCell>
+              <TableCell>{person.company}</TableCell>
+              <TableCell>{person.job_title}</TableCell>
+              <TableCell>{person.room_size}</TableCell>
+              <TableCell>
+                {person.group_id ? (
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${getGroupColor(person.group_id)}`}>
+                    {person.group_id}
+                  </span>
+                ) : '-'}
+              </TableCell>
               <TableCell>
                 {person.checkin_date && new Date(person.checkin_date).toLocaleDateString()}
               </TableCell>

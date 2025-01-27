@@ -145,8 +145,8 @@ GET /people-details/{id}
 ```json
 {
   "person_id": 1,
-  "department": "Engineering",
-  "position": "Software Engineer",
+  "company": "Engineering",
+  "job_title": "Software Engineer",
   "start_date": "2023-01-01",
   "notes": "Full stack developer",
   "updated_at": "2023-12-25T10:30:00Z",
@@ -166,16 +166,16 @@ PUT /people-details/{id}
 **Request Body:**
 ```json
 {
-  "department": "Engineering",
-  "position": "Software Engineer",
+  "company": "Engineering",
+  "job_title": "Software Engineer",
   "start_date": "2023-01-01",
   "notes": "Full stack developer"
 }
 ```
 
 **Fields:**
-- `department` (optional)
-- `position` (optional)
+- `company` (optional)
+- `job_title` (optional)
 - `start_date` (optional): ISO date format (YYYY-MM-DD)
 - `notes` (optional)
 
@@ -183,8 +183,8 @@ PUT /people-details/{id}
 ```json
 {
   "person_id": 1,
-  "department": "Engineering",
-  "position": "Software Engineer",
+  "company": "Engineering",
+  "job_title": "Software Engineer",
   "start_date": "2023-01-01",
   "notes": "Full stack developer",
   "updated_at": "2023-12-25T10:30:00Z"

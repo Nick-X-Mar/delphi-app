@@ -36,8 +36,8 @@ export default function AccommodationConfirmation({
           <div className="grid grid-cols-2 gap-4">
             <p>Name: {person.first_name} {person.last_name}</p>
             <p>Email: {person.email}</p>
-            <p>Department: {person.department}</p>
-            <p>Position: {person.position}</p>
+            <p>Company: {person.company}</p>
+            <p>Job Title: {person.job_title}</p>
           </div>
         </div>
 
