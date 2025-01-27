@@ -1,14 +1,26 @@
 -- Create people table (managed by external system)
 CREATE TABLE IF NOT EXISTS people (
     person_id INTEGER PRIMARY KEY,
-    first_name VARCHAR(255) NOT NULL,
-    last_name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL UNIQUE
+    salutation VARCHAR(10) CHECK (salutation IN ('Mr.', 'Ms.', 'Mx.', 'Prof.', 'Doc.', 'Amb.')),
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    nationality VARCHAR(50),
+    mobile_phone VARCHAR(15),
+    email VARCHAR(100),
+    room_type VARCHAR(10) CHECK (room_type IN ('single', 'double')),
+    full_name VARCHAR(200),
+    companion_email VARCHAR(100),
+    check_in DATE,
+    check_out DATE,
+    comments TEXT,
+    app_synced BOOLEAN,
+    app_synced_date DATE,
+    guest_type VARCHAR(10) CHECK (guest_type IN ('speaker', 'press', 'guest'))
 );
 
 -- Create the people_details table (managed by our system)
 CREATE TABLE IF NOT EXISTS people_details (
-    person_id INTEGER PRIMARY KEY REFERENCES people(person_id),
+    person_id INTEGER PRIMARY KEY,
     company VARCHAR(100),
     job_title VARCHAR(100),
     checkin_date DATE,
@@ -18,12 +30,6 @@ CREATE TABLE IF NOT EXISTS people_details (
     notes TEXT,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
     FOREIGN KEY (person_id) REFERENCES people(person_id) ON DELETE CASCADE
-);
-
--- Create stay_together table to manage room sharing preferences
-CREATE TABLE IF NOT EXISTS stay_together (
-    group_id SERIAL PRIMARY KEY,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')
 );
 
 -- Create hotels table (managed by our system)

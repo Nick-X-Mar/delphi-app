@@ -14,6 +14,7 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
   const [isNewGroup, setIsNewGroup] = useState(false);
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState('');
+  const [isSourceExpanded, setIsSourceExpanded] = useState(false);
 
   // Initialize formData with person's group_id when component mounts
   useEffect(() => {
@@ -130,40 +131,175 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Source fields in first row */}
+      {/* Source fields section */}
       <div className="bg-gray-50/80 p-6 rounded-xl border border-gray-100 shadow-sm">
-        <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">Source Information</h3>
-        <div className="grid grid-cols-3 gap-6">
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-gray-700">First Name</Label>
-            <input 
-              type="text"
-              value={person?.first_name || ''} 
-              disabled
-              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
-            />
-          </div>
+        <button
+          type="button"
+          onClick={() => setIsSourceExpanded(!isSourceExpanded)}
+          className="w-full flex items-center justify-between text-left"
+        >
+          <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Source Information</h3>
+          <ChevronsUpDown 
+            className={cn(
+              "h-4 w-4 text-gray-500 transition-transform duration-200",
+              isSourceExpanded ? "transform rotate-180" : ""
+            )}
+          />
+        </button>
+        
+        {isSourceExpanded && (
+          <div className="grid grid-cols-3 gap-6 mt-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Salutation</Label>
+              <input 
+                type="text"
+                value={person?.salutation || ''} 
+                disabled
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-gray-700">Last Name</Label>
-            <input 
-              type="text"
-              value={person?.last_name || ''} 
-              disabled
-              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
-            />
-          </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">First Name</Label>
+              <input 
+                type="text"
+                value={person?.first_name || ''} 
+                disabled
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-gray-700">Email</Label>
-            <input 
-              type="email"
-              value={person?.email || ''} 
-              disabled
-              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
-            />
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Last Name</Label>
+              <input 
+                type="text"
+                value={person?.last_name || ''} 
+                disabled
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Full Name</Label>
+              <input 
+                type="text"
+                value={person?.full_name || ''} 
+                disabled
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Email</Label>
+              <input 
+                type="email"
+                value={person?.email || ''} 
+                disabled
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Nationality</Label>
+              <input 
+                type="text"
+                value={person?.nationality || ''} 
+                disabled
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Mobile Phone</Label>
+              <input 
+                type="text"
+                value={person?.mobile_phone || ''} 
+                disabled
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Room Type</Label>
+              <input 
+                type="text"
+                value={person?.room_type || ''} 
+                disabled
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Guest Type</Label>
+              <input 
+                type="text"
+                value={person?.guest_type || ''} 
+                disabled
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Companion Email</Label>
+              <input 
+                type="email"
+                value={person?.companion_email || ''} 
+                disabled
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Check In</Label>
+              <input 
+                type="date"
+                value={person?.check_in || ''} 
+                disabled
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Check Out</Label>
+              <input 
+                type="date"
+                value={person?.check_out || ''} 
+                disabled
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+              />
+            </div>
+
+            <div className="col-span-3 space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Comments</Label>
+              <textarea 
+                value={person?.comments || ''} 
+                disabled
+                rows={3}
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">App Synced</Label>
+              <input 
+                type="text"
+                value={person?.app_synced ? 'Yes' : 'No'} 
+                disabled
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">App Synced Date</Label>
+              <input 
+                type="date"
+                value={person?.app_synced_date || ''} 
+                disabled
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Custom fields section */}
