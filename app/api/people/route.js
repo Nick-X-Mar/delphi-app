@@ -11,20 +11,36 @@ export async function GET(request) {
     const lastName = searchParams.get('lastName') || '';
     const email = searchParams.get('email') || '';
     const eventId = searchParams.get('eventId') || '';
+    const category = searchParams.get('category') || '';
     const offset = (page - 1) * limit;
 
     // Base query
     let query = `
       SELECT DISTINCT
         p.person_id,
+        p.salutation,
         p.first_name,
         p.last_name,
+        p.nationality,
+        p.mobile_phone,
         p.email,
-        pd.department,
-        pd.position,
-        pd.checkin_date,
-        pd.checkout_date,
+        p.room_type,
+        p.full_name,
+        p.companion_email,
+        p.checkin_date,
+        p.checkout_date,
+        p.comments,
+        p.app_synced,
+        p.app_synced_date,
+        p.guest_type,
+        p.synced_at,
+        pd.company,
+        pd.job_title,
+        pd.room_size,
+        pd.group_id,
         pd.notes,
+        pd.category,
+        pd.updated_at,
         CASE 
           WHEN ep.event_id IS NOT NULL THEN true
           ELSE false
@@ -61,6 +77,12 @@ export async function GET(request) {
       paramCount++;
     }
 
+    if (category) {
+      conditions.push(`pd.category = $${paramCount}`);
+      queryParams.push(category);
+      paramCount++;
+    }
+
     if (eventId && eventId !== 'all') {
       conditions.push(`ep.event_id = CAST($1 AS INTEGER)`);
     }
@@ -70,7 +92,7 @@ export async function GET(request) {
     }
 
     // Add ORDER BY and pagination
-    query += ` ORDER BY p.last_name, p.first_name
+    query += ` ORDER BY pd.updated_at DESC NULLS LAST, p.synced_at DESC NULLS LAST, p.last_name, p.first_name
                LIMIT $${paramCount} 
                OFFSET $${paramCount + 1}`;
     queryParams.push(limit, offset);

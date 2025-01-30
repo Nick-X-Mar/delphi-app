@@ -125,7 +125,9 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
-            <TableHead>Department</TableHead>
+            <TableHead>Company</TableHead>
+            <TableHead>Room Size</TableHead>
+            <TableHead>Stay Together</TableHead>
             <TableHead>Current Booking</TableHead>
           </TableRow>
         </TableHeader>
@@ -142,7 +144,9 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
                 {person.first_name} {person.last_name}
               </TableCell>
               <TableCell>{person.email}</TableCell>
-              <TableCell>{person.department}</TableCell>
+              <TableCell>{person.company}</TableCell>
+              <TableCell>{person.room_size || '-'}</TableCell>
+              <TableCell>{person.group_id ? `Group ${person.group_id}` : '-'}</TableCell>
               <TableCell>
                 {person.booking_id ? (
                   <span className="text-sm">

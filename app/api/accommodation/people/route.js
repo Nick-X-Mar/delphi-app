@@ -9,11 +9,15 @@ export async function GET() {
         p.first_name,
         p.last_name,
         p.email,
-        pd.department,
-        pd.position,
-        pd.checkin_date,
-        pd.checkout_date,
+        p.checkin_date,
+        p.checkout_date,
+        p.synced_at,
+        pd.company,
+        pd.job_title,
+        pd.room_size,
+        pd.group_id,
         pd.notes,
+        pd.updated_at,
         b.booking_id,
         b.check_in_date as booking_check_in,
         b.check_out_date as booking_check_out,
@@ -25,7 +29,7 @@ export async function GET() {
       LEFT JOIN bookings b ON p.person_id = b.person_id
       LEFT JOIN room_types rt ON b.room_type_id = rt.room_type_id
       LEFT JOIN hotels h ON rt.hotel_id = h.hotel_id
-      ORDER BY p.last_name, p.first_name
+      ORDER BY p.synced_at DESC NULLS LAST, p.last_name, p.first_name
     `;
 
     const { rows } = await pool.query(query);
