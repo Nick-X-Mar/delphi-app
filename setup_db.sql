@@ -5,17 +5,18 @@ CREATE TABLE IF NOT EXISTS people (
     first_name VARCHAR(100),
     last_name VARCHAR(100),
     nationality VARCHAR(50),
-    mobile_phone VARCHAR(15),
+    mobile_phone VARCHAR(30),
     email VARCHAR(100),
     room_type VARCHAR(10) CHECK (room_type IN ('single', 'double')),
     full_name VARCHAR(200),
     companion_email VARCHAR(100),
-    check_in DATE,
-    check_out DATE,
+    checkin_date DATE,
+    checkout_date DATE,
     comments TEXT,
     app_synced BOOLEAN,
     app_synced_date DATE,
-    guest_type VARCHAR(10) CHECK (guest_type IN ('speaker', 'press', 'guest'))
+    guest_type VARCHAR(10) CHECK (guest_type IN ('speaker', 'press', 'guest')),
+    synced_at TIMESTAMP WITH TIME ZONE DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')
 );
 
 -- Create the people_details table (managed by our system)
@@ -23,11 +24,10 @@ CREATE TABLE IF NOT EXISTS people_details (
     person_id INTEGER PRIMARY KEY,
     company VARCHAR(100),
     job_title VARCHAR(100),
-    checkin_date DATE,
-    checkout_date DATE,
     room_size INTEGER CHECK (room_size > 0),
     group_id VARCHAR(100),
     notes TEXT,
+    category VARCHAR(10) CHECK (category IN ('VVIP', 'VIP', 'Regular', 'Other')) DEFAULT 'Regular',
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
     FOREIGN KEY (person_id) REFERENCES people(person_id) ON DELETE CASCADE
 );

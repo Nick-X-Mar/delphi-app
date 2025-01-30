@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Label } from "@radix-ui/react-label";
 
 export default function PeopleTable() {
   const [people, setPeople] = useState([]);
@@ -30,9 +31,10 @@ export default function PeopleTable() {
     firstName: '',
     lastName: '',
     email: '',
+    category: 'all'
   });
   const [selectedPeople, setSelectedPeople] = useState(new Set());
-  const [debouncedFilters] = useDebounce(filters, 300);
+  const [debouncedFilters] = useDebounce(filters, 500);
   const [showModal, setShowModal] = useState(false);
   const [editPerson, setEditPerson] = useState(null);
   const [formData, setFormData] = useState({
@@ -75,6 +77,7 @@ export default function PeopleTable() {
       if (debouncedFilters.firstName) params.append('firstName', debouncedFilters.firstName);
       if (debouncedFilters.lastName) params.append('lastName', debouncedFilters.lastName);
       if (debouncedFilters.email) params.append('email', debouncedFilters.email);
+      if (debouncedFilters.category && debouncedFilters.category !== 'all') params.append('category', debouncedFilters.category);
       
       const response = await fetch(`/api/people?${params.toString()}`);
       
@@ -110,9 +113,9 @@ export default function PeopleTable() {
       company: person.company || '',
       job_title: person.job_title || '',
       room_size: person.room_size || '',
-      checkin_date: person.checkin_date ? format(parseISO(person.checkin_date), 'yyyy-MM-dd') : '',
-      checkout_date: person.checkout_date ? format(parseISO(person.checkout_date), 'yyyy-MM-dd') : '',
-      notes: person.notes || ''
+      group_id: person.group_id || '',
+      notes: person.notes || '',
+      category: person.category || 'Regular'
     });
     setShowModal(true);
   };
@@ -259,61 +262,84 @@ export default function PeopleTable() {
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Filter People</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Event
-            </label>
-            <Select
-              value={filters.eventId}
-              onValueChange={(value) => handleFilterChange('eventId', value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select event" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Events</SelectItem>
-                {events.map(event => (
-                  <SelectItem key={event.event_id} value={event.event_id.toString()}>
-                    {event.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              First Name
-            </label>
-            <Input
-              type="text"
-              value={filters.firstName}
-              onChange={(e) => handleFilterChange('firstName', e.target.value)}
-              placeholder="Filter by first name..."
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Last Name
-            </label>
-            <Input
-              type="text"
-              value={filters.lastName}
-              onChange={(e) => handleFilterChange('lastName', e.target.value)}
-              placeholder="Filter by last name..."
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Email
-            </label>
-            <Input
-              type="text"
-              value={filters.email}
-              onChange={(e) => handleFilterChange('email', e.target.value)}
-              placeholder="Filter by email..."
-            />
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">Filter People</h2>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Event
+              </label>
+              <Select
+                value={filters.eventId}
+                onValueChange={(value) => handleFilterChange('eventId', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All Events" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Events</SelectItem>
+                  {events.map(event => (
+                    <SelectItem key={event.event_id} value={event.event_id.toString()}>
+                      {event.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                First Name
+              </label>
+              <Input
+                placeholder="Filter by first name..."
+                value={filters.firstName}
+                onChange={(e) => handleFilterChange('firstName', e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Last Name
+              </label>
+              <Input
+                placeholder="Filter by last name..."
+                value={filters.lastName}
+                onChange={(e) => handleFilterChange('lastName', e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Email
+              </label>
+              <Input
+                placeholder="Filter by email..."
+                value={filters.email}
+                onChange={(e) => handleFilterChange('email', e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Category
+              </label>
+              <Select
+                value={filters.category}
+                onValueChange={(value) => handleFilterChange('category', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="VVIP">VVIP</SelectItem>
+                  <SelectItem value="VIP">VIP</SelectItem>
+                  <SelectItem value="Regular">Regular</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
@@ -370,6 +396,8 @@ export default function PeopleTable() {
             <TableHead>Stay Together</TableHead>
             <TableHead>Checkin</TableHead>
             <TableHead>Checkout</TableHead>
+            <TableHead>Mobile Phone</TableHead>
+            <TableHead>Category</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -403,6 +431,12 @@ export default function PeopleTable() {
               </TableCell>
               <TableCell>
                 {person.checkout_date && new Date(person.checkout_date).toLocaleDateString()}
+              </TableCell>
+              <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                {person.mobile_phone}
+              </TableCell>
+              <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                {person.category || 'Regular'}
               </TableCell>
               <TableCell className="text-right">
                 <Button

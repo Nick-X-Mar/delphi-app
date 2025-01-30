@@ -16,15 +16,19 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
   const [submitError, setSubmitError] = useState('');
   const [isSourceExpanded, setIsSourceExpanded] = useState(false);
 
-  // Initialize formData with person's group_id when component mounts
+  // Initialize formData with person's data when component mounts
   useEffect(() => {
-    if (person?.group_id) {
-      setFormData(prev => ({
-        ...prev,
-        group_id: person.group_id
-      }));
+    if (person) {
+      setFormData({
+        company: person.company || '',
+        job_title: person.job_title || '',
+        room_size: person.room_size || '',
+        group_id: person.group_id || '',
+        notes: person.notes || '',
+        category: person.category || 'Regular'
+      });
     }
-  }, [person?.group_id]);
+  }, [person, setFormData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -45,12 +49,6 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
 
     // Validate required fields
     const newErrors = {};
-    if (!formData.checkin_date) {
-      newErrors.checkin_date = 'Check-in date is required';
-    }
-    if (!formData.checkout_date) {
-      newErrors.checkout_date = 'Check-out date is required';
-    }
     if (!formData.room_size) {
       newErrors.room_size = 'Room size is required';
     }
@@ -253,7 +251,7 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
               <Label className="text-sm font-medium text-gray-700">Check In</Label>
               <input 
                 type="date"
-                value={person?.check_in || ''} 
+                value={person?.checkin_date ? person.checkin_date.split('T')[0] : ''} 
                 disabled
                 className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
               />
@@ -263,7 +261,7 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
               <Label className="text-sm font-medium text-gray-700">Check Out</Label>
               <input 
                 type="date"
-                value={person?.check_out || ''} 
+                value={person?.checkout_date ? person.checkout_date.split('T')[0] : ''} 
                 disabled
                 className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
               />
@@ -293,7 +291,7 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
               <Label className="text-sm font-medium text-gray-700">App Synced Date</Label>
               <input 
                 type="date"
-                value={person?.app_synced_date || ''} 
+                value={person?.app_synced_date ? person.app_synced_date.split('T')[0] : ''} 
                 disabled
                 className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
               />
@@ -333,46 +331,6 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="checkin_date" className="text-sm font-medium text-gray-700">
-              Checkin Date <span className="text-red-500">*</span>
-            </Label>
-            <input
-              type="date"
-              id="checkin_date"
-              name="checkin_date"
-              value={formData.checkin_date || ''}
-              onChange={handleChange}
-              className={cn(
-                "w-full px-3 py-2 bg-white border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
-                errors.checkin_date ? "border-red-500" : "border-gray-200"
-              )}
-            />
-            {errors.checkin_date && (
-              <p className="text-sm text-red-500 mt-1">{errors.checkin_date}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="checkout_date" className="text-sm font-medium text-gray-700">
-              Checkout Date <span className="text-red-500">*</span>
-            </Label>
-            <input
-              type="date"
-              id="checkout_date"
-              name="checkout_date"
-              value={formData.checkout_date || ''}
-              onChange={handleChange}
-              className={cn(
-                "w-full px-3 py-2 bg-white border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
-                errors.checkout_date ? "border-red-500" : "border-gray-200"
-              )}
-            />
-            {errors.checkout_date && (
-              <p className="text-sm text-red-500 mt-1">{errors.checkout_date}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="room_size" className="text-sm font-medium text-gray-700">
               Room Size <span className="text-red-500">*</span>
             </Label>
@@ -391,6 +349,32 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
             {errors.room_size && (
               <p className="text-sm text-red-500 mt-1">{errors.room_size}</p>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-gray-700">Updated At</Label>
+            <input 
+              type="text"
+              value={person?.updated_at ? new Date(person.updated_at).toLocaleString() : 'Never'} 
+              disabled
+              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-gray-700">Category</Label>
+            <select
+              id="category"
+              name="category"
+              value={formData.category || 'Regular'}
+              onChange={handleChange}
+              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="VVIP">VVIP</option>
+              <option value="VIP">VIP</option>
+              <option value="Regular">Regular</option>
+              <option value="Other">Other</option>
+            </select>
           </div>
 
           {/* Stay Together Section - Simplified */}

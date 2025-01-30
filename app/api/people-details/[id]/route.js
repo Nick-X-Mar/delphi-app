@@ -25,7 +25,7 @@ export async function GET(request, { params }) {
 export async function PUT(request, { params }) {
   const { id } = await params;
   try {
-    const { company, job_title, room_size, checkin_date, checkout_date, notes, group_id } = await request.json();
+    const { company, job_title, room_size, notes, group_id, category } = await request.json();
 
     // Validate room_size if provided
     if (room_size !== undefined && room_size !== '' && isNaN(parseInt(room_size))) {
@@ -35,36 +35,67 @@ export async function PUT(request, { params }) {
       }, { status: 400 });
     }
 
-    const query = `
+    // Validate category if provided
+    const validCategories = ['VVIP', 'VIP', 'Regular', 'Other'];
+    if (category && !validCategories.includes(category)) {
+      return NextResponse.json({ 
+        error: 'Invalid category. Must be one of: VVIP, VIP, Regular, Other',
+        field: 'category'
+      }, { status: 400 });
+    }
+
+    // First try to update
+    const updateQuery = `
       UPDATE people_details 
       SET 
         company = $1,
         job_title = $2,
         room_size = $3,
-        checkin_date = $4,
-        checkout_date = $5,
-        notes = $6,
-        group_id = $7,
+        notes = $4,
+        group_id = $5,
+        category = COALESCE($6, 'Regular'),
         updated_at = CURRENT_TIMESTAMP
-      WHERE person_id = $8
+      WHERE person_id = $7
       RETURNING *
     `;
 
     const values = [
       company,
       job_title,
-      room_size === '' ? null : room_size, // Convert empty string to null
-      checkin_date || null,
-      checkout_date || null,
+      room_size === '' ? null : room_size,
       notes,
       group_id,
+      category || 'Regular',
       id
     ];
 
-    const result = await pool.query(query, values);
+    let result = await pool.query(updateQuery, values);
 
+    // If no row was updated, try to insert
     if (result.rows.length === 0) {
-      return NextResponse.json({ error: 'Person not found' }, { status: 404 });
+      const insertQuery = `
+        INSERT INTO people_details (
+          person_id,
+          company,
+          job_title,
+          room_size,
+          notes,
+          group_id,
+          category,
+          updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+        RETURNING *
+      `;
+
+      result = await pool.query(insertQuery, [
+        id,
+        company,
+        job_title,
+        room_size === '' ? null : room_size,
+        notes,
+        group_id,
+        category || 'Regular'
+      ]);
     }
 
     return NextResponse.json(result.rows[0]);
