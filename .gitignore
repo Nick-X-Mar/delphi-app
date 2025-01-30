@@ -44,11 +44,6 @@ next-env.d.ts
 .env.local
 .env.*.local
 
-# Ignore configuration files
-config/*.yml
-config/*.yaml
-config/*.json
-
 # Ignore private keys
 *.pem
 *.key

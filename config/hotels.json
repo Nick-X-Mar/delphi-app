@@ -1,0 +1,16 @@
+{
+  "categories": [
+    {
+      "value": "VIP",
+      "label": "VIP"
+    },
+    {
+      "value": "Very Good",
+      "label": "Very Good"
+    },
+    {
+      "value": "Good",
+      "label": "Good"
+    }
+  ]
+} 
