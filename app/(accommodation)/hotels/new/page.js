@@ -50,6 +50,10 @@ export default function NewHotelPage() {
         if (!response.ok) throw new Error('Failed to fetch events');
         const data = await response.json();
         setEvents(data);
+        // Automatically select the event if there's only one
+        if (data.length === 1) {
+          setSelectedEventId(data[0].event_id.toString());
+        }
       } catch (error) {
         console.error('Error fetching events:', error);
         toast.error('Failed to load events');
