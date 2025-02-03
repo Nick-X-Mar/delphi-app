@@ -33,6 +33,7 @@ export default function HotelDetailPage() {
   const [events, setEvents] = useState([]);
   const [selectedEventId, setSelectedEventId] = useState('');
   const [errors, setErrors] = useState({});
+  const [s3Debug, setS3Debug] = useState(null);
 
   useEffect(() => {
     fetchHotel();
@@ -245,6 +246,16 @@ export default function HotelDetailPage() {
       return;
     }
 
+    // Get S3 configuration for debugging
+    try {
+      const configResponse = await fetch('/api/hotels/s3-config');
+      const configData = await configResponse.json();
+      setS3Debug(configData);
+    } catch (error) {
+      console.error('Error fetching S3 config:', error);
+      setS3Debug({ error: error.message });
+    }
+
     // Store the file temporarily
     setTempFile(file);
     // Create a temporary URL for preview
@@ -296,6 +307,22 @@ export default function HotelDetailPage() {
     }
 
     return stars;
+  };
+
+  const renderS3DebugInfo = () => {
+    if (!s3Debug) return null;
+
+    return (
+      <div className="mt-4 p-4 bg-gray-50 rounded-lg text-sm">
+        <h4 className="font-medium text-gray-700 mb-2">S3 Configuration Debug Info:</h4>
+        <pre className="whitespace-pre-wrap bg-white p-2 rounded border">
+          {JSON.stringify({
+            environment: process.env.NODE_ENV,
+            ...s3Debug
+          }, null, 2)}
+        </pre>
+      </div>
+    );
   };
 
   if (isLoading) {
@@ -483,15 +510,18 @@ export default function HotelDetailPage() {
                         </Button>
                       </>
                     ) : (
-                      <div className="flex items-center">
-                        <Input
-                          type="file"
-                          accept=".pdf"
-                          onChange={handleFileChange}
-                          disabled={isUploadingFile}
-                          className="max-w-xs"
-                        />
-                        {isUploadingFile && <span className="ml-2">Uploading...</span>}
+                      <div className="flex flex-col w-full">
+                        <div className="flex items-center">
+                          <Input
+                            type="file"
+                            accept=".pdf"
+                            onChange={handleFileChange}
+                            disabled={isUploadingFile}
+                            className="max-w-xs"
+                          />
+                          {isUploadingFile && <span className="ml-2">Uploading...</span>}
+                        </div>
+                        {renderS3DebugInfo()}
                       </div>
                     )}
                   </div>
