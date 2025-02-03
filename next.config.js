@@ -6,8 +6,8 @@ const nextConfig = {
     DB_NAME: process.env.DB_NAME,
     DB_USER: process.env.DB_USER,
     DB_PASSWORD: process.env.DB_PASSWORD,
-    NEXT_PUBLIC_AWS_REGION: 'eu-central-1',
-    NEXT_PUBLIC_AWS_BUCKET_NAME: process.env.AWS_BUCKET_NAME
+    NEXT_PUBLIC_AWS_REGION: process.env.NEXT_PUBLIC_AWS_REGION || 'eu-central-1',
+    NEXT_PUBLIC_AWS_BUCKET_NAME: process.env.NEXT_PUBLIC_AWS_BUCKET_NAME
   }
 }
 
