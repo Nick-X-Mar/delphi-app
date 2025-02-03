@@ -1,4 +1,6 @@
 import { S3Client, ListBucketsCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { fromIni } from '@aws-sdk/credential-provider-ini';
+import path from 'path';
 
 export async function GET() {
   const isProd = process.env.NODE_ENV === 'production';
@@ -18,7 +20,16 @@ export async function GET() {
   
   try {
     const s3Client = new S3Client({
-      region: process.env.NEXT_PUBLIC_AWS_REGION || 'eu-central-1'
+      region: process.env.NEXT_PUBLIC_AWS_REGION || 'eu-central-1',
+      credentials: isProd 
+        ? {
+            roleArn: TERRAFORM_ROLE
+          }
+        : fromIni({
+            filepath: path.join(process.cwd(), '.aws', 'credentials'),
+            configFilepath: path.join(process.cwd(), '.aws', 'config'),
+            profile: 'delphi-role'
+          })
     });
     
     console.log('[S3 Config] Testing bucket access...');
