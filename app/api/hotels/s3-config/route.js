@@ -4,13 +4,15 @@ import path from 'path';
 
 export async function GET() {
   const isProd = process.env.NODE_ENV === 'production';
-  const TERRAFORM_ROLE = 'arn:aws:iam::529088278315:role/TerraformExecutionRole';
   const BUCKET_NAME = process.env.NEXT_PUBLIC_AWS_BUCKET_NAME;
+  const REGION = process.env.NEXT_PUBLIC_AWS_REGION || 'eu-central-1';
   
   console.log('[S3 Config] Starting S3 test...', {
+    environment: process.env.NODE_ENV,
     isProd,
-    role: TERRAFORM_ROLE,
-    bucket: BUCKET_NAME
+    bucket: BUCKET_NAME,
+    region: REGION,
+    usingAmplifyCredentials: isProd
   });
   
   // Test S3 access
@@ -20,11 +22,9 @@ export async function GET() {
   
   try {
     const s3Client = new S3Client({
-      region: process.env.NEXT_PUBLIC_AWS_REGION || 'eu-central-1',
+      region: REGION,
       credentials: isProd 
-        ? {
-            roleArn: TERRAFORM_ROLE
-          }
+        ? undefined // In production, let Amplify handle credentials automatically
         : fromIni({
             filepath: path.join(process.cwd(), '.aws', 'credentials'),
             configFilepath: path.join(process.cwd(), '.aws', 'config'),
@@ -62,7 +62,16 @@ export async function GET() {
     
     s3Status = 'Success - Can access S3 and list contents';
   } catch (error) {
-    console.error('[S3 Config] Error testing S3:', error);
+    console.error('[S3 Config] Error testing S3:', {
+      errorMessage: error.message,
+      errorCode: error.code,
+      errorName: error.name,
+      errorStack: error.stack,
+      bucket: BUCKET_NAME,
+      region: REGION,
+      isProd,
+      environment: process.env.NODE_ENV
+    });
     s3Status = `Error - ${error.message}`;
     s3Error = {
       code: error.code,
@@ -78,12 +87,11 @@ export async function GET() {
     isProd,
     
     // S3 Configuration
-    region: process.env.NEXT_PUBLIC_AWS_REGION,
+    region: REGION,
     bucketName: BUCKET_NAME,
     
     // Credentials info
-    credentialsMode: isProd ? 'Using TerraformExecutionRole via Amplify' : 'Using local AWS credentials',
-    roleArn: TERRAFORM_ROLE,
+    credentialsMode: isProd ? 'Using Amplify managed credentials' : 'Using local AWS credentials',
     
     // S3 Access Test
     s3AccessTest: s3Status,
@@ -92,8 +100,8 @@ export async function GET() {
     
     // Important note for debugging
     note: isProd 
-      ? 'In production, using TerraformExecutionRole through Amplify'
-      : 'In development, using TerraformExecutionRole through local credentials'
+      ? 'In production, using Amplify managed credentials'
+      : 'In development, using local AWS credentials'
   };
 
   console.log('[S3 Config] Final configuration:', config);
