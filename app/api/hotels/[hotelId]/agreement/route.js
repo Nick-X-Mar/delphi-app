@@ -3,6 +3,7 @@ import pool from '@/lib/db';
 import { uploadAgreement, getAgreementUrl, deleteAgreement } from '@/lib/s3';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { fromIni } from '@aws-sdk/credential-provider-ini';
+import { defaultProvider } from '@aws-sdk/credential-provider-node';
 import path from 'path';
 
 const isProd = process.env.NODE_ENV === 'production';
@@ -30,7 +31,10 @@ export async function POST(request, { params }) {
     isProd,
     bucket: BUCKET_NAME,
     region: REGION,
-    usingAmplifyCredentials: isProd
+    usingAmplifyCredentials: isProd,
+    availableEnvVars: Object.keys(process.env).filter(key => key.startsWith('AWS_')),
+    amplifyMeta: process.env.AWS_EXECUTION_ENV,
+    webCompute: process.env.AWS_WEB_COMPUTE === 'true'
   });
 
   try {
@@ -38,13 +42,31 @@ export async function POST(request, { params }) {
     const s3Client = new S3Client({
       region: REGION,
       credentials: isProd 
-        ? undefined // In production, let Amplify handle credentials automatically
+        ? defaultProvider()  // Use the default credential provider chain
         : fromIni({
             filepath: path.join(process.cwd(), '.aws', 'credentials'),
             configFilepath: path.join(process.cwd(), '.aws', 'config'),
             profile: 'delphi-role'
           })
     });
+
+    // Test credentials before proceeding
+    try {
+      const creds = await s3Client.config.credentials();
+      console.log('[S3 Upload] Credentials loaded:', {
+        hasAccessKeyId: !!creds.accessKeyId,
+        hasSecretKey: !!creds.secretAccessKey,
+        hasSessionToken: !!creds.sessionToken,
+        expiration: creds.expiration
+      });
+    } catch (credError) {
+      console.error('[S3 Upload] Failed to load credentials:', {
+        errorMessage: credError.message,
+        errorStack: credError.stack,
+        errorCode: credError.code,
+        errorName: credError.name
+      });
+    }
 
     const formData = await request.formData();
     const file = formData.get('file');
