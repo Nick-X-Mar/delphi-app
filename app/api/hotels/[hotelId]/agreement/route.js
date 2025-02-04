@@ -34,13 +34,21 @@ export async function POST(request, { params }) {
   });
 
   try {
+    // Create credentials object
+    const getCredentials = () => {
+      if (!process.env.DELPHI_AWS_ACCESS_KEY || !process.env.DELPHI_AWS_SECRET_KEY) {
+        throw new Error('AWS credentials not found in environment variables');
+      }
+      return Promise.resolve({
+        accessKeyId: process.env.DELPHI_AWS_ACCESS_KEY,
+        secretAccessKey: process.env.DELPHI_AWS_SECRET_KEY
+      });
+    };
+
     // Create S3 client with explicit credential provider
     const s3Client = new S3Client({
       region: REGION,
-      credentials: {
-        accessKeyId: process.env.DELPHI_AWS_ACCESS_KEY,
-        secretAccessKey: process.env.DELPHI_AWS_SECRET_KEY
-      },
+      credentials: getCredentials,
       maxAttempts: 3,
       retryMode: 'standard'
     });
