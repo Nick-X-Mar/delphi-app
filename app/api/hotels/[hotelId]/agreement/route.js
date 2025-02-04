@@ -8,22 +8,16 @@ import path from 'path';
 const isProd = process.env.NODE_ENV === 'production';
 const BUCKET_NAME = process.env.NEXT_PUBLIC_AWS_BUCKET_NAME;
 const REGION = process.env.NEXT_PUBLIC_AWS_REGION || 'eu-central-1';
-const ACCESS_KEY = process.env.NEXT_PUBLIC_ACCESS_KEY_ID;
-const SECRET_KEY = process.env.NEXT_PUBLIC_SECRET_ACCESS_KEY;
 
 // POST - Upload agreement file
 export async function POST(request, { params }) {
   const hotelId = params.hotelId;
   
-  console.log('[S3 Upload] Starting S3 test...', {
+  console.log('[S3 Upload] Starting upload process...', {
     environment: process.env.NODE_ENV,
     isProd,
     bucket: BUCKET_NAME,
-    region: REGION,
-    usingAmplifyCredentials: isProd,
-    availableEnvVars: Object.keys(process.env).filter(key => key.startsWith('NEXT_PUBLIC_')),
-    amplifyMeta: process.env.AWS_EXECUTION_ENV,
-    webCompute: process.env.AWS_WEB_COMPUTE === 'true'
+    region: REGION
   });
 
   try {
@@ -31,23 +25,13 @@ export async function POST(request, { params }) {
     const s3Client = new S3Client({
       region: REGION,
       credentials: isProd 
-        ? {
-            accessKeyId: ACCESS_KEY || '',
-            secretAccessKey: SECRET_KEY || ''
-          }
+        ? undefined  // Let Amplify use its own role
         : fromIni({
-            profile: 'delphi-amplify',  // Use the delphi-amplify profile for local development
+            profile: 'delphi-amplify',
             filepath: path.join(process.cwd(), '.aws', 'credentials'),
             configFilepath: path.join(process.cwd(), '.aws', 'config')
           }),
       maxAttempts: 3
-    });
-
-    // Log available credentials (safely)
-    console.log('[S3 Upload] Credentials check:', {
-      hasAccessKeyId: !!ACCESS_KEY,
-      hasSecretKey: !!SECRET_KEY,
-      region: REGION
     });
 
     const formData = await request.formData();
@@ -57,15 +41,11 @@ export async function POST(request, { params }) {
       return Response.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    console.log('[S3 Upload] Processing upload:', {
+    console.log('[S3 Upload] Processing file:', {
       hotelId,
       fileName: file.name,
       fileType: file.type,
-      bucketName: BUCKET_NAME,
-      region: REGION,
-      environment: process.env.NODE_ENV,
-      isProd,
-      role: process.env.AWS_LAMBDA_ROLE_ARN || 'Not available'
+      bucketName: BUCKET_NAME
     });
 
     const filename = `hotels/${hotelId}/agreement/${Date.now()}-${file.name}`;
@@ -81,11 +61,9 @@ export async function POST(request, { params }) {
 
     const fileUrl = `https://${BUCKET_NAME}.s3.${REGION}.amazonaws.com/${filename}`;
     
-    console.log('[S3 Upload] Upload successful:', {
+    console.log('[S3 Upload] File uploaded successfully:', {
       fileUrl,
-      key: filename,
-      bucket: BUCKET_NAME,
-      region: REGION
+      key: filename
     });
 
     // Update hotel record with new agreement file link
@@ -110,12 +88,10 @@ export async function POST(request, { params }) {
       errorMessage: error.message,
       errorCode: error.code,
       errorName: error.name,
-      errorStack: error.stack,
       bucket: BUCKET_NAME,
       region: REGION,
       isProd,
-      environment: process.env.NODE_ENV,
-      role: process.env.AWS_LAMBDA_ROLE_ARN || 'Not available'
+      environment: process.env.NODE_ENV
     });
     
     return Response.json({ error: error.message }, { status: 500 });
