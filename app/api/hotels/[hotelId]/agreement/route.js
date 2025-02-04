@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { uploadAgreement, getAgreementUrl, deleteAgreement } from '@/lib/s3';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { defaultProvider } from '@aws-sdk/credential-provider-node';
+import { fromEnv } from '@aws-sdk/credential-provider-env';
 import path from 'path';
 
 const isProd = process.env.NODE_ENV === 'production';
@@ -37,7 +37,10 @@ export async function POST(request, { params }) {
     // Create S3 client with explicit credential provider
     const s3Client = new S3Client({
       region: REGION,
-      credentials: undefined,  // Let AWS SDK use the Lambda execution role credentials
+      credentials: {
+        accessKeyId: process.env.DELPHI_AWS_ACCESS_KEY,
+        secretAccessKey: process.env.DELPHI_AWS_SECRET_KEY
+      },
       maxAttempts: 3,
       retryMode: 'standard'
     });
