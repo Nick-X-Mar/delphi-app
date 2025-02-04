@@ -28,31 +28,21 @@ export async function POST(request, { params }) {
   try {
     const s3ClientOptions = {
       region: REGION,
-      maxAttempts: 3
+      maxAttempts: 3,
+      credentials: isProd 
+        ? {
+            // In production testing, use environment variables
+            accessKeyId: process.env.MY_AWS_ACCESS_KEY_ID,
+            secretAccessKey: process.env.MY_AWS_SECRET_ACCESS_KEY
+          }
+        : fromIni({
+            filepath: path.join(process.cwd(), '.aws', 'credentials'),
+            configFilepath: path.join(process.cwd(), '.aws', 'config'),
+            profile: 'delphi-role'
+          })
     };
 
-    if (!isProd) {
-      // Use local credentials when not in production.
-      s3ClientOptions.credentials = fromIni({
-        profile: 'delphi-amplify',
-        filepath: path.join(process.cwd(), '.aws', 'credentials'),
-        configFilepath: path.join(process.cwd(), '.aws', 'config')
-      });
-    }
-
     const s3Client = new S3Client(s3ClientOptions);
-
-    // Test S3 client initialization
-    try {
-      const creds = await s3Client.config.credentials();
-      console.log('[S3 Upload] Credentials loaded successfully');
-    } catch (credError) {
-      console.error('[S3 Upload] Failed to load credentials:', {
-        error: credError.message,
-        name: credError.name,
-        code: credError.code
-      });
-    }
 
     const formData = await request.formData();
     const file = formData.get('file');
