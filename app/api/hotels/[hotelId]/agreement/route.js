@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { uploadAgreement, getAgreementUrl, deleteAgreement } from '@/lib/s3';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { fromIni } from '@aws-sdk/credential-provider-ini';
+import { fromNodeProviderChain } from '@aws-sdk/credential-providers';
 import path from 'path';
 
 const isProd = process.env.NODE_ENV === 'production';
@@ -25,13 +25,19 @@ export async function POST(request, { params }) {
     amplify_vars: Object.keys(process.env).filter(key => key.includes('AMPLIFY')),
     role_arn: process.env.AWS_LAMBDA_ROLE_ARN,
     lambda_function_name: process.env.AWS_LAMBDA_FUNCTION_NAME,
-    lambda_task_root: process.env.LAMBDA_TASK_ROOT
+    lambda_task_root: process.env.LAMBDA_TASK_ROOT,
+    amplify_listener: {
+      enabled: process.env.AWS_AMPLIFY_CREDENTIAL_LISTENER_ENABLED,
+      port: process.env.AWS_AMPLIFY_CREDENTIAL_LISTENER_PORT,
+      path: process.env.AWS_AMPLIFY_CREDENTIAL_LISTENER_PATH
+    }
   });
 
   try {
-    // Create S3 client without explicit credentials in production
+    // Create S3 client with explicit credential provider
     const s3Client = new S3Client({
       region: REGION,
+      credentials: fromNodeProviderChain(),
       maxAttempts: 3,
       retryMode: 'standard'
     });
