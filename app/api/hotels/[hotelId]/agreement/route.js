@@ -13,11 +13,16 @@ const REGION = process.env.NEXT_PUBLIC_AWS_REGION || 'eu-central-1';
 export async function POST(request, { params }) {
   const hotelId = params.hotelId;
   
-  console.log('[S3 Upload] Starting upload process...', {
+  // Debug environment
+  console.log('[S3 Upload] Environment check:', {
     environment: process.env.NODE_ENV,
     isProd,
     bucket: BUCKET_NAME,
-    region: REGION
+    region: REGION,
+    lambda: !!process.env.AWS_LAMBDA_FUNCTION_NAME,
+    execution_env: process.env.AWS_EXECUTION_ENV,
+    available_aws_vars: Object.keys(process.env).filter(key => key.startsWith('AWS_')),
+    amplify_vars: Object.keys(process.env).filter(key => key.includes('AMPLIFY'))
   });
 
   try {
@@ -33,6 +38,18 @@ export async function POST(request, { params }) {
           }),
       maxAttempts: 3
     });
+
+    // Test S3 client initialization
+    try {
+      const creds = await s3Client.config.credentials();
+      console.log('[S3 Upload] Credentials loaded successfully');
+    } catch (credError) {
+      console.error('[S3 Upload] Failed to load credentials:', {
+        error: credError.message,
+        name: credError.name,
+        code: credError.code
+      });
+    }
 
     const formData = await request.formData();
     const file = formData.get('file');
