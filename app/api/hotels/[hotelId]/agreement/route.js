@@ -30,11 +30,7 @@ export async function POST(request, { params }) {
       region: REGION,
       maxAttempts: 3,
       credentials: isProd 
-        ? {
-            // In production testing, use environment variables
-            accessKeyId: process.env.MY_AWS_ACCESS_KEY_ID,
-            secretAccessKey: process.env.MY_AWS_SECRET_ACCESS_KEY
-          }
+        ? undefined // In production, let AWS handle credentials through IAM role
         : fromIni({
             filepath: path.join(process.cwd(), '.aws', 'credentials'),
             configFilepath: path.join(process.cwd(), '.aws', 'config'),
