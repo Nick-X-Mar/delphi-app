@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { uploadAgreement, getAgreementUrl, deleteAgreement } from '@/lib/s3';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { fromNodeProviderChain } from '@aws-sdk/credential-providers';
+import { defaultProvider } from '@aws-sdk/credential-provider-node';
 import path from 'path';
 
 const isProd = process.env.NODE_ENV === 'production';
@@ -37,7 +37,7 @@ export async function POST(request, { params }) {
     // Create S3 client with explicit credential provider
     const s3Client = new S3Client({
       region: REGION,
-      credentials: fromNodeProviderChain(),
+      credentials: defaultProvider(),
       maxAttempts: 3,
       retryMode: 'standard'
     });
