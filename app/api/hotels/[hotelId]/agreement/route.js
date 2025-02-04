@@ -22,21 +22,33 @@ export async function POST(request, { params }) {
     lambda: !!process.env.AWS_LAMBDA_FUNCTION_NAME,
     execution_env: process.env.AWS_EXECUTION_ENV,
     available_aws_vars: Object.keys(process.env).filter(key => key.startsWith('AWS_')),
-    amplify_vars: Object.keys(process.env).filter(key => key.includes('AMPLIFY'))
+    amplify_vars: Object.keys(process.env).filter(key => key.includes('AMPLIFY')),
+    role_arn: process.env.AWS_LAMBDA_ROLE_ARN,
+    lambda_function_name: process.env.AWS_LAMBDA_FUNCTION_NAME,
+    lambda_task_root: process.env.LAMBDA_TASK_ROOT
   });
 
   try {
+    // Create S3 client without explicit credentials in production
     const s3Client = new S3Client({
       region: REGION,
-      maxAttempts: 3,
-      credentials: isProd 
-        ? undefined // In production, let AWS handle credentials through IAM role
-        : fromIni({
-            filepath: path.join(process.cwd(), '.aws', 'credentials'),
-            configFilepath: path.join(process.cwd(), '.aws', 'config'),
-            profile: 'delphi-role'  // Use TerraformExecutionRole which should have S3 permissions
-          })
+      maxAttempts: 3
     });
+
+    console.log('[S3 Upload] Client created, attempting to get credentials...');
+    
+    // Test credentials before proceeding
+    try {
+      const creds = await s3Client.config.credentials();
+      console.log('[S3 Upload] Credentials loaded:', {
+        hasAccessKey: !!creds.accessKeyId,
+        hasSecretKey: !!creds.secretAccessKey,
+        hasSessionToken: !!creds.sessionToken,
+        expiration: creds.expiration
+      });
+    } catch (credError) {
+      console.error('[S3 Upload] Failed to load credentials:', credError);
+    }
 
     const formData = await request.formData();
     const file = formData.get('file');
