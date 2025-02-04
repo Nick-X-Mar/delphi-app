@@ -1,42 +1,82 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { uploadAgreement, getAgreementUrl, deleteAgreement } from '@/lib/s3';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { fromIni } from '@aws-sdk/credential-provider-ini';
+import path from 'path';
+
+const isProd = process.env.NODE_ENV === 'production';
+const BUCKET_NAME = process.env.NEXT_PUBLIC_AWS_BUCKET_NAME;
+const REGION = process.env.NEXT_PUBLIC_AWS_REGION || 'eu-central-1';
+
+// Initialize S3 client with different credentials based on environment
+const s3Client = new S3Client({
+  region: REGION,
+  credentials: isProd 
+    ? undefined // In production, let Amplify handle credentials automatically
+    : fromIni({
+        filepath: path.join(process.cwd(), '.aws', 'credentials'),
+        configFilepath: path.join(process.cwd(), '.aws', 'config'),
+        profile: 'delphi-role'
+      })
+});
 
 // POST - Upload agreement file
 export async function POST(request, { params }) {
-  const { hotelId } = params;
-
+  const hotelId = params.hotelId;
+  
   try {
     const formData = await request.formData();
     const file = formData.get('file');
-
+    
     if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+      return Response.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Upload to S3 using our centralized function
-    const fileUrl = await uploadAgreement(hotelId, file);
+    console.log('[S3 Upload] Starting upload:', {
+      hotelId,
+      fileName: file.name,
+      fileType: file.type,
+      bucketName: BUCKET_NAME,
+      region: REGION,
+      environment: process.env.NODE_ENV,
+      isProd
+    });
 
-    // Update hotel record with new agreement file link
-    const query = `
-      UPDATE hotels 
-      SET 
-        agreement_file_link = $1,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE hotel_id = $2
-      RETURNING *
-    `;
+    const filename = `hotels/${hotelId}/agreement/${Date.now()}-${file.name}`;
+    const buffer = Buffer.from(await file.arrayBuffer());
 
-    const { rows } = await pool.query(query, [fileUrl, hotelId]);
+    await s3Client.send(new PutObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: filename,
+      Body: buffer,
+      ContentType: file.type || 'application/pdf',
+      ServerSideEncryption: 'AES256'
+    }));
 
-    if (rows.length === 0) {
-      return NextResponse.json({ error: 'Hotel not found' }, { status: 404 });
-    }
-
-    return NextResponse.json({ fileUrl });
+    const fileUrl = `https://${BUCKET_NAME}.s3.${REGION}.amazonaws.com/${filename}`;
+    
+    console.log('[S3 Upload] Upload successful:', {
+      fileUrl,
+      key: filename,
+      bucket: BUCKET_NAME,
+      region: REGION
+    });
+    
+    return Response.json({ fileUrl });
   } catch (error) {
-    console.error('Error uploading file:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[S3 Upload] Error:', {
+      errorMessage: error.message,
+      errorCode: error.code,
+      errorName: error.name,
+      errorStack: error.stack,
+      bucket: BUCKET_NAME,
+      region: REGION,
+      isProd,
+      environment: process.env.NODE_ENV
+    });
+    
+    return Response.json({ error: error.message }, { status: 500 });
   }
 }
 
