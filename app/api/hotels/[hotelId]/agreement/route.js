@@ -37,7 +37,7 @@ export async function POST(request, { params }) {
     // Create S3 client with explicit credential provider
     const s3Client = new S3Client({
       region: REGION,
-      credentials: defaultProvider(),
+      credentials: undefined,  // Let AWS SDK use the Lambda execution role credentials
       maxAttempts: 3,
       retryMode: 'standard'
     });
