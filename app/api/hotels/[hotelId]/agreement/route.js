@@ -26,18 +26,21 @@ export async function POST(request, { params }) {
   });
 
   try {
-    // Initialize S3 client inside the request
-    const s3Client = new S3Client({
+    const s3ClientOptions = {
       region: REGION,
-      credentials: isProd 
-        ? undefined  // Let Amplify use its own role
-        : fromIni({
-            profile: 'delphi-amplify',
-            filepath: path.join(process.cwd(), '.aws', 'credentials'),
-            configFilepath: path.join(process.cwd(), '.aws', 'config')
-          }),
       maxAttempts: 3
-    });
+    };
+
+    if (!isProd) {
+      // Use local credentials when not in production.
+      s3ClientOptions.credentials = fromIni({
+        profile: 'delphi-amplify',
+        filepath: path.join(process.cwd(), '.aws', 'credentials'),
+        configFilepath: path.join(process.cwd(), '.aws', 'config')
+      });
+    }
+
+    const s3Client = new S3Client(s3ClientOptions);
 
     // Test S3 client initialization
     try {
