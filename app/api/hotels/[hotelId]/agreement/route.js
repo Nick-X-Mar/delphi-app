@@ -22,15 +22,14 @@ export async function POST(request, { params }) {
     lambda: !!process.env.AWS_LAMBDA_FUNCTION_NAME,
     execution_env: process.env.AWS_EXECUTION_ENV,
     available_aws_vars: Object.keys(process.env).filter(key => key.startsWith('AWS_')),
-    amplify_vars: Object.keys(process.env).filter(key => key.includes('AMPLIFY')),
+    delphi_vars: Object.keys(process.env).filter(key => key.includes('DELPHI')),
+    has_access_key: !!process.env.DELPHI_AWS_ACCESS_KEY,
+    has_secret_key: !!process.env.DELPHI_AWS_SECRET_KEY,
+    access_key_length: process.env.DELPHI_AWS_ACCESS_KEY?.length,
+    secret_key_length: process.env.DELPHI_AWS_SECRET_KEY?.length,
     role_arn: process.env.AWS_LAMBDA_ROLE_ARN,
     lambda_function_name: process.env.AWS_LAMBDA_FUNCTION_NAME,
-    lambda_task_root: process.env.LAMBDA_TASK_ROOT,
-    amplify_listener: {
-      enabled: process.env.AWS_AMPLIFY_CREDENTIAL_LISTENER_ENABLED,
-      port: process.env.AWS_AMPLIFY_CREDENTIAL_LISTENER_PORT,
-      path: process.env.AWS_AMPLIFY_CREDENTIAL_LISTENER_PATH
-    }
+    lambda_task_root: process.env.LAMBDA_TASK_ROOT
   });
 
   try {
