@@ -3,24 +3,11 @@ import pool from '@/lib/db';
 import { uploadAgreement, getAgreementUrl, deleteAgreement } from '@/lib/s3';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { fromIni } from '@aws-sdk/credential-provider-ini';
-import { defaultProvider } from '@aws-sdk/credential-provider-node';
 import path from 'path';
 
 const isProd = process.env.NODE_ENV === 'production';
 const BUCKET_NAME = process.env.NEXT_PUBLIC_AWS_BUCKET_NAME;
 const REGION = process.env.NEXT_PUBLIC_AWS_REGION || 'eu-central-1';
-
-// Initialize S3 client with different credentials based on environment
-const s3Client = new S3Client({
-  region: REGION,
-  credentials: isProd 
-    ? undefined // In production, let Amplify handle credentials automatically
-    : fromIni({
-        filepath: path.join(process.cwd(), '.aws', 'credentials'),
-        configFilepath: path.join(process.cwd(), '.aws', 'config'),
-        profile: 'delphi-role'
-      })
-});
 
 // POST - Upload agreement file
 export async function POST(request, { params }) {
@@ -42,31 +29,14 @@ export async function POST(request, { params }) {
     const s3Client = new S3Client({
       region: REGION,
       credentials: isProd 
-        ? defaultProvider()  // Use the default credential provider chain
+        ? undefined  // Let AWS SDK use the Lambda's role credentials
         : fromIni({
+            profile: 'delphi-amplify',  // Use the delphi-amplify profile for local development
             filepath: path.join(process.cwd(), '.aws', 'credentials'),
-            configFilepath: path.join(process.cwd(), '.aws', 'config'),
-            profile: 'delphi-role'
-          })
+            configFilepath: path.join(process.cwd(), '.aws', 'config')
+          }),
+      maxAttempts: 3
     });
-
-    // Test credentials before proceeding
-    try {
-      const creds = await s3Client.config.credentials();
-      console.log('[S3 Upload] Credentials loaded:', {
-        hasAccessKeyId: !!creds.accessKeyId,
-        hasSecretKey: !!creds.secretAccessKey,
-        hasSessionToken: !!creds.sessionToken,
-        expiration: creds.expiration
-      });
-    } catch (credError) {
-      console.error('[S3 Upload] Failed to load credentials:', {
-        errorMessage: credError.message,
-        errorStack: credError.stack,
-        errorCode: credError.code,
-        errorName: credError.name
-      });
-    }
 
     const formData = await request.formData();
     const file = formData.get('file');
@@ -82,7 +52,8 @@ export async function POST(request, { params }) {
       bucketName: BUCKET_NAME,
       region: REGION,
       environment: process.env.NODE_ENV,
-      isProd
+      isProd,
+      role: process.env.AWS_LAMBDA_ROLE_ARN || 'Not available'
     });
 
     const filename = `hotels/${hotelId}/agreement/${Date.now()}-${file.name}`;
@@ -131,7 +102,8 @@ export async function POST(request, { params }) {
       bucket: BUCKET_NAME,
       region: REGION,
       isProd,
-      environment: process.env.NODE_ENV
+      environment: process.env.NODE_ENV,
+      role: process.env.AWS_LAMBDA_ROLE_ARN || 'Not available'
     });
     
     return Response.json({ error: error.message }, { status: 500 });
