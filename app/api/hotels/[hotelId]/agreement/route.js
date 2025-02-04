@@ -32,10 +32,18 @@ export async function POST(request, { params }) {
     // Create S3 client without explicit credentials in production
     const s3Client = new S3Client({
       region: REGION,
-      maxAttempts: 3
+      maxAttempts: 3,
+      retryMode: 'standard'
     });
 
-    console.log('[S3 Upload] Client created, attempting to get credentials...');
+    console.log('[S3 Upload] Client created, checking AWS environment:', {
+      lambda_function: process.env.AWS_LAMBDA_FUNCTION_NAME,
+      lambda_region: process.env.AWS_REGION,
+      lambda_memory: process.env.AWS_LAMBDA_FUNCTION_MEMORY_SIZE,
+      lambda_version: process.env.AWS_LAMBDA_FUNCTION_VERSION,
+      container_id: process.env.AWS_LAMBDA_CONTAINER_ID,
+      execution_env: process.env.AWS_EXECUTION_ENV
+    });
     
     // Test credentials before proceeding
     try {
