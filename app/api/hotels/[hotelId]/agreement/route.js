@@ -26,7 +26,7 @@ export async function POST(request, { params }) {
   });
 
   try {
-    const s3ClientOptions = {
+    const s3Client = new S3Client({
       region: REGION,
       maxAttempts: 3,
       credentials: isProd 
@@ -34,11 +34,9 @@ export async function POST(request, { params }) {
         : fromIni({
             filepath: path.join(process.cwd(), '.aws', 'credentials'),
             configFilepath: path.join(process.cwd(), '.aws', 'config'),
-            profile: 'delphi-role'
+            profile: 'delphi-role'  // Use TerraformExecutionRole which should have S3 permissions
           })
-    };
-
-    const s3Client = new S3Client(s3ClientOptions);
+    });
 
     const formData = await request.formData();
     const file = formData.get('file');
