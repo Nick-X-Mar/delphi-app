@@ -8,6 +8,8 @@ import path from 'path';
 const isProd = process.env.NODE_ENV === 'production';
 const BUCKET_NAME = process.env.NEXT_PUBLIC_AWS_BUCKET_NAME;
 const REGION = process.env.NEXT_PUBLIC_AWS_REGION || 'eu-central-1';
+const ACCESS_KEY = process.env.NEXT_PUBLIC_ACCESS_KEY_ID;
+const SECRET_KEY = process.env.NEXT_PUBLIC_SECRET_ACCESS_KEY;
 
 // POST - Upload agreement file
 export async function POST(request, { params }) {
@@ -19,7 +21,7 @@ export async function POST(request, { params }) {
     bucket: BUCKET_NAME,
     region: REGION,
     usingAmplifyCredentials: isProd,
-    availableEnvVars: Object.keys(process.env).filter(key => key.startsWith('AWS_')),
+    availableEnvVars: Object.keys(process.env).filter(key => key.startsWith('NEXT_PUBLIC_')),
     amplifyMeta: process.env.AWS_EXECUTION_ENV,
     webCompute: process.env.AWS_WEB_COMPUTE === 'true'
   });
@@ -29,13 +31,23 @@ export async function POST(request, { params }) {
     const s3Client = new S3Client({
       region: REGION,
       credentials: isProd 
-        ? undefined  // Let AWS SDK use the Lambda's role credentials
+        ? {
+            accessKeyId: ACCESS_KEY || '',
+            secretAccessKey: SECRET_KEY || ''
+          }
         : fromIni({
             profile: 'delphi-amplify',  // Use the delphi-amplify profile for local development
             filepath: path.join(process.cwd(), '.aws', 'credentials'),
             configFilepath: path.join(process.cwd(), '.aws', 'config')
           }),
       maxAttempts: 3
+    });
+
+    // Log available credentials (safely)
+    console.log('[S3 Upload] Credentials check:', {
+      hasAccessKeyId: !!ACCESS_KEY,
+      hasSecretKey: !!SECRET_KEY,
+      region: REGION
     });
 
     const formData = await request.formData();
