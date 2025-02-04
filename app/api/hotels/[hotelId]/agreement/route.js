@@ -25,7 +25,27 @@ const s3Client = new S3Client({
 export async function POST(request, { params }) {
   const hotelId = params.hotelId;
   
+  console.log('[S3 Upload] Starting S3 test...', {
+    environment: process.env.NODE_ENV,
+    isProd,
+    bucket: BUCKET_NAME,
+    region: REGION,
+    usingAmplifyCredentials: isProd
+  });
+
   try {
+    // Initialize S3 client inside the request
+    const s3Client = new S3Client({
+      region: REGION,
+      credentials: isProd 
+        ? undefined // In production, let Amplify handle credentials automatically
+        : fromIni({
+            filepath: path.join(process.cwd(), '.aws', 'credentials'),
+            configFilepath: path.join(process.cwd(), '.aws', 'config'),
+            profile: 'delphi-role'
+          })
+    });
+
     const formData = await request.formData();
     const file = formData.get('file');
     
@@ -33,7 +53,7 @@ export async function POST(request, { params }) {
       return Response.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    console.log('[S3 Upload] Starting upload:', {
+    console.log('[S3 Upload] Processing upload:', {
       hotelId,
       fileName: file.name,
       fileType: file.type,
@@ -62,6 +82,22 @@ export async function POST(request, { params }) {
       bucket: BUCKET_NAME,
       region: REGION
     });
+
+    // Update hotel record with new agreement file link
+    const query = `
+      UPDATE hotels 
+      SET 
+        agreement_file_link = $1,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE hotel_id = $2
+      RETURNING *
+    `;
+
+    const { rows } = await pool.query(query, [fileUrl, hotelId]);
+
+    if (rows.length === 0) {
+      return Response.json({ error: 'Hotel not found' }, { status: 404 });
+    }
     
     return Response.json({ fileUrl });
   } catch (error) {
