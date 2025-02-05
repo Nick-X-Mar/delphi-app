@@ -1,13 +1,48 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { uploadAgreement, getAgreementUrl, deleteAgreement } from '@/lib/s3';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { fromEnv } from '@aws-sdk/credential-provider-env';
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { fromIni } from '@aws-sdk/credential-provider-ini';
 import path from 'path';
 
 const isProd = process.env.NODE_ENV === 'production';
 const BUCKET_NAME = process.env.NEXT_PUBLIC_AWS_BUCKET_NAME;
 const REGION = process.env.NEXT_PUBLIC_AWS_REGION || 'eu-central-1';
+
+// Create credentials object based on environment
+const getCredentials = () => {
+  console.log('[S3] Getting credentials for environment:', {
+    isProd,
+    has_access_key: !!process.env.DELPHI_AWS_ACCESS_KEY,
+    has_secret_key: !!process.env.DELPHI_AWS_SECRET_KEY,
+    access_key_length: process.env.DELPHI_AWS_ACCESS_KEY?.length,
+    secret_key_length: process.env.DELPHI_AWS_SECRET_KEY?.length
+  });
+
+  if (isProd) {
+    if (!process.env.DELPHI_AWS_ACCESS_KEY || !process.env.DELPHI_AWS_SECRET_KEY) {
+      throw new Error('AWS credentials not found in environment variables');
+    }
+    return Promise.resolve({
+      accessKeyId: process.env.DELPHI_AWS_ACCESS_KEY,
+      secretAccessKey: process.env.DELPHI_AWS_SECRET_KEY
+    });
+  } else {
+    return fromIni({
+      filepath: path.join(process.cwd(), '.aws', 'credentials'),
+      configFilepath: path.join(process.cwd(), '.aws', 'config'),
+      profile: 'delphi-role'
+    })();
+  }
+};
+
+const s3Client = new S3Client({
+  region: REGION,
+  credentials: getCredentials,
+  maxAttempts: 3,
+  retryMode: 'standard'
+});
 
 // POST - Upload agreement file
 export async function POST(request, { params }) {
@@ -33,47 +68,6 @@ export async function POST(request, { params }) {
   });
 
   try {
-    // Create credentials object
-    const getCredentials = () => {
-      if (!process.env.DELPHI_AWS_ACCESS_KEY || !process.env.DELPHI_AWS_SECRET_KEY) {
-        throw new Error('AWS credentials not found in environment variables');
-      }
-      return Promise.resolve({
-        accessKeyId: process.env.DELPHI_AWS_ACCESS_KEY,
-        secretAccessKey: process.env.DELPHI_AWS_SECRET_KEY
-      });
-    };
-
-    // Create S3 client with explicit credential provider
-    const s3Client = new S3Client({
-      region: REGION,
-      credentials: getCredentials,
-      maxAttempts: 3,
-      retryMode: 'standard'
-    });
-
-    console.log('[S3 Upload] Client created, checking AWS environment:', {
-      lambda_function: process.env.AWS_LAMBDA_FUNCTION_NAME,
-      lambda_region: process.env.AWS_REGION,
-      lambda_memory: process.env.AWS_LAMBDA_FUNCTION_MEMORY_SIZE,
-      lambda_version: process.env.AWS_LAMBDA_FUNCTION_VERSION,
-      container_id: process.env.AWS_LAMBDA_CONTAINER_ID,
-      execution_env: process.env.AWS_EXECUTION_ENV
-    });
-    
-    // Test credentials before proceeding
-    try {
-      const creds = await s3Client.config.credentials();
-      console.log('[S3 Upload] Credentials loaded:', {
-        hasAccessKey: !!creds.accessKeyId,
-        hasSecretKey: !!creds.secretAccessKey,
-        hasSessionToken: !!creds.sessionToken,
-        expiration: creds.expiration
-      });
-    } catch (credError) {
-      console.error('[S3 Upload] Failed to load credentials:', credError);
-    }
-
     const formData = await request.formData();
     const file = formData.get('file');
     
@@ -154,8 +148,12 @@ export async function DELETE(request, { params }) {
     const currentFileUrl = rows[0].agreement_file_link;
 
     if (currentFileUrl) {
-      // Delete from S3 using our centralized function
-      await deleteAgreement(currentFileUrl);
+      // Delete from S3
+      const key = currentFileUrl.split('.amazonaws.com/')[1];
+      await s3Client.send(new DeleteObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: key
+      }));
     }
 
     // Update hotel record to remove agreement file link
@@ -194,8 +192,16 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Agreement file not found' }, { status: 404 });
     }
 
-    // Get signed URL using our centralized function
-    const signedUrl = await getAgreementUrl(rows[0].agreement_file_link);
+    // Extract key from the full S3 URL
+    const key = rows[0].agreement_file_link.split('.amazonaws.com/')[1];
+    
+    // Generate a signed URL that expires in 1 hour
+    const command = new GetObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: key
+    });
+
+    const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
 
     // Redirect to the signed URL
     return NextResponse.redirect(signedUrl);

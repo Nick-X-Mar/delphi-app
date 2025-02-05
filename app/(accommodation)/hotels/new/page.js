@@ -52,7 +52,10 @@ export default function NewHotelPage() {
         setEvents(data);
         // Automatically select the event if there's only one
         if (data.length === 1) {
-          setSelectedEventId(data[0].event_id.toString());
+          const eventId = data[0].event_id.toString();
+          setSelectedEventId(eventId);
+          // Clear any event-related errors
+          setErrors(prev => ({ ...prev, event: undefined }));
         }
       } catch (error) {
         console.error('Error fetching events:', error);
@@ -338,8 +341,9 @@ export default function NewHotelPage() {
                     }
                   }}
                   required
+                  disabled={events.length === 1}
                 >
-                  <SelectTrigger className={errors.event ? 'border-red-500' : ''}>
+                  <SelectTrigger className={`${errors.event ? 'border-red-500' : ''} ${events.length === 1 ? 'opacity-60 cursor-not-allowed' : ''}`}>
                     <SelectValue placeholder="Select an event" />
                   </SelectTrigger>
                   <SelectContent>
