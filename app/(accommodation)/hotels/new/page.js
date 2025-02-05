@@ -353,19 +353,14 @@ export default function NewHotelPage() {
                     }
                   }}
                   required
-                  disabled={events.length === 1}
                 >
                   <SelectTrigger 
-                    className={`${errors.event ? 'border-red-500' : ''} ${
-                      events.length === 1 ? 'opacity-60 cursor-not-allowed' : ''
-                    }`}
+                    className={errors.event ? 'border-red-500' : ''}
                   >
                     <SelectValue>
-                      {events.length === 1 
-                        ? events[0].name 
-                        : selectedEventId 
-                          ? events.find(e => e.event_id.toString() === selectedEventId)?.name 
-                          : "Select an event"}
+                      {selectedEventId 
+                        ? events.find(e => e.event_id.toString() === selectedEventId)?.name 
+                        : "Select an event"}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
