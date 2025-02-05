@@ -44,29 +44,29 @@ export default function NewHotelPage() {
 
   // Fetch events when component mounts
   useEffect(() => {
-    const fetchEvents = async () => {
+    async function initializeEvents() {
       try {
         const response = await fetch('/api/events');
         if (!response.ok) throw new Error('Failed to fetch events');
         const data = await response.json();
         
-        console.log('Fetched events:', data);  // Debug log
-        
-        setEvents(data);
-        
-        // If there's only one event, set it immediately
+        // Set both states at once if there's only one event
         if (data.length === 1) {
           const eventId = data[0].event_id.toString();
-          console.log('Setting single event:', eventId);  // Debug log
+          setEvents(data);
           setSelectedEventId(eventId);
+          setErrors(prev => ({ ...prev, event: undefined }));
+        } else {
+          setEvents(data);
         }
       } catch (error) {
         console.error('Error fetching events:', error);
         toast.error('Failed to load events');
       }
-    };
+    }
 
-    fetchEvents();
+    // Call and await the initialization
+    initializeEvents();
   }, []);
 
   // Debug effect to monitor state changes
@@ -347,7 +347,6 @@ export default function NewHotelPage() {
                 <Select
                   value={selectedEventId}
                   onValueChange={(value) => {
-                    console.log('Event selected:', value);  // Debug log
                     setSelectedEventId(value);
                     if (errors.event) {
                       setErrors(prev => ({ ...prev, event: undefined }));
