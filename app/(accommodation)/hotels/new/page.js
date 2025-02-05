@@ -23,7 +23,7 @@ export default function NewHotelPage() {
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [tempFile, setTempFile] = useState(null);
   const [events, setEvents] = useState([]);
-  const [selectedEventId, setSelectedEventId] = useState(null);
+  const [selectedEventId, setSelectedEventId] = useState('');
   const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
     name: '',
@@ -49,16 +49,16 @@ export default function NewHotelPage() {
         const response = await fetch('/api/events');
         if (!response.ok) throw new Error('Failed to fetch events');
         const data = await response.json();
+        
+        console.log('Fetched events:', data);  // Debug log
+        
         setEvents(data);
         
-        // Automatically select the event if there's only one
+        // If there's only one event, set it immediately
         if (data.length === 1) {
           const eventId = data[0].event_id.toString();
-          // Use a timeout to ensure state updates are processed in order
-          setTimeout(() => {
-            setSelectedEventId(eventId);
-            setErrors(prev => ({ ...prev, event: undefined }));
-          }, 0);
+          console.log('Setting single event:', eventId);  // Debug log
+          setSelectedEventId(eventId);
         }
       } catch (error) {
         console.error('Error fetching events:', error);
@@ -68,6 +68,15 @@ export default function NewHotelPage() {
 
     fetchEvents();
   }, []);
+
+  // Debug effect to monitor state changes
+  useEffect(() => {
+    console.log('State updated:', {
+      eventsCount: events.length,
+      selectedEventId,
+      firstEventId: events[0]?.event_id
+    });
+  }, [events, selectedEventId]);
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -336,8 +345,9 @@ export default function NewHotelPage() {
                   )}
                 </label>
                 <Select
-                  value={selectedEventId || ''}
+                  value={selectedEventId}
                   onValueChange={(value) => {
+                    console.log('Event selected:', value);  // Debug log
                     setSelectedEventId(value);
                     if (errors.event) {
                       setErrors(prev => ({ ...prev, event: undefined }));
@@ -352,12 +362,19 @@ export default function NewHotelPage() {
                     }`}
                   >
                     <SelectValue>
-                      {events.length === 1 ? events[0].name : (selectedEventId ? events.find(e => e.event_id.toString() === selectedEventId)?.name : "Select an event")}
+                      {events.length === 1 
+                        ? events[0].name 
+                        : selectedEventId 
+                          ? events.find(e => e.event_id.toString() === selectedEventId)?.name 
+                          : "Select an event"}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {events.map(event => (
-                      <SelectItem key={event.event_id} value={event.event_id.toString()}>
+                      <SelectItem 
+                        key={event.event_id} 
+                        value={event.event_id.toString()}
+                      >
                         {event.name}
                       </SelectItem>
                     ))}
