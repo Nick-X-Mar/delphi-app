@@ -23,7 +23,7 @@ export default function NewHotelPage() {
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [tempFile, setTempFile] = useState(null);
   const [events, setEvents] = useState([]);
-  const [selectedEventId, setSelectedEventId] = useState('');
+  const [selectedEventId, setSelectedEventId] = useState(null);
   const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
     name: '',
@@ -50,12 +50,15 @@ export default function NewHotelPage() {
         if (!response.ok) throw new Error('Failed to fetch events');
         const data = await response.json();
         setEvents(data);
+        
         // Automatically select the event if there's only one
         if (data.length === 1) {
           const eventId = data[0].event_id.toString();
-          setSelectedEventId(eventId);
-          // Clear any event-related errors
-          setErrors(prev => ({ ...prev, event: undefined }));
+          // Use a timeout to ensure state updates are processed in order
+          setTimeout(() => {
+            setSelectedEventId(eventId);
+            setErrors(prev => ({ ...prev, event: undefined }));
+          }, 0);
         }
       } catch (error) {
         console.error('Error fetching events:', error);
@@ -333,7 +336,7 @@ export default function NewHotelPage() {
                   )}
                 </label>
                 <Select
-                  value={selectedEventId}
+                  value={selectedEventId || ''}
                   onValueChange={(value) => {
                     setSelectedEventId(value);
                     if (errors.event) {
@@ -342,10 +345,15 @@ export default function NewHotelPage() {
                   }}
                   required
                   disabled={events.length === 1}
-                  defaultValue={events.length === 1 ? events[0].event_id.toString() : undefined}
                 >
-                  <SelectTrigger className={`${errors.event ? 'border-red-500' : ''} ${events.length === 1 ? 'opacity-60 cursor-not-allowed' : ''}`}>
-                    <SelectValue placeholder={events.length === 1 ? events[0].name : "Select an event"} />
+                  <SelectTrigger 
+                    className={`${errors.event ? 'border-red-500' : ''} ${
+                      events.length === 1 ? 'opacity-60 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    <SelectValue>
+                      {events.length === 1 ? events[0].name : (selectedEventId ? events.find(e => e.event_id.toString() === selectedEventId)?.name : "Select an event")}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {events.map(event => (
