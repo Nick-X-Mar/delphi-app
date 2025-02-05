@@ -342,9 +342,10 @@ export default function NewHotelPage() {
                   }}
                   required
                   disabled={events.length === 1}
+                  defaultValue={events.length === 1 ? events[0].event_id.toString() : undefined}
                 >
                   <SelectTrigger className={`${errors.event ? 'border-red-500' : ''} ${events.length === 1 ? 'opacity-60 cursor-not-allowed' : ''}`}>
-                    <SelectValue placeholder="Select an event" />
+                    <SelectValue placeholder={events.length === 1 ? events[0].name : "Select an event"} />
                   </SelectTrigger>
                   <SelectContent>
                     {events.map(event => (
