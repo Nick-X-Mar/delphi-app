@@ -289,6 +289,7 @@ export default function PeopleTable() {
               <Select
                 value={filters.eventId}
                 onValueChange={(value) => handleFilterChange('eventId', value)}
+                disabled={true}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="All Events" />
@@ -403,6 +404,7 @@ export default function PeopleTable() {
               <Checkbox
                 checked={selectedPeople.size === people.length && people.length > 0}
                 onCheckedChange={handleSelectAll}
+                disabled={true}
               />
             </TableHead>
             <TableHead>First Name</TableHead>
@@ -430,6 +432,7 @@ export default function PeopleTable() {
                 <Checkbox
                   checked={selectedPeople.has(person.person_id)}
                   onCheckedChange={() => handleSelectPerson(person.person_id)}
+                  disabled={true}
                 />
               </TableCell>
               <TableCell>{person.first_name}</TableCell>

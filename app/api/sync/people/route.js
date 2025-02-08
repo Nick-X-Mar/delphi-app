@@ -136,6 +136,15 @@ export async function POST(request) {
           
           const insertResult = await individualClient.query(insertQuery, insertValues);
           console.log(`[Sync] Successfully inserted person_id: ${person.person_id}`);
+          
+          // Assign newly created person to event 1
+          const assignToEventQuery = `
+            INSERT INTO event_people (event_id, person_id)
+            VALUES (1, $1)
+          `;
+          await individualClient.query(assignToEventQuery, [person.person_id]);
+          console.log(`[Sync] Successfully assigned person_id: ${person.person_id} to event 1`);
+
           results.inserted++;
         } else {
           console.log(`[Sync] Successfully updated person_id: ${person.person_id}`);
