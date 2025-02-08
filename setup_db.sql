@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS hotels (
     email VARCHAR(255),
     website_link TEXT,
     map_link TEXT,
-    category VARCHAR(50) NOT NULL CHECK (category IN ('VIP', 'Very Good', 'Good')),
+    category VARCHAR(50) NOT NULL CHECK (category IN ('VVIP', 'VIP', 'Decent', 'NEB')),
     contact_name VARCHAR(255),
     contact_phone VARCHAR(50),
     contact_mobile VARCHAR(50),

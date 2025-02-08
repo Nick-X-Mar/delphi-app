@@ -5,6 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { X, Check, ChevronsUpDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function PersonForm({ person, formData, setFormData, onSubmit, onCancel }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -15,6 +16,8 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState('');
   const [isSourceExpanded, setIsSourceExpanded] = useState(false);
+  const [editPerson, setEditPerson] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
   // Initialize formData with person's data when component mounts
   useEffect(() => {
@@ -25,7 +28,6 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
         room_size: person.room_size || '',
         group_id: person.group_id || '',
         notes: person.notes || '',
-        category: person.category || 'Regular'
       });
     }
   }, [person, setFormData]);
@@ -44,18 +46,9 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitError(''); // Clear any previous submit error
-    setErrors({}); // Clear previous field errors
-
-    // Validate required fields
-    const newErrors = {};
-    if (!formData.room_size) {
-      newErrors.room_size = 'Room size is required';
-    }
-
-    // If there are validation errors, display them and stop submission
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
+    
+    if (!person || !person.person_id) {
+      toast.error('Invalid person data');
       return;
     }
 
@@ -68,21 +61,20 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
         body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        if (data.field) {
-          setErrors({ [data.field]: data.error });
-        } else {
-          setSubmitError(data.error || 'Failed to update details');
-        }
-        return;
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update details');
       }
 
-      onSubmit(e);
+      const updatedData = await response.json();
+      toast.success('Successfully updated details');
+      
+      if (onSubmit) {
+        onSubmit(e);
+      }
     } catch (error) {
       console.error('Update error:', error);
-      setSubmitError(error.message || 'Failed to update details');
+      toast.error(error.message || 'Failed to update details');
     }
   };
 
@@ -125,6 +117,18 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
       setIsNewGroup(false);
       setNewGroupName('');
     }
+  };
+
+  const handleEdit = (person) => {
+    setEditPerson(person);
+    setFormData({
+      company: person.company || '',
+      job_title: person.job_title || '',
+      room_size: person.room_size || '',
+      group_id: person.group_id || '',
+      notes: person.notes || ''
+    });
+    setShowModal(true);
   };
 
   return (
@@ -332,7 +336,7 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
 
           <div className="space-y-2">
             <Label htmlFor="room_size" className="text-sm font-medium text-gray-700">
-              Room Size <span className="text-red-500">*</span>
+              Number of pax <span className="text-red-500">*</span>
             </Label>
             <input
               type="number"
@@ -359,22 +363,6 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
               disabled
               className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-gray-700">Category</Label>
-            <select
-              id="category"
-              name="category"
-              value={formData.category || 'Regular'}
-              onChange={handleChange}
-              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="VVIP">VVIP</option>
-              <option value="VIP">VIP</option>
-              <option value="Regular">Regular</option>
-              <option value="Other">Other</option>
-            </select>
           </div>
 
           {/* Stay Together Section - Simplified */}

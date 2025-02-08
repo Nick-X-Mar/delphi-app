@@ -1,16 +1,52 @@
 {
   "categories": [
     {
+      "value": "VVIP",
+      "label": "VVIP",
+      "color": {
+        "bg": "red",
+        "text": "red",
+        "intensity": {
+          "bg": 100,
+          "text": 800
+        }
+      }
+    },
+    {
       "value": "VIP",
-      "label": "VIP"
+      "label": "VIP",
+      "color": {
+        "bg": "orange",
+        "text": "orange",
+        "intensity": {
+          "bg": 100,
+          "text": 800
+        }
+      }
     },
     {
-      "value": "Very Good",
-      "label": "Very Good"
+      "value": "Decent",
+      "label": "Decent",
+      "color": {
+        "bg": "yellow",
+        "text": "yellow",
+        "intensity": {
+          "bg": 100,
+          "text": 800
+        }
+      }
     },
     {
-      "value": "Good",
-      "label": "Good"
+      "value": "NEB",
+      "label": "NEB",
+      "color": {
+        "bg": "blue",
+        "text": "blue",
+        "intensity": {
+          "bg": 100,
+          "text": 800
+        }
+      }
     }
   ]
 } 

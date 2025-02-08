@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { getAgreementUrl } from '@/lib/s3';
+import { isValidHotelCategory } from '@/lib/hotelCategories';
 
 // GET single hotel
 export async function GET(request, { params }) {
@@ -81,10 +82,9 @@ export async function PUT(request, { params }) {
         }
 
         // Validate category
-        const validCategories = ['VIP', 'Very Good', 'Good'];
-        if (!validCategories.includes(category)) {
+        if (!isValidHotelCategory(category)) {
             return NextResponse.json({
-                error: 'Category must be one of: VIP, Very Good, Good'
+                error: 'Invalid category'
             }, { status: 400 });
         }
 

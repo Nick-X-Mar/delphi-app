@@ -25,13 +25,14 @@ export default function PeopleTable() {
   const [people, setPeople] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [events, setEvents] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [groupColors, setGroupColors] = useState({});
   const [filters, setFilters] = useState({
     eventId: 'all',
     firstName: '',
     lastName: '',
     email: '',
-    category: 'all'
+    guestType: 'all'
   });
   const [selectedPeople, setSelectedPeople] = useState(new Set());
   const [debouncedFilters] = useDebounce(filters, 500);
@@ -65,6 +66,23 @@ export default function PeopleTable() {
     fetchEvents();
   }, []);
 
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/people/categories');
+        if (!response.ok) throw new Error('Failed to fetch categories');
+        const data = await response.json();
+        setCategories(data);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        toast.error('Failed to load categories');
+        setCategories([]);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
   const fetchPeople = async () => {
     try {
       setIsLoading(true);
@@ -77,7 +95,7 @@ export default function PeopleTable() {
       if (debouncedFilters.firstName) params.append('firstName', debouncedFilters.firstName);
       if (debouncedFilters.lastName) params.append('lastName', debouncedFilters.lastName);
       if (debouncedFilters.email) params.append('email', debouncedFilters.email);
-      if (debouncedFilters.category && debouncedFilters.category !== 'all') params.append('category', debouncedFilters.category);
+      if (debouncedFilters.guestType && debouncedFilters.guestType !== 'all') params.append('guestType', debouncedFilters.guestType);
       
       const response = await fetch(`/api/people?${params.toString()}`);
       
@@ -114,8 +132,7 @@ export default function PeopleTable() {
       job_title: person.job_title || '',
       room_size: person.room_size || '',
       group_id: person.group_id || '',
-      notes: person.notes || '',
-      category: person.category || 'Regular'
+      notes: person.notes || ''
     });
     setShowModal(true);
   };
@@ -322,21 +339,22 @@ export default function PeopleTable() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700">
-                Category
+                Guest Type
               </label>
               <Select
-                value={filters.category}
-                onValueChange={(value) => handleFilterChange('category', value)}
+                value={filters.guestType}
+                onValueChange={(value) => handleFilterChange('guestType', value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="All Categories" />
+                  <SelectValue placeholder="All Guest Types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="VVIP">VVIP</SelectItem>
-                  <SelectItem value="VIP">VIP</SelectItem>
-                  <SelectItem value="Regular">Regular</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
+                  <SelectItem value="all">All Guest Types</SelectItem>
+                  {categories.map(guestType => (
+                    <SelectItem key={guestType} value={guestType}>
+                      {guestType}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -392,12 +410,13 @@ export default function PeopleTable() {
             <TableHead>Email</TableHead>
             <TableHead>Company</TableHead>
             <TableHead>Job Title</TableHead>
-            <TableHead>Room Size</TableHead>
+            <TableHead>Number of pax</TableHead>
             <TableHead>Stay Together</TableHead>
             <TableHead>Checkin</TableHead>
             <TableHead>Checkout</TableHead>
             <TableHead>Mobile Phone</TableHead>
-            <TableHead>Category</TableHead>
+            <TableHead>Guest Type</TableHead>
+            <TableHead>Notes</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -436,7 +455,10 @@ export default function PeopleTable() {
                 {person.mobile_phone}
               </TableCell>
               <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {person.category || 'Regular'}
+                {person.guest_type}
+              </TableCell>
+              <TableCell className="px-6 py-4 text-sm text-gray-500">
+                {person.notes}
               </TableCell>
               <TableCell className="text-right">
                 <Button

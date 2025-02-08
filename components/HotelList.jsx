@@ -9,6 +9,7 @@ import { StarIcon as StarOutline } from '@heroicons/react/24/outline';
 import Pagination from './Pagination';
 import { StarRating } from '@/components/ui/star-rating';
 import { Input } from '@/components/ui/input';
+import { getHotelCategories, getHotelCategoryColor } from '@/lib/hotelCategories';
 import {
   Select,
   SelectContent,
@@ -34,9 +35,7 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
 
   const categories = [
     { value: 'all', label: 'All Categories' },
-    { value: 'VIP', label: 'VIP' },
-    { value: 'Very Good', label: 'Very Good' },
-    { value: 'Good', label: 'Good' }
+    ...getHotelCategories()
   ];
 
   useEffect(() => {
@@ -294,7 +293,7 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
                     {hotel.area}
                   </p>
                 </div>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getHotelCategoryColor(hotel.category)}`}>
                   {hotel.category}
                 </span>
               </div>

@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/table';
 import { Star } from 'lucide-react';
 import { toast } from 'sonner';
+import { getHotelCategoryColor } from '@/lib/hotelCategories';
 
 export default function AccommodationHotelList({ eventId, personId, onRoomSelection }) {
   const [hotels, setHotels] = useState([]);
@@ -308,7 +309,7 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
                           </div>
                           <div className="text-sm text-gray-600 mt-1">{hotel.area}</div>
                           <div className="mt-1">
-                            <span className="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                            <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${getHotelCategoryColor(hotel.category)}`}>
                               {hotel.category}
                             </span>
                           </div>

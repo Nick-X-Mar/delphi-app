@@ -11,7 +11,7 @@ export async function GET(request) {
     const lastName = searchParams.get('lastName') || '';
     const email = searchParams.get('email') || '';
     const eventId = searchParams.get('eventId') || '';
-    const category = searchParams.get('category') || '';
+    const guestType = searchParams.get('guestType') || '';
     const offset = (page - 1) * limit;
 
     // Base query
@@ -39,7 +39,6 @@ export async function GET(request) {
         pd.room_size,
         pd.group_id,
         pd.notes,
-        pd.category,
         pd.updated_at,
         CASE 
           WHEN ep.event_id IS NOT NULL THEN true
@@ -77,9 +76,9 @@ export async function GET(request) {
       paramCount++;
     }
 
-    if (category) {
-      conditions.push(`pd.category = $${paramCount}`);
-      queryParams.push(category);
+    if (guestType && guestType !== 'all') {
+      conditions.push(`p.guest_type = $${paramCount}`);
+      queryParams.push(guestType);
       paramCount++;
     }
 
