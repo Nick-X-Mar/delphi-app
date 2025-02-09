@@ -25,12 +25,10 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [expandedSections, setExpandedSections] = useState({});
-  const [minStars, setMinStars] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm || '');
   const [selectedEventId, setSelectedEventId] = useState(initialEventId || 'all');
   const [events, setEvents] = useState([]);
-  const [debouncedStars] = useDebounce(minStars, 300);
   const itemsPerPage = 6;
 
   const categories = [
@@ -64,7 +62,6 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
         if (selectedCategory && selectedCategory !== 'all') params.append('category', selectedCategory);
         params.append('page', currentPage.toString());
         params.append('limit', itemsPerPage.toString());
-        params.append('minStars', debouncedStars.toString());
         
         const response = await fetch(`/api/hotels?${params.toString()}`);
         if (!response.ok) throw new Error('Failed to fetch hotels');
@@ -82,7 +79,7 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
     };
 
     fetchHotels();
-  }, [selectedEventId, currentPage, itemsPerPage, debouncedStars, selectedCategory]);
+  }, [selectedEventId, currentPage, itemsPerPage, selectedCategory]);
 
   const handleSearch = () => {
     setCurrentPage(1);
@@ -95,7 +92,6 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
         if (selectedCategory && selectedCategory !== 'all') params.append('category', selectedCategory);
         params.append('page', '1');
         params.append('limit', itemsPerPage.toString());
-        params.append('minStars', debouncedStars.toString());
         
         const response = await fetch(`/api/hotels?${params.toString()}`);
         if (!response.ok) throw new Error('Failed to fetch hotels');
@@ -126,6 +122,8 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
   };
 
   const renderStars = (count) => {
+    if (!count) return null;  // Return null if no stars
+    
     const stars = [];
     const fullStars = Math.floor(count);
     const hasHalfStar = count % 1 !== 0;
@@ -230,6 +228,7 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
             <Select
               value={selectedEventId}
               onValueChange={setSelectedEventId}
+              disabled={true}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select event" />
@@ -243,19 +242,6 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Minimum Star Rating
-              <span className="text-gray-500 text-xs ml-1">(Filter hotels with rating equal or above)</span>
-            </label>
-            <div className="w-full">
-              <StarRating
-                value={minStars}
-                onChange={(value) => setMinStars(parseFloat(value))}
-                allowHalf={true}
-              />
-            </div>
           </div>
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">

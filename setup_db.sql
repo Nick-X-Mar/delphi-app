@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS hotels (
     hotel_id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     area VARCHAR(255) NOT NULL,
-    stars NUMERIC(2,1) NOT NULL CHECK (stars >= 0.5 AND stars <= 5.0),
+    stars NUMERIC(2,1) CHECK (stars IS NULL OR (stars >= 0.0 AND stars <= 5.0)),
     address TEXT,
     phone_number VARCHAR(50),
     email VARCHAR(255),

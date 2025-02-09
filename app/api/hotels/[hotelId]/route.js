@@ -67,18 +67,21 @@ export async function PUT(request, { params }) {
         } = await request.json();
 
         // Validate required fields
-        if (!name || !area || !stars || !category) {
+        if (!name || !area || !category || !address) {
             return NextResponse.json({
-                error: 'Name, area, stars, and category are required'
+                error: 'Name, area, category, and address are required'
             }, { status: 400 });
         }
 
-        // Convert stars to numeric and validate range
-        const starsNumeric = Number(stars);
-        if (isNaN(starsNumeric) || starsNumeric < 0.5 || starsNumeric > 5.0) {
-            return NextResponse.json({
-                error: 'Stars must be between 0.5 and 5.0'
-            }, { status: 400 });
+        // Convert stars to numeric and validate range if provided
+        let starsNumeric = null;
+        if (stars !== null && stars !== undefined && stars !== '') {
+            starsNumeric = Number(stars);
+            if (isNaN(starsNumeric) || starsNumeric < 0.0 || starsNumeric > 5.0) {
+                return NextResponse.json({
+                    error: 'Stars must be between 0.0 and 5.0'
+                }, { status: 400 });
+            }
         }
 
         // Validate category
@@ -93,7 +96,7 @@ export async function PUT(request, { params }) {
       SET 
         name = $1,
         area = $2,
-        stars = $3::numeric(2,1),
+        stars = $3,
         category = $4,
         address = $5,
         phone_number = $6,
@@ -112,7 +115,7 @@ export async function PUT(request, { params }) {
         const values = [
             name,
             area,
-            stars.toString(),
+            starsNumeric,
             category,
             address || null,
             phone_number || null,

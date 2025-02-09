@@ -88,14 +88,14 @@ export default function HotelDetailPage() {
     
     if (!formData.name) newErrors.name = 'Name is required';
     if (!formData.area) newErrors.area = 'Area is required';
-    if (!formData.stars) newErrors.stars = 'Stars rating is required';
+    if (!formData.address) newErrors.address = 'Address is required';
     if (!formData.category) newErrors.category = 'Category is required';
     if (!selectedEventId) newErrors.event = 'Event selection is required';
 
     if (formData.stars) {
       const starsNum = Number(formData.stars);
-      if (isNaN(starsNum) || starsNum < 0.5 || starsNum > 5.0) {
-        newErrors.stars = 'Stars must be between 0.5 and 5.0';
+      if (isNaN(starsNum) || starsNum < 0.0 || starsNum > 5.0) {
+        newErrors.stars = 'Stars must be between 0.0 and 5.0';
       }
     }
 
@@ -410,7 +410,7 @@ export default function HotelDetailPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
-                    Stars *
+                    Stars
                     {errors.stars && (
                       <span className="text-red-500 text-xs ml-1">{errors.stars}</span>
                     )}
@@ -476,11 +476,19 @@ export default function HotelDetailPage() {
                   </Select>
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700">Address</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Address *
+                    {errors.address && (
+                      <span className="text-red-500 text-xs ml-1">{errors.address}</span>
+                    )}
+                  </label>
                   <Input
                     name="address"
-                    value={formData.address || ''}
+                    value={formData.address}
                     onChange={handleInputChange}
+                    required
+                    placeholder="Full address"
+                    className={errors.address ? 'border-red-500' : ''}
                   />
                 </div>
                 <div className="md:col-span-2">

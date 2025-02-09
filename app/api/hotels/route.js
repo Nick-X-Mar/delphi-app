@@ -213,18 +213,21 @@ export async function POST(request) {
     } = await request.json();
 
     // Validate required fields
-    if (!name || !area || !stars || !category) {
+    if (!name || !area || !category || !address) {
       return NextResponse.json({
-        error: 'Name, area, stars, and category are required'
+        error: 'Name, area, category, and address are required'
       }, { status: 400 });
     }
 
-    // Convert stars to numeric and validate range
-    const starsNumeric = Number(stars);
-    if (isNaN(starsNumeric) || starsNumeric < 0.5 || starsNumeric > 5.0) {
-      return NextResponse.json({
-        error: 'Stars must be between 0.5 and 5.0'
-      }, { status: 400 });
+    // Convert stars to numeric and validate range if provided
+    let starsNumeric = null;
+    if (stars !== null && stars !== undefined && stars !== '') {
+      starsNumeric = Number(stars);
+      if (isNaN(starsNumeric) || starsNumeric < 0.0 || starsNumeric > 5.0) {
+        return NextResponse.json({
+          error: 'Stars must be between 0.0 and 5.0'
+        }, { status: 400 });
+      }
     }
 
     // Validate category
@@ -250,14 +253,14 @@ export async function POST(request) {
         contact_mobile,
         contact_email
       ) 
-      VALUES ($1, $2, $3::numeric(2,1), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING *
     `;
 
     const values = [
       name,
       area,
-      stars.toString(),
+      starsNumeric,
       address,
       phone_number,
       email,
