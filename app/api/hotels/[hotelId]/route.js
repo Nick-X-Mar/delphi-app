@@ -48,6 +48,7 @@ export async function GET(request, { params }) {
 // PUT update hotel
 export async function PUT(request, { params }) {
     const { hotelId } = await params;
+    const client = await pool.connect();
 
     try {
         const {
@@ -63,13 +64,14 @@ export async function PUT(request, { params }) {
             contact_name,
             contact_phone,
             contact_mobile,
-            contact_email
+            contact_email,
+            eventId
         } = await request.json();
 
         // Validate required fields
-        if (!name || !area || !category || !address) {
+        if (!name || !area || !category || !address || !eventId) {
             return NextResponse.json({
-                error: 'Name, area, category, and address are required'
+                error: 'Name, area, category, address, and event are required'
             }, { status: 400 });
         }
 
@@ -91,26 +93,29 @@ export async function PUT(request, { params }) {
             }, { status: 400 });
         }
 
-        const query = `
-      UPDATE hotels 
-      SET 
-        name = $1,
-        area = $2,
-        stars = $3,
-        category = $4,
-        address = $5,
-        phone_number = $6,
-        email = $7,
-        website_link = $8,
-        map_link = $9,
-        contact_name = $10,
-        contact_phone = $11,
-        contact_mobile = $12,
-        contact_email = $13,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE hotel_id = $14
-      RETURNING *
-    `;
+        await client.query('BEGIN');
+
+        // First update the hotel
+        const updateQuery = `
+          UPDATE hotels 
+          SET 
+            name = $1,
+            area = $2,
+            stars = $3,
+            category = $4,
+            address = $5,
+            phone_number = $6,
+            email = $7,
+            website_link = $8,
+            map_link = $9,
+            contact_name = $10,
+            contact_phone = $11,
+            contact_mobile = $12,
+            contact_email = $13,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE hotel_id = $14
+          RETURNING *
+        `;
 
         const values = [
             name,
@@ -129,16 +134,31 @@ export async function PUT(request, { params }) {
             hotelId
         ];
 
-        const { rows } = await pool.query(query, values);
+        const { rows } = await client.query(updateQuery, values);
 
         if (rows.length === 0) {
+            await client.query('ROLLBACK');
             return NextResponse.json({ error: 'Hotel not found' }, { status: 404 });
         }
 
+        // Update event_hotels association
+        // Use UPSERT (INSERT ... ON CONFLICT) to handle the event association
+        const eventHotelQuery = `
+          INSERT INTO event_hotels (event_id, hotel_id)
+          VALUES ($1, $2)
+          ON CONFLICT (event_id, hotel_id) DO NOTHING
+        `;
+
+        await client.query(eventHotelQuery, [eventId, hotelId]);
+
+        await client.query('COMMIT');
         return NextResponse.json(rows[0]);
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error('Update error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
+    } finally {
+        client.release();
     }
 }
 

@@ -69,9 +69,8 @@ export async function GET(request) {
         FROM hotels h
         INNER JOIN event_hotels eh ON h.hotel_id = eh.hotel_id
         WHERE eh.event_id = $${paramIndex++}
-        AND h.stars >= $${paramIndex++}
       `;
-      params.push(eventId, minStars);
+      params.push(eventId);
 
       if (category) {
         countQuery += ` AND h.category = $${paramIndex++}`;
@@ -90,17 +89,15 @@ export async function GET(request) {
         params.push(searchPattern, searchPattern, searchPattern);
       }
     } else {
-      countQuery += ` WHERE h.stars >= $${paramIndex++}`;
-      params.push(minStars);
-
       if (category) {
-        countQuery += ` AND h.category = $${paramIndex++}`;
+        countQuery += ` WHERE h.category = $${paramIndex++}`;
         params.push(category);
       }
 
       if (search) {
+        const whereOrAnd = category ? 'AND' : 'WHERE';
         countQuery += `
-          AND (
+          ${whereOrAnd} (
             LOWER(h.name) LIKE LOWER($${paramIndex++}) OR
             LOWER(h.area) LIKE LOWER($${paramIndex++}) OR
             LOWER(h.address) LIKE LOWER($${paramIndex++})
@@ -129,9 +126,8 @@ export async function GET(request) {
         FROM hotels h
         INNER JOIN event_hotels eh ON h.hotel_id = eh.hotel_id
         WHERE eh.event_id = $${paramIndex++}
-        AND h.stars >= $${paramIndex++}
       `;
-      params.push(eventId, minStars);
+      params.push(eventId);
 
       if (category) {
         query += ` AND h.category = $${paramIndex++}`;
@@ -150,17 +146,15 @@ export async function GET(request) {
         params.push(searchPattern, searchPattern, searchPattern);
       }
     } else {
-      query += ` WHERE h.stars >= $${paramIndex++}`;
-      params.push(minStars);
-
       if (category) {
-        query += ` AND h.category = $${paramIndex++}`;
+        query += ` WHERE h.category = $${paramIndex++}`;
         params.push(category);
       }
 
       if (search) {
+        const whereOrAnd = category ? 'AND' : 'WHERE';
         query += `
-          AND (
+          ${whereOrAnd} (
             LOWER(h.name) LIKE LOWER($${paramIndex++}) OR
             LOWER(h.area) LIKE LOWER($${paramIndex++}) OR
             LOWER(h.address) LIKE LOWER($${paramIndex++})
@@ -171,7 +165,7 @@ export async function GET(request) {
       }
     }
 
-    query += ` ORDER BY h.category DESC, h.stars DESC, h.name
+    query += ` ORDER BY h.category DESC, COALESCE(h.stars, 0) DESC, h.name
                LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
     params.push(limit, offset);
 
@@ -195,6 +189,7 @@ export async function GET(request) {
 
 // POST create new hotel
 export async function POST(request) {
+  const client = await pool.connect();
   try {
     const {
       name,
@@ -209,13 +204,14 @@ export async function POST(request) {
       contact_name,
       contact_phone,
       contact_mobile,
-      contact_email
+      contact_email,
+      eventId
     } = await request.json();
 
     // Validate required fields
-    if (!name || !area || !category || !address) {
+    if (!name || !area || !category || !address || !eventId) {
       return NextResponse.json({
-        error: 'Name, area, category, and address are required'
+        error: 'Name, area, category, address, and event are required'
       }, { status: 400 });
     }
 
@@ -237,7 +233,10 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    const query = `
+    await client.query('BEGIN');
+
+    // First create the hotel
+    const hotelQuery = `
       INSERT INTO hotels (
         name,
         area,
@@ -257,7 +256,7 @@ export async function POST(request) {
       RETURNING *
     `;
 
-    const values = [
+    const hotelValues = [
       name,
       area,
       starsNumeric,
@@ -273,10 +272,24 @@ export async function POST(request) {
       contact_email
     ];
 
-    const { rows } = await pool.query(query, values);
-    return NextResponse.json(rows[0], { status: 201 });
+    const { rows: [hotel] } = await client.query(hotelQuery, hotelValues);
+
+    // Then create the event_hotels association
+    const eventHotelQuery = `
+      INSERT INTO event_hotels (event_id, hotel_id)
+      VALUES ($1, $2)
+      ON CONFLICT (event_id, hotel_id) DO NOTHING
+    `;
+
+    await client.query(eventHotelQuery, [eventId, hotel.hotel_id]);
+
+    await client.query('COMMIT');
+    return NextResponse.json(hotel, { status: 201 });
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Create error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
+  } finally {
+    client.release();
   }
 } 

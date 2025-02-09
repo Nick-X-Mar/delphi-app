@@ -115,28 +115,31 @@ export default function HotelDetailPage() {
     try {
       setIsSaving(true);
 
-      // If we have a new file to upload
-      if (tempFile) {
-        const fileFormData = new FormData();
-        fileFormData.append('file', tempFile);
+      // Only handle file operations if there's a change in the file
+      if (tempFile || (originalFileUrl && !formData.agreement_file_link)) {
+        // If we have a new file to upload
+        if (tempFile) {
+          const fileFormData = new FormData();
+          fileFormData.append('file', tempFile);
 
-        const uploadResponse = await fetch(`/api/hotels/${hotelId}/agreement`, {
-          method: 'POST',
-          body: fileFormData,
-        });
+          const uploadResponse = await fetch(`/api/hotels/${hotelId}/agreement`, {
+            method: 'POST',
+            body: fileFormData,
+          });
 
-        if (!uploadResponse.ok) {
-          throw new Error('Failed to upload agreement file');
-        }
+          if (!uploadResponse.ok) {
+            throw new Error('Failed to upload agreement file');
+          }
 
-        const { fileUrl } = await uploadResponse.json();
-        formData.agreement_file_link = fileUrl;
-      } else if (formData.agreement_file_link !== originalFileUrl) {
-        // If file was deleted, remove it from S3
-        if (originalFileUrl) {
+          const { fileUrl } = await uploadResponse.json();
+          formData.agreement_file_link = fileUrl;
+        } 
+        // If file was deleted
+        else if (originalFileUrl) {
           await fetch(`/api/hotels/${hotelId}/agreement`, {
             method: 'DELETE',
           });
+          formData.agreement_file_link = null;
         }
       }
 
@@ -146,26 +149,16 @@ export default function HotelDetailPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          eventId: selectedEventId
+        }),
       });
 
       const data = await response.json();
       
       if (data.error) {
         throw new Error(data.error);
-      }
-
-      // Update event association
-      const eventAssocResponse = await fetch(`/api/events/${selectedEventId}/hotels`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ hotelIds: [hotelId] }),
-      });
-
-      if (!eventAssocResponse.ok) {
-        throw new Error('Failed to update event association');
       }
 
       setHotel(data);
