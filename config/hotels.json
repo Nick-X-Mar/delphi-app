@@ -7,8 +7,8 @@
         "bg": "red",
         "text": "red",
         "intensity": {
-          "bg": 100,
-          "text": 800
+          "bg": 50,
+          "text": 700
         }
       }
     },
@@ -16,11 +16,11 @@
       "value": "VIP",
       "label": "VIP",
       "color": {
-        "bg": "orange",
-        "text": "orange",
+        "bg": "red",
+        "text": "red",
         "intensity": {
-          "bg": 100,
-          "text": 800
+          "bg": 50,
+          "text": 500
         }
       }
     },
@@ -28,11 +28,11 @@
       "value": "Decent",
       "label": "Decent",
       "color": {
-        "bg": "yellow",
-        "text": "yellow",
+        "bg": "green",
+        "text": "green",
         "intensity": {
-          "bg": 100,
-          "text": 800
+          "bg": 50,
+          "text": 700
         }
       }
     },
@@ -43,8 +43,8 @@
         "bg": "blue",
         "text": "blue",
         "intensity": {
-          "bg": 100,
-          "text": 800
+          "bg": 50,
+          "text": 700
         }
       }
     }
