@@ -149,6 +149,12 @@ export default function NewHotelPage() {
     try {
       setIsSubmitting(true);
 
+      // Debug logging
+      console.log('Submitting form with data:', {
+        ...formData,
+        eventId: selectedEventId
+      });
+
       // First create the hotel
       const response = await fetch('/api/hotels', {
         method: 'POST',
@@ -162,6 +168,7 @@ export default function NewHotelPage() {
       });
 
       const data = await response.json();
+      console.log('Response from server:', data);
       
       if (data.error) {
         throw new Error(data.error);

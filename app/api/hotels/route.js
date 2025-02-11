@@ -191,6 +191,9 @@ export async function GET(request) {
 export async function POST(request) {
   const client = await pool.connect();
   try {
+    const body = await request.json();
+    console.log('Debug - Received request body:', body);
+
     const {
       name,
       area,
@@ -206,7 +209,9 @@ export async function POST(request) {
       contact_mobile,
       contact_email,
       eventId
-    } = await request.json();
+    } = body;
+
+    console.log('Debug - Extracted eventId:', eventId);
 
     // Validate required fields
     if (!name || !area || !category || !address || !eventId) {
@@ -235,7 +240,21 @@ export async function POST(request) {
 
     await client.query('BEGIN');
 
-    // First create the hotel
+    // First verify that the event exists
+    const eventQuery = `
+      SELECT event_id
+      FROM events
+      WHERE event_id = $1
+    `;
+    const { rows: eventRows } = await client.query(eventQuery, [eventId]);
+    if (eventRows.length === 0) {
+      await client.query('ROLLBACK');
+      return NextResponse.json({
+        error: 'Event not found'
+      }, { status: 404 });
+    }
+
+    // Then create the hotel
     const hotelQuery = `
       INSERT INTO hotels (
         name,
