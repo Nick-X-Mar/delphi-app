@@ -78,6 +78,7 @@ export default function EventList({ events, onEventUpdated, onEventDeleted }) {
                     variant="outline"
                     size="sm"
                     onClick={() => handleDelete(event)}
+                    disabled={true}
                   >
                     <TrashIcon className="h-4 w-4" />
                   </Button>

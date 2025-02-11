@@ -105,6 +105,7 @@ export default function EventsPage() {
           <Button
             onClick={() => setShowCreateModal(true)}
             className="inline-flex items-center"
+            disabled={true}
           >
             <PlusIcon className="h-5 w-5 mr-2" />
             Add Event
