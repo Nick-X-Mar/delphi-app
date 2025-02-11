@@ -155,7 +155,10 @@ export default function NewHotelPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          eventId: selectedEventId
+        }),
       });
 
       const data = await response.json();
