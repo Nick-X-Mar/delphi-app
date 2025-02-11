@@ -12,6 +12,18 @@ export async function GET(request, { params }) {
           (SELECT accommodation_end_date FROM events WHERE event_id = $1),
           '1 day'::interval
         )::date AS date
+      ),
+      bookings_per_date AS (
+        SELECT 
+          b.room_type_id,
+          d.date,
+          COUNT(*) as booked_rooms
+        FROM date_range d
+        INNER JOIN bookings b ON d.date >= b.check_in_date 
+          AND d.date < b.check_out_date
+          AND b.event_id = $1
+          AND b.status != 'cancelled'
+        GROUP BY b.room_type_id, d.date
       )
       SELECT h.*,
         (
@@ -24,11 +36,13 @@ export async function GET(request, { params }) {
                 FROM (
                   SELECT 
                     dr.date,
-                    COALESCE(ra.available_rooms, rt.total_rooms) as available_rooms,
+                    COALESCE(ra.available_rooms, rt.total_rooms) - COALESCE(bpd.booked_rooms, 0) as available_rooms,
                     COALESCE(ra.price_per_night, rt.base_price_per_night) as price_per_night
                   FROM date_range dr
                   LEFT JOIN room_availability ra ON ra.room_type_id = rt.room_type_id 
                     AND ra.date = dr.date
+                  LEFT JOIN bookings_per_date bpd ON bpd.room_type_id = rt.room_type_id
+                    AND bpd.date = dr.date
                   ORDER BY dr.date
                 ) availability_info
               ) as availability
