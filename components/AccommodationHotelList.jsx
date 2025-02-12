@@ -91,6 +91,10 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
 
     // If this is the second selection
     if (selection.dates.length === 1) {
+      // Prevent selecting the same date
+      if (selection.dates[0].getTime() === date.getTime()) {
+        return;
+      }
       setSelection(prev => ({
         ...prev,
         dates: [...prev.dates, date].sort((a, b) => a - b)
