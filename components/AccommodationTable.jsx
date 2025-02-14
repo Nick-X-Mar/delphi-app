@@ -5,6 +5,7 @@ import { ChevronDown, ChevronRight, Pencil, Trash2, X, Minimize2, Maximize2 } fr
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import AccommodationHotelList from './AccommodationHotelList';
+import Pagination from './Pagination';
 
 export default function AccommodationTable({ eventId, filters }) {
   const [expandedHotels, setExpandedHotels] = useState(new Set());
@@ -12,6 +13,12 @@ export default function AccommodationTable({ eventId, filters }) {
   const [hotels, setHotels] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingBooking, setEditingBooking] = useState(null);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    itemsPerPage: 10,
+    totalItems: 0,
+    totalPages: 0
+  });
 
   const formatDisplayDate = (dateString) => {
     const date = new Date(dateString);
@@ -28,14 +35,32 @@ export default function AccommodationTable({ eventId, filters }) {
     }
 
     try {
+      setIsLoading(true);
       const response = await fetch(`/api/events/${eventId}/hotels/bookings`);
       if (!response.ok) throw new Error('Failed to fetch hotels');
       const data = await response.json();
-      setHotels(Array.isArray(data) ? data : []);
+      const allHotels = Array.isArray(data) ? data : [];
+      
+      // Update total items count
+      setPagination(prev => ({
+        ...prev,
+        totalItems: allHotels.length,
+        totalPages: Math.ceil(allHotels.length / prev.itemsPerPage)
+      }));
+
+      // Apply pagination to hotels
+      const start = (pagination.currentPage - 1) * pagination.itemsPerPage;
+      const end = start + pagination.itemsPerPage;
+      setHotels(allHotels.slice(start, end));
     } catch (error) {
       console.error('Error fetching hotels:', error);
       toast.error('Failed to load hotels');
       setHotels([]);
+      setPagination(prev => ({
+        ...prev,
+        totalItems: 0,
+        totalPages: 0
+      }));
     } finally {
       setIsLoading(false);
     }
@@ -44,7 +69,7 @@ export default function AccommodationTable({ eventId, filters }) {
   useEffect(() => {
     setIsLoading(true);
     fetchData();
-  }, [eventId]);
+  }, [eventId, pagination.currentPage]);
 
   // Filter hotels based on search and category
   const filteredHotels = useMemo(() => {
@@ -264,6 +289,13 @@ export default function AccommodationTable({ eventId, filters }) {
     }
   };
 
+  const handlePageChange = (newPage) => {
+    setPagination(prev => ({
+      ...prev,
+      currentPage: newPage
+    }));
+  };
+
   if (isLoading) {
     return <div className="text-center py-4">Loading...</div>;
   }
@@ -285,7 +317,7 @@ export default function AccommodationTable({ eventId, filters }) {
   }
 
   return (
-    <div>
+    <div className="space-y-4">
       <Table>
         <TableHeader>
           <TableRow>
@@ -450,6 +482,14 @@ export default function AccommodationTable({ eventId, filters }) {
           ))}
         </TableBody>
       </Table>
+
+      <Pagination
+        currentPage={pagination.currentPage}
+        totalPages={pagination.totalPages}
+        onPageChange={handlePageChange}
+        totalItems={pagination.totalItems}
+        itemsPerPage={pagination.itemsPerPage}
+      />
     </div>
   );
 } 

@@ -5,8 +5,21 @@ import pool from '@/lib/db';
 export async function GET(request, { params }) {
   try {
     const eventId = await params.id;
+    const { searchParams } = new URL(request.url);
     
-    const query = `
+    // Get pagination parameters
+    const page = parseInt(searchParams.get('page')) || 1;
+    const limit = parseInt(searchParams.get('limit')) || 10;
+    const offset = (page - 1) * limit;
+
+    // Get filter parameters
+    const firstName = searchParams.get('firstName') || '';
+    const lastName = searchParams.get('lastName') || '';
+    const email = searchParams.get('email') || '';
+    const onlyAvailable = searchParams.get('onlyAvailable') === 'true';
+    
+    // Build the base query
+    let query = `
       SELECT 
         p.*,
         b.booking_id,
@@ -25,11 +38,52 @@ export async function GET(request, { params }) {
       LEFT JOIN room_types rt ON b.room_type_id = rt.room_type_id
       LEFT JOIN hotels h ON rt.hotel_id = h.hotel_id
       WHERE ep.event_id = $1
-      ORDER BY p.first_name, p.last_name
     `;
 
-    const { rows } = await pool.query(query, [eventId]);
-    return NextResponse.json(rows);
+    const queryParams = [eventId];
+    let paramCount = 2;
+
+    // Add filter conditions
+    if (firstName) {
+      query += ` AND p.first_name ILIKE $${paramCount}`;
+      queryParams.push(`%${firstName}%`);
+      paramCount++;
+    }
+
+    if (lastName) {
+      query += ` AND p.last_name ILIKE $${paramCount}`;
+      queryParams.push(`%${lastName}%`);
+      paramCount++;
+    }
+
+    if (email) {
+      query += ` AND p.email ILIKE $${paramCount}`;
+      queryParams.push(`%${email}%`);
+      paramCount++;
+    }
+
+    if (onlyAvailable) {
+      query += ` AND b.booking_id IS NULL`;
+    }
+
+    // Get total count for pagination
+    const countQuery = `SELECT COUNT(*) FROM (${query}) AS count_query`;
+    const { rows: [{ count }] } = await pool.query(countQuery, queryParams);
+
+    // Add ordering and pagination to the main query
+    query += ` ORDER BY p.first_name, p.last_name
+               LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+    queryParams.push(limit, offset);
+
+    const { rows } = await pool.query(query, queryParams);
+
+    return NextResponse.json({
+      items: rows,
+      total: parseInt(count),
+      page,
+      totalPages: Math.ceil(parseInt(count) / limit),
+      limit
+    });
   } catch (error) {
     console.error('Error getting event people:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
