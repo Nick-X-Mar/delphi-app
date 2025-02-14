@@ -14,7 +14,7 @@ export default function AccommodationConfirmation({
   onCancel,
   isLoading
 }) {
-  const [isPayable, setIsPayable] = useState(true);
+  const [isPayable, setIsPayable] = useState(false);
 
   if (!person || !selection) return null;
 

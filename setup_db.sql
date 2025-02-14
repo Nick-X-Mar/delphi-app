@@ -120,7 +120,14 @@ CREATE TABLE IF NOT EXISTS bookings
         REFERENCES room_types (room_type_id) MATCH SIMPLE
         ON UPDATE NO ACTION
         ON DELETE NO ACTION,
-    CONSTRAINT bookings_status_check CHECK (status::text = ANY (ARRAY['pending'::character varying, 'confirmed'::character varying, 'cancelled'::character varying, 'invalidated'::character varying]::text[])),
+    CONSTRAINT bookings_status_check CHECK (status::text = ANY (ARRAY[
+        'pending'::character varying, 
+        'confirmed'::character varying, 
+        'cancelled'::character varying, 
+        'invalidated'::character varying,
+        'date_change'::character varying,
+        'room_change'::character varying
+    ]::text[])),
     CONSTRAINT valid_dates CHECK (check_out_date > check_in_date)
 );
 

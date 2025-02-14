@@ -16,7 +16,11 @@ export async function GET(request, { params }) {
         rt.name as room_type_name
       FROM people p
       INNER JOIN event_people ep ON p.person_id = ep.person_id
-      LEFT JOIN bookings b ON p.person_id = b.person_id 
+      LEFT JOIN (
+        SELECT *
+        FROM bookings
+        WHERE status NOT IN ('cancelled', 'invalidated')
+      ) b ON p.person_id = b.person_id 
         AND b.event_id = ep.event_id
       LEFT JOIN room_types rt ON b.room_type_id = rt.room_type_id
       LEFT JOIN hotels h ON rt.hotel_id = h.hotel_id
