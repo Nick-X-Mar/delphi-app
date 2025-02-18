@@ -15,6 +15,8 @@ export default function EditRoomTypePage() {
   const roomTypeId = params.roomTypeId;
   const [roomType, setRoomType] = useState(null);
   const [eventDates, setEventDates] = useState(null);
+  const [basePrice, setBasePrice] = useState(null);
+  const [key, setKey] = useState(0);
 
   useEffect(() => {
     fetchRoomType();
@@ -39,15 +41,18 @@ export default function EditRoomTypePage() {
       if (!res.ok) throw new Error('Failed to fetch room type');
       const data = await res.json();
       setRoomType(data);
+      setBasePrice(data.base_price_per_night);
     } catch (error) {
       console.error('Error fetching room type:', error);
       toast.error('Failed to load room type');
     }
   };
 
-  const handleSuccess = () => {
+  const handleSuccess = async (updatedRoomType) => {
+    setBasePrice(updatedRoomType.base_price_per_night);
+    setKey(prevKey => prevKey + 1);
+    await fetchRoomType();
     toast.success('Room type updated successfully');
-    fetchRoomType();
   };
 
   if (!roomType) {
@@ -96,9 +101,10 @@ export default function EditRoomTypePage() {
           <CardContent>
             {eventDates ? (
               <RoomAvailabilityCalendar
+                key={key}
                 hotelId={hotelId}
                 roomTypeId={roomTypeId}
-                basePrice={roomType.base_price_per_night}
+                basePrice={basePrice}
                 totalRooms={roomType.total_rooms}
                 eventStartDate={eventDates.accommodation_start_date}
                 eventEndDate={eventDates.accommodation_end_date}

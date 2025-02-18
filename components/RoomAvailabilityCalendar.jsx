@@ -145,21 +145,29 @@ export default function RoomAvailabilityCalendar({
         body: JSON.stringify({ updates })
       });
 
-      console.log('Response status:', res.status);
-      const responseText = await res.text();
-      console.log('Response text:', responseText);
-
       if (!res.ok) {
+        const responseText = await res.text();
         throw new Error(`Server responded with ${res.status}: ${responseText}`);
       }
 
+      // Recalculate booking costs
+      const recalculateRes = await fetch(`/api/hotels/${numericHotelId}/room-types/${numericRoomTypeId}/recalculate-bookings`, {
+        method: 'POST'
+      });
+
+      if (!recalculateRes.ok) {
+        throw new Error('Failed to recalculate booking costs');
+      }
+
+      const recalculateData = await recalculateRes.json();
+      
       // Clear pending changes first
       setPendingChanges({});
       
       // Fetch fresh data
       await fetchRoomTypeData();
       
-      toast.success('All changes saved successfully');
+      toast.success(`Changes saved successfully. Updated ${recalculateData.updatedBookings} booking(s).`);
     } catch (error) {
       console.error('Error saving changes:', error);
       toast.error(error.message || 'Failed to save changes');

@@ -12,7 +12,7 @@ export default function RoomTypeForm({ hotelId, roomType, onSuccess }) {
     name: roomType?.name || '',
     description: roomType?.description || '',
     total_rooms: roomType?.total_rooms || '',
-    base_price_per_night: roomType?.base_price_per_night || ''
+    base_price_per_night: roomType?.base_price_per_night || '0'
   });
 
   const handleChange = (e) => {
@@ -80,15 +80,15 @@ export default function RoomTypeForm({ hotelId, roomType, onSuccess }) {
         throw new Error(data.error || 'Something went wrong');
       }
 
+      if (onSuccess) {
+        onSuccess(data);
+      }
+
       toast.success(
         roomType
           ? 'Room type updated successfully'
           : 'Room type created successfully'
       );
-
-      if (onSuccess) {
-        onSuccess(data);
-      }
     } catch (error) {
       console.error('Submit error:', error);
       toast.error(error.message || 'Failed to save room type');
