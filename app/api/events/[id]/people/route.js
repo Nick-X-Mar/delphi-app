@@ -17,11 +17,13 @@ export async function GET(request, { params }) {
     const lastName = searchParams.get('lastName') || '';
     const email = searchParams.get('email') || '';
     const onlyAvailable = searchParams.get('onlyAvailable') === 'true';
+    const hideNotAttending = searchParams.get('hideNotAttending') === 'true';
     
     // Build the base query
     let query = `
       SELECT 
         p.*,
+        pd.will_not_attend,
         b.booking_id,
         b.check_in_date,
         b.check_out_date,
@@ -29,6 +31,7 @@ export async function GET(request, { params }) {
         rt.name as room_type_name
       FROM people p
       INNER JOIN event_people ep ON p.person_id = ep.person_id
+      LEFT JOIN people_details pd ON p.person_id = pd.person_id
       LEFT JOIN (
         SELECT *
         FROM bookings
@@ -64,6 +67,10 @@ export async function GET(request, { params }) {
 
     if (onlyAvailable) {
       query += ` AND b.booking_id IS NULL`;
+    }
+
+    if (hideNotAttending) {
+      query += ` AND (pd.will_not_attend IS NULL OR pd.will_not_attend = false)`;
     }
 
     // Get total count for pagination

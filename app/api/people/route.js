@@ -40,6 +40,7 @@ export async function GET(request) {
         pd.room_size,
         pd.group_id,
         pd.notes,
+        pd.will_not_attend,
         pd.updated_at,
         CASE 
           WHEN ep.event_id IS NOT NULL THEN true

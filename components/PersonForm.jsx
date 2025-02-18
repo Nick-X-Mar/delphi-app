@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { X, Check, ChevronsUpDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function PersonForm({ person, formData, setFormData, onSubmit, onCancel }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,6 +29,7 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
         room_size: person.room_size || '',
         group_id: person.group_id || '',
         notes: person.notes || '',
+        will_not_attend: person.will_not_attend || false
       });
     }
   }, [person, setFormData]);
@@ -50,6 +52,27 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
     if (!person || !person.person_id) {
       toast.error('Invalid person data');
       return;
+    }
+
+    // If will_not_attend is being set to true, check for active bookings
+    if (formData.will_not_attend) {
+      try {
+        const response = await fetch(`/api/people-details/${person.person_id}/bookings`);
+        if (!response.ok) throw new Error('Failed to check bookings');
+        const { activeBookings } = await response.json();
+        
+        let message = activeBookings > 0 
+          ? `This person has ${activeBookings} active booking(s) that will be cancelled. Are you sure you want to proceed?`
+          : 'This person has no active bookings. Do you want to proceed with marking them as not attending?';
+
+        if (!confirm(message)) {
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking bookings:', error);
+        toast.error('Failed to check active bookings');
+        return;
+      }
     }
 
     try {
@@ -126,7 +149,8 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
       job_title: person.job_title || '',
       room_size: person.room_size || '',
       group_id: person.group_id || '',
-      notes: person.notes || ''
+      notes: person.notes || '',
+      will_not_attend: person.will_not_attend || false
     });
     setShowModal(true);
   };
@@ -469,6 +493,32 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
                 </p>
               </div>
             )}
+          </div>
+
+          {/* Will not attend - Styled nicely */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-gray-700">Attendance Status</Label>
+            <div className="flex items-center space-x-2 bg-white border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+              <Checkbox
+                id="will_not_attend"
+                checked={formData.will_not_attend}
+                onCheckedChange={(checked) => 
+                  setFormData(prev => ({ ...prev, will_not_attend: checked }))
+                }
+                className="h-5 w-5 border-2 border-gray-300 rounded data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600"
+              />
+              <div className="grid gap-1.5 leading-none">
+                <label
+                  htmlFor="will_not_attend"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Will not attend
+                </label>
+                <p className="text-sm text-gray-500">
+                  Check this if the person will not be attending the event
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 

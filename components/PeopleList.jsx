@@ -13,7 +13,8 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
     firstName: '',
     lastName: '',
     email: '',
-    onlyAvailable: true
+    onlyAvailable: true,
+    hideNotAttending: true
   });
   const [debouncedFilters] = useDebounce(filters, 300);
   const [isLoading, setIsLoading] = useState(true);
@@ -34,7 +35,8 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
           firstName: filters.firstName,
           lastName: filters.lastName,
           email: filters.email,
-          onlyAvailable: filters.onlyAvailable
+          onlyAvailable: filters.onlyAvailable,
+          hideNotAttending: filters.hideNotAttending
         });
 
         const response = await fetch(`/api/events/${eventId}/people?${queryParams}`);
@@ -81,6 +83,10 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
   const handlePersonClick = (person) => {
     if (person.booking_id) {
       // Don't do anything if the person already has a booking
+      return;
+    }
+    if (person.will_not_attend) {
+      // Don't do anything if the person will not attend
       return;
     }
     onPersonSelect(person);
@@ -134,7 +140,7 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
             onChange={(e) => handleFilterChange('email', e.target.value)}
           />
         </div>
-        <div className="flex items-end">
+        <div className="flex flex-col gap-2">
           <div className="flex items-center space-x-2">
             <Checkbox
               id="onlyAvailable"
@@ -146,6 +152,19 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             >
               Available for Accommodation
+            </label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="hideNotAttending"
+              checked={filters.hideNotAttending}
+              onCheckedChange={(checked) => handleFilterChange('hideNotAttending', checked)}
+            />
+            <label
+              htmlFor="hideNotAttending"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Hide People Not Attending
             </label>
           </div>
         </div>
@@ -169,9 +188,16 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
               className={`
                 ${person.booking_id ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'cursor-pointer hover:bg-gray-100'}
                 ${selectedPerson?.person_id === person.person_id ? 'bg-blue-50' : ''}
+                ${person.will_not_attend ? 'line-through text-gray-500 cursor-not-allowed' : ''}
               `}
               onClick={() => handlePersonClick(person)}
-              title={person.booking_id ? "This person already has a booking and cannot be selected" : ""}
+              title={
+                person.booking_id 
+                  ? "This person already has a booking and cannot be selected"
+                  : person.will_not_attend
+                    ? "This person will not attend and cannot be selected"
+                    : ""
+              }
             >
               <TableCell>
                 {person.first_name} {person.last_name}
