@@ -150,11 +150,28 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
   const validateAndNotifySelection = () => {
     const [checkIn, checkOut] = selection.dates;
     const selectedHotel = hotels.find(h => 
-      h.room_types.some(rt => rt.room_type_id === selection.roomTypeId)
+      h.room_types?.some(rt => rt.room_type_id === selection.roomTypeId)
     );
+
+    if (!selectedHotel || !selectedHotel.room_types) {
+      toast.error('Selected room type not found');
+      setSelection({
+        roomTypeId: null,
+        dates: []
+      });
+      return;
+    }
+
     const roomType = selectedHotel.room_types.find(rt => rt.room_type_id === selection.roomTypeId);
 
-    if (!roomType) return;
+    if (!roomType) {
+      toast.error('Selected room type not found');
+      setSelection({
+        roomTypeId: null,
+        dates: []
+      });
+      return;
+    }
 
     // Get all dates between check-in and check-out
     const dates = [];

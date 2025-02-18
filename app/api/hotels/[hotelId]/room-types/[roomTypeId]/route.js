@@ -93,4 +93,54 @@ export async function PUT(request, { params }) {
         console.error('Update error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
+}
+
+export async function DELETE(request, { params }) {
+  const client = await pool.connect();
+  
+  try {
+    const { roomTypeId } = params;
+    
+    await client.query('BEGIN');
+
+    // First, delete all bookings for this room type
+    const { rows: deletedBookings } = await client.query(`
+      DELETE FROM bookings
+      WHERE room_type_id = $1
+      RETURNING booking_id
+    `, [roomTypeId]);
+
+    // Then delete all availability records
+    await client.query(`
+      DELETE FROM room_availability
+      WHERE room_type_id = $1
+    `, [roomTypeId]);
+
+    // Finally delete the room type
+    const { rows: deletedRoomTypes } = await client.query(`
+      DELETE FROM room_types
+      WHERE room_type_id = $1
+      RETURNING room_type_id
+    `, [roomTypeId]);
+
+    if (deletedRoomTypes.length === 0) {
+      throw new Error('Room type not found');
+    }
+
+    await client.query('COMMIT');
+
+    return NextResponse.json({
+      message: 'Room type and all associated bookings deleted successfully',
+      deletedBookings: deletedBookings.length
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error deleting room type:', error);
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 }
+    );
+  } finally {
+    client.release();
+  }
 } 

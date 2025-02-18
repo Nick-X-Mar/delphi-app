@@ -164,19 +164,67 @@ export async function PUT(request, { params }) {
 
 // DELETE hotel
 export async function DELETE(request, { params }) {
-    const { hotelId } = await params;
-
+    const client = await pool.connect();
+    
     try {
-        const query = 'DELETE FROM hotels WHERE hotel_id = $1 RETURNING *';
-        const { rows } = await pool.query(query, [hotelId]);
+        const { hotelId } = await params;
+        
+        await client.query('BEGIN');
 
-        if (rows.length === 0) {
-            return NextResponse.json({ error: 'Hotel not found' }, { status: 404 });
+        // First, delete all bookings for all room types in this hotel
+        const { rows: deletedBookings } = await client.query(`
+          DELETE FROM bookings
+          WHERE room_type_id IN (
+            SELECT room_type_id 
+            FROM room_types 
+            WHERE hotel_id = $1
+          )
+          RETURNING booking_id
+        `, [hotelId]);
+
+        // Then delete all availability records
+        await client.query(`
+          DELETE FROM room_availability
+          WHERE room_type_id IN (
+            SELECT room_type_id 
+            FROM room_types 
+            WHERE hotel_id = $1
+          )
+        `, [hotelId]);
+
+        // Delete all room types
+        const { rows: deletedRoomTypes } = await client.query(`
+          DELETE FROM room_types
+          WHERE hotel_id = $1
+          RETURNING room_type_id
+        `, [hotelId]);
+
+        // Finally delete the hotel
+        const { rows: deletedHotel } = await client.query(`
+          DELETE FROM hotels
+          WHERE hotel_id = $1
+          RETURNING hotel_id
+        `, [hotelId]);
+
+        if (deletedHotel.length === 0) {
+            throw new Error('Hotel not found');
         }
 
-        return NextResponse.json({ message: 'Hotel deleted successfully' });
+        await client.query('COMMIT');
+
+        return NextResponse.json({
+            message: 'Hotel and all associated data deleted successfully',
+            deletedBookings: deletedBookings.length,
+            deletedRoomTypes: deletedRoomTypes.length
+        });
     } catch (error) {
-        console.error('Delete error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        await client.query('ROLLBACK');
+        console.error('Error deleting hotel:', error);
+        return NextResponse.json(
+            { error: error.message },
+            { status: 500 }
+        );
+    } finally {
+        client.release();
     }
 } 
