@@ -18,4 +18,13 @@ export const formatDateTime = (datetime) => {
     console.error('DateTime parsing error:', error);
     return '-';
   }
+};
+
+// Format a Date object to YYYY-MM-DD for API calls
+export const formatDateForAPI = (date) => {
+  if (!date || !(date instanceof Date)) return null;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }; 

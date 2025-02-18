@@ -45,9 +45,11 @@ export async function GET(request, { params }) {
                     p.first_name,
                     p.last_name,
                     p.email,
-                    p.guest_type
+                    p.guest_type,
+                    pd.company
                   FROM bookings b
                   INNER JOIN people p ON b.person_id = p.person_id
+                  LEFT JOIN people_details pd ON p.person_id = pd.person_id
                   WHERE b.room_type_id = rt.room_type_id
                   AND b.event_id = $1
                   ORDER BY b.check_in_date

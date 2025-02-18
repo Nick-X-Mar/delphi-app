@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import AccommodationHotelList from './AccommodationHotelList';
 import Pagination from './Pagination';
 
-export default function AccommodationTable({ eventId, filters }) {
+const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
   const [expandedHotels, setExpandedHotels] = useState(new Set());
   const [expandedRoomTypes, setExpandedRoomTypes] = useState(new Set());
   const [hotels, setHotels] = useState([]);
@@ -66,6 +66,11 @@ export default function AccommodationTable({ eventId, filters }) {
     }
   };
 
+  // Expose fetchData method through ref
+  React.useImperativeHandle(ref, () => ({
+    fetchData
+  }));
+
   useEffect(() => {
     setIsLoading(true);
     fetchData();
@@ -104,7 +109,11 @@ export default function AccommodationTable({ eventId, filters }) {
             filters.guestType === 'all' ||
             booking.guest_type === filters.guestType;
 
-          return firstNameMatch && lastNameMatch && emailMatch && guestTypeMatch;
+          const companyMatch = !filters?.company || 
+            filters.company === 'all' ||
+            (booking.company && booking.company === filters.company);
+
+          return firstNameMatch && lastNameMatch && emailMatch && guestTypeMatch && companyMatch;
         })
       }))
     }));
@@ -492,4 +501,6 @@ export default function AccommodationTable({ eventId, filters }) {
       />
     </div>
   );
-} 
+});
+
+export default AccommodationTable; 

@@ -14,6 +14,7 @@ import { Star, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { getHotelCategories, getHotelCategoryColor } from '@/lib/hotelCategories';
 import { Input } from '@/components/ui/input';
+import { formatDateForAPI } from '@/utils/dateFormatters';
 import {
   Select,
   SelectContent,
@@ -265,7 +266,7 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
   };
 
   const getAvailabilityForDate = (roomType, date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = formatDateForAPI(date);
     return roomType.availability?.find(a => a.date === dateStr) || {
       available_rooms: roomType.total_rooms,
       price_per_night: roomType.base_price_per_night

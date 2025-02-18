@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from "@/lib/utils";
+import { formatDateForAPI } from '@/utils/dateFormatters';
 
 export default function RoomAvailabilityCalendar({ 
   hotelId, 
@@ -55,7 +56,7 @@ export default function RoomAvailabilityCalendar({
   };
 
   const formatDate = (date) => {
-    return date.toISOString().split('T')[0];
+    return formatDateForAPI(date);
   };
 
   const fetchRoomTypeData = async () => {

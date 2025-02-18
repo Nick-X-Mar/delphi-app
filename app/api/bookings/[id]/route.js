@@ -12,13 +12,13 @@ export async function PUT(request, { params }) {
       const query = `
         UPDATE bookings
         SET 
-          status = $1,
+          status = $1::varchar,
           modification_type = CASE 
-            WHEN $1 = 'cancelled' THEN 'cancelled'::varchar
+            WHEN $1::varchar = 'cancelled' THEN 'cancelled'::varchar
             ELSE NULL
           END,
           modification_date = CASE 
-            WHEN $1 = 'cancelled' THEN CURRENT_TIMESTAMP
+            WHEN $1::varchar = 'cancelled' THEN CURRENT_TIMESTAMP
             ELSE NULL
           END,
           updated_at = CURRENT_TIMESTAMP
