@@ -19,8 +19,8 @@ export async function GET(request, { params }) {
           d.date,
           COUNT(*) as booked_rooms
         FROM date_range d
-        INNER JOIN bookings b ON d.date >= (b.check_in_date AT TIME ZONE 'UTC')::date
-          AND d.date < (b.check_out_date AT TIME ZONE 'UTC')::date
+        INNER JOIN bookings b ON d.date >= (b.check_in_date::date)
+          AND d.date < (b.check_out_date::date)
           AND b.event_id = $1
           AND b.status != 'cancelled'
         GROUP BY b.room_type_id, d.date

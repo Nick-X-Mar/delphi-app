@@ -71,6 +71,7 @@ export default function EventList({ events, onEventUpdated, onEventDeleted }) {
                     variant="outline"
                     size="sm"
                     onClick={() => setEditingEvent(event)}
+                    disabled={true}
                   >
                     <PencilIcon className="h-4 w-4" />
                   </Button>

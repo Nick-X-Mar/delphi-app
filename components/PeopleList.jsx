@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useDebounce } from 'use-debounce';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import { formatDate } from '@/utils/dateFormatters';
 
 export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) {
   const [people, setPeople] = useState([]);
@@ -212,7 +213,7 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
                     {person.hotel_name} - {person.room_type_name}
                     <br />
                     <span className="text-gray-500">
-                      {new Date(person.check_in_date).toLocaleDateString()} - {new Date(person.check_out_date).toLocaleDateString()}
+                      {formatDate(person.check_in_date)} - {formatDate(person.check_out_date)}
                     </span>
                   </span>
                 ) : (

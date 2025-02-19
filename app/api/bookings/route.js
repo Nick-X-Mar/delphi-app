@@ -6,7 +6,7 @@ export async function POST(request) {
     const { eventId, personId, roomTypeId, checkInDate, checkOutDate, pricePerNight, totalCost, payable } = await request.json();
 
     // Validate required fields
-    if (!eventId || !personId || !roomTypeId || !checkInDate || !checkOutDate || !totalCost) {
+    if (!eventId || !personId || !roomTypeId || !checkInDate || !checkOutDate || totalCost === undefined) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import AccommodationHotelList from './AccommodationHotelList';
 import Pagination from './Pagination';
+import { formatDate } from '@/utils/dateFormatters';
 
 const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
   const [expandedHotels, setExpandedHotels] = useState(new Set());
@@ -411,10 +412,10 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
                             </TableCell>
                             <TableCell>
                               <div className="text-sm">
-                                Check-in: {formatDisplayDate(booking.check_in_date)}
+                                Check-in: {formatDate(booking.check_in_date)}
                               </div>
                               <div className="text-sm">
-                                Check-out: {formatDisplayDate(booking.check_out_date)}
+                                Check-out: {formatDate(booking.check_out_date)}
                               </div>
                             </TableCell>
                             <TableCell>

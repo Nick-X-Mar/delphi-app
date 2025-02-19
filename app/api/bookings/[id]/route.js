@@ -52,6 +52,18 @@ export async function PUT(request, { params }) {
       );
     }
 
+    // Parse dates and set to noon UTC
+    const checkIn = new Date(checkInDate);
+    checkIn.setUTCHours(12, 0, 0, 0);
+    const checkOut = new Date(checkOutDate);
+    checkOut.setUTCHours(12, 0, 0, 0);
+
+    // Parse original dates
+    const originalCheckIn = new Date(originalBooking.checkInDate);
+    originalCheckIn.setUTCHours(12, 0, 0, 0);
+    const originalCheckOut = new Date(originalBooking.checkOutDate);
+    originalCheckOut.setUTCHours(12, 0, 0, 0);
+
     // Start a transaction
     const client = await pool.connect();
     try {
@@ -94,8 +106,8 @@ export async function PUT(request, { params }) {
 
         const { rows: newBookingRows } = await client.query(newBookingQuery, [
           roomTypeId,
-          checkInDate,
-          checkOutDate,
+          checkIn.toISOString(),
+          checkOut.toISOString(),
           totalCost,
           bookingId
         ]);
@@ -109,8 +121,8 @@ export async function PUT(request, { params }) {
 
       // Determine what has changed
       const datesChanged = 
-        originalBooking.checkInDate !== checkInDate || 
-        originalBooking.checkOutDate !== checkOutDate;
+        originalCheckIn.getTime() !== checkIn.getTime() || 
+        originalCheckOut.getTime() !== checkOut.getTime();
       
       const roomChanged = originalBooking.roomTypeId !== roomTypeId;
 
@@ -139,8 +151,8 @@ export async function PUT(request, { params }) {
 
       const { rows } = await client.query(updateQuery, [
         roomTypeId,
-        checkInDate,
-        checkOutDate,
+        checkIn.toISOString(),
+        checkOut.toISOString(),
         totalCost,
         modificationType,
         bookingId
