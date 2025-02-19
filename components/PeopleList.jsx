@@ -5,6 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { useDebounce } from 'use-debounce';
 import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { formatDate } from '@/utils/dateFormatters';
 
 export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) {
   const [people, setPeople] = useState([]);
@@ -12,21 +14,43 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
     firstName: '',
     lastName: '',
     email: '',
-    onlyAvailable: true
+    onlyAvailable: true,
+    hideNotAttending: true
   });
   const [debouncedFilters] = useDebounce(filters, 300);
   const [isLoading, setIsLoading] = useState(true);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    itemsPerPage: 10
+  });
 
   useEffect(() => {
     const fetchPeople = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/events/${eventId}/people`);
+        const queryParams = new URLSearchParams({
+          page: pagination.currentPage,
+          limit: pagination.itemsPerPage,
+          firstName: filters.firstName,
+          lastName: filters.lastName,
+          email: filters.email,
+          onlyAvailable: filters.onlyAvailable,
+          hideNotAttending: filters.hideNotAttending
+        });
+
+        const response = await fetch(`/api/events/${eventId}/people?${queryParams}`);
         if (!response.ok) {
           throw new Error('Failed to fetch people');
         }
         const data = await response.json();
-        setPeople(data);
+        setPeople(data.items);
+        setPagination(prev => ({
+          ...prev,
+          totalPages: Math.ceil(data.total / pagination.itemsPerPage),
+          totalItems: data.total
+        }));
       } catch (error) {
         console.error('Error fetching people:', error);
       } finally {
@@ -37,23 +61,37 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
     if (eventId) {
       fetchPeople();
     }
-  }, [eventId]);
+  }, [eventId, pagination.currentPage, debouncedFilters]);
 
   const handleFilterChange = (field, value) => {
     setFilters(prev => ({
       ...prev,
       [field]: value
     }));
+    setPagination(prev => ({
+      ...prev,
+      currentPage: 1 // Reset to first page when filters change
+    }));
   };
 
-  const filteredPeople = people.filter(person => {
-    const matchesFirstName = person.first_name?.toLowerCase().includes(filters.firstName.toLowerCase());
-    const matchesLastName = person.last_name?.toLowerCase().includes(filters.lastName.toLowerCase());
-    const matchesEmail = person.email?.toLowerCase().includes(filters.email.toLowerCase());
-    const isAvailable = !filters.onlyAvailable || !person.booking_id;
+  const handlePageChange = (newPage) => {
+    setPagination(prev => ({
+      ...prev,
+      currentPage: newPage
+    }));
+  };
 
-    return matchesFirstName && matchesLastName && matchesEmail && isAvailable;
-  });
+  const handlePersonClick = (person) => {
+    if (person.booking_id) {
+      // Don't do anything if the person already has a booking
+      return;
+    }
+    if (person.will_not_attend) {
+      // Don't do anything if the person will not attend
+      return;
+    }
+    onPersonSelect(person);
+  };
 
   if (isLoading) {
     return <div className="text-center py-4">Loading people...</div>;
@@ -103,7 +141,7 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
             onChange={(e) => handleFilterChange('email', e.target.value)}
           />
         </div>
-        <div className="flex items-end">
+        <div className="flex flex-col gap-2">
           <div className="flex items-center space-x-2">
             <Checkbox
               id="onlyAvailable"
@@ -115,6 +153,19 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             >
               Available for Accommodation
+            </label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="hideNotAttending"
+              checked={filters.hideNotAttending}
+              onCheckedChange={(checked) => handleFilterChange('hideNotAttending', checked)}
+            />
+            <label
+              htmlFor="hideNotAttending"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Hide People Not Attending
             </label>
           </div>
         </div>
@@ -132,13 +183,22 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredPeople.map((person) => (
+          {people.map((person) => (
             <TableRow 
               key={person.person_id}
-              className={`cursor-pointer hover:bg-gray-100 ${
-                selectedPerson?.person_id === person.person_id ? 'bg-blue-50' : ''
-              }`}
-              onClick={() => onPersonSelect(person)}
+              className={`
+                ${person.booking_id ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'cursor-pointer hover:bg-gray-100'}
+                ${selectedPerson?.person_id === person.person_id ? 'bg-blue-50' : ''}
+                ${person.will_not_attend ? 'line-through text-gray-500 cursor-not-allowed' : ''}
+              `}
+              onClick={() => handlePersonClick(person)}
+              title={
+                person.booking_id 
+                  ? "This person already has a booking and cannot be selected"
+                  : person.will_not_attend
+                    ? "This person will not attend and cannot be selected"
+                    : ""
+              }
             >
               <TableCell>
                 {person.first_name} {person.last_name}
@@ -153,7 +213,7 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
                     {person.hotel_name} - {person.room_type_name}
                     <br />
                     <span className="text-gray-500">
-                      {new Date(person.check_in_date).toLocaleDateString()} - {new Date(person.check_out_date).toLocaleDateString()}
+                      {formatDate(person.check_in_date)} - {formatDate(person.check_out_date)}
                     </span>
                   </span>
                 ) : (
@@ -164,6 +224,31 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
           ))}
         </TableBody>
       </Table>
+
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-500">
+          Showing {((pagination.currentPage - 1) * pagination.itemsPerPage) + 1} to {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} of {pagination.totalItems} people
+        </p>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => handlePageChange(pagination.currentPage - 1)}
+            disabled={pagination.currentPage === 1}
+            className="h-8 w-8 flex items-center justify-center rounded-md border border-gray-200 bg-white text-gray-900 hover:bg-gray-100 hover:text-gray-900 disabled:pointer-events-none disabled:opacity-50"
+          >
+            ←
+          </button>
+          <div className="flex items-center justify-center h-8 w-8 rounded-md bg-primary text-primary-foreground">
+            {pagination.currentPage}
+          </div>
+          <button
+            onClick={() => handlePageChange(pagination.currentPage + 1)}
+            disabled={pagination.currentPage === pagination.totalPages}
+            className="h-8 w-8 flex items-center justify-center rounded-md border border-gray-200 bg-white text-gray-900 hover:bg-gray-100 hover:text-gray-900 disabled:pointer-events-none disabled:opacity-50"
+          >
+            →
+          </button>
+        </div>
+      </div>
     </div>
   );
 } 

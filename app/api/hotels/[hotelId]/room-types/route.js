@@ -44,10 +44,10 @@ export async function POST(request, { params }) {
         // Format base price to have two decimal places
         const formattedBasePrice = Number(base_price_per_night).toFixed(2);
 
-        // Validate that the formatted price is a valid number and greater than 0
-        if (isNaN(formattedBasePrice) || parseFloat(formattedBasePrice) <= 0) {
+        // Validate that the formatted price is a valid number and greater than or equal to 0
+        if (isNaN(formattedBasePrice) || parseFloat(formattedBasePrice) < 0) {
             return NextResponse.json({
-                error: 'Base price per night must be a valid number greater than 0'
+                error: 'Base price per night must be a valid number (0 or greater)'
             }, { status: 400 });
         }
 

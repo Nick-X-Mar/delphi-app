@@ -12,6 +12,7 @@ export async function GET(request, { params }) {
             SELECT COUNT(*)
             FROM bookings b
             WHERE b.event_id = $1
+            AND b.status NOT IN ('cancelled', 'invalidated')
             AND b.room_type_id IN (
               SELECT rt.room_type_id
               FROM room_types rt
@@ -30,15 +31,25 @@ export async function GET(request, { params }) {
             SELECT 
               rt.*,
               (
+                SELECT COUNT(*)
+                FROM bookings b
+                WHERE b.room_type_id = rt.room_type_id
+                AND b.event_id = $1
+                AND b.status NOT IN ('cancelled', 'invalidated')
+              ) as active_bookings_count,
+              (
                 SELECT json_agg(booking_info)
                 FROM (
                   SELECT 
                     b.*,
                     p.first_name,
                     p.last_name,
-                    p.email
+                    p.email,
+                    p.guest_type,
+                    pd.company
                   FROM bookings b
                   INNER JOIN people p ON b.person_id = p.person_id
+                  LEFT JOIN people_details pd ON p.person_id = pd.person_id
                   WHERE b.room_type_id = rt.room_type_id
                   AND b.event_id = $1
                   ORDER BY b.check_in_date

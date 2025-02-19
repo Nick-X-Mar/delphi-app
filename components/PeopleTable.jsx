@@ -426,7 +426,10 @@ export default function PeopleTable() {
           {people.map((person) => (
             <TableRow 
               key={person.person_id}
-              className={person.is_in_event ? 'bg-blue-50' : ''}
+              className={`${
+                person.will_not_attend ? 'line-through text-gray-500' : ''
+              } hover:bg-gray-50 cursor-pointer`}
+              onClick={() => handleEdit(person)}
             >
               <TableCell>
                 <Checkbox

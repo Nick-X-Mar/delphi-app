@@ -1,17 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { format, addDays, subDays } from 'date-fns';
+import { format, addDays, subDays, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { formatDate, formatDateForAPI } from '@/utils/dateFormatters';
 
 export default function EventForm({ event, onSuccess, onCancel }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: event?.name || '',
-    start_date: event?.start_date ? format(new Date(event.start_date), 'yyyy-MM-dd') : '',
-    end_date: event?.end_date ? format(new Date(event.end_date), 'yyyy-MM-dd') : ''
+    start_date: event?.start_date ? format(parseISO(event.start_date), 'yyyy-MM-dd') : '',
+    end_date: event?.end_date ? format(parseISO(event.end_date), 'yyyy-MM-dd') : ''
   });
 
   const handleSubmit = async (e) => {
@@ -26,9 +27,9 @@ export default function EventForm({ event, onSuccess, onCancel }) {
         return;
       }
 
-      // Validate dates
-      const startDate = new Date(formData.start_date);
-      const endDate = new Date(formData.end_date);
+      // Create dates in UTC
+      const startDate = new Date(formData.start_date + 'T12:00:00Z');
+      const endDate = new Date(formData.end_date + 'T12:00:00Z');
 
       if (endDate < startDate) {
         toast.error('End date must be after start date');
@@ -44,7 +45,11 @@ export default function EventForm({ event, onSuccess, onCancel }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          start_date: startDate.toISOString(),
+          end_date: endDate.toISOString()
+        }),
       });
 
       const data = await response.json();
@@ -80,11 +85,11 @@ export default function EventForm({ event, onSuccess, onCancel }) {
 
   // Calculate accommodation dates for display
   const accommodationStartDate = formData.start_date
-    ? format(subDays(new Date(formData.start_date), 2), 'yyyy-MM-dd')
+    ? format(subDays(new Date(formData.start_date + 'T12:00:00Z'), 2), 'yyyy-MM-dd')
     : '';
   
   const accommodationEndDate = formData.end_date
-    ? format(addDays(new Date(formData.end_date), 2), 'yyyy-MM-dd')
+    ? format(addDays(new Date(formData.end_date + 'T12:00:00Z'), 2), 'yyyy-MM-dd')
     : '';
 
   return (

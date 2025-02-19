@@ -10,12 +10,23 @@ import {
   TableRow,
   TableCell
 } from '@/components/ui/table';
-import { Star } from 'lucide-react';
+import { Star, Search } from 'lucide-react';
 import { toast } from 'sonner';
-import { getHotelCategoryColor } from '@/lib/hotelCategories';
+import { getHotelCategories, getHotelCategoryColor } from '@/lib/hotelCategories';
+import { Input } from '@/components/ui/input';
+import { formatDateForAPI } from '@/utils/dateFormatters';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import Pagination from '@/components/Pagination';
 
 export default function AccommodationHotelList({ eventId, personId, onRoomSelection }) {
   const [hotels, setHotels] = useState([]);
+  const [filteredHotels, setFilteredHotels] = useState([]);
   const [event, setEvent] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [dates, setDates] = useState([]);
@@ -23,6 +34,12 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
     roomTypeId: null,
     dates: []
   });
+  const [filters, setFilters] = useState({
+    search: '',
+    category: 'all'
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -55,6 +72,27 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
       validateAndNotifySelection();
     }
   }, [selection.dates]);
+
+  useEffect(() => {
+    // Apply filters and pagination
+    let filtered = [...hotels];
+    
+    // Apply search filter
+    if (filters.search) {
+      const searchTerm = filters.search.toLowerCase();
+      filtered = filtered.filter(hotel => 
+        hotel.name.toLowerCase().includes(searchTerm) ||
+        hotel.area.toLowerCase().includes(searchTerm)
+      );
+    }
+
+    // Apply category filter
+    if (filters.category !== 'all') {
+      filtered = filtered.filter(hotel => hotel.category === filters.category);
+    }
+
+    setFilteredHotels(filtered);
+  }, [hotels, filters]);
 
   const generateDateRange = () => {
     const start = new Date(event.accommodation_start_date);
@@ -91,6 +129,10 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
 
     // If this is the second selection
     if (selection.dates.length === 1) {
+      // Prevent selecting the same date
+      if (selection.dates[0].getTime() === date.getTime()) {
+        return;
+      }
       setSelection(prev => ({
         ...prev,
         dates: [...prev.dates, date].sort((a, b) => a - b)
@@ -108,11 +150,28 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
   const validateAndNotifySelection = () => {
     const [checkIn, checkOut] = selection.dates;
     const selectedHotel = hotels.find(h => 
-      h.room_types.some(rt => rt.room_type_id === selection.roomTypeId)
+      h.room_types?.some(rt => rt.room_type_id === selection.roomTypeId)
     );
+
+    if (!selectedHotel || !selectedHotel.room_types) {
+      toast.error('Selected room type not found');
+      setSelection({
+        roomTypeId: null,
+        dates: []
+      });
+      return;
+    }
+
     const roomType = selectedHotel.room_types.find(rt => rt.room_type_id === selection.roomTypeId);
 
-    if (!roomType) return;
+    if (!roomType) {
+      toast.error('Selected room type not found');
+      setSelection({
+        roomTypeId: null,
+        dates: []
+      });
+      return;
+    }
 
     // Get all dates between check-in and check-out
     const dates = [];
@@ -224,12 +283,26 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
   };
 
   const getAvailabilityForDate = (roomType, date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = formatDateForAPI(date);
     return roomType.availability?.find(a => a.date === dateStr) || {
       available_rooms: roomType.total_rooms,
       price_per_night: roomType.base_price_per_night
     };
   };
+
+  const handleFilterChange = (field, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+
+  // Get paginated hotels
+  const paginatedHotels = filteredHotels.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   if (isLoading) {
     return <div className="text-center py-4">Loading hotels...</div>;
@@ -246,6 +319,11 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
       </div>
     );
   }
+
+  const categories = [
+    { value: 'all', label: 'All Categories' },
+    ...getHotelCategories()
+  ];
 
   return (
     <div className="space-y-6">
@@ -264,6 +342,44 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
             }
           </p>
         )}
+      </div>
+
+      <div className="flex gap-4 items-end">
+        <div className="flex-1">
+          <label className="text-sm font-medium mb-1 block">
+            Search Hotels
+          </label>
+          <div className="relative">
+            <Input
+              type="text"
+              placeholder="Search by name or location..."
+              value={filters.search}
+              onChange={(e) => handleFilterChange('search', e.target.value)}
+              className="pl-8"
+            />
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+          </div>
+        </div>
+        <div className="w-[200px]">
+          <label className="text-sm font-medium mb-1 block">
+            Category
+          </label>
+          <Select
+            value={filters.category}
+            onValueChange={(value) => handleFilterChange('category', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map(category => (
+                <SelectItem key={category.value} value={category.value}>
+                  {category.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="border rounded-lg overflow-x-auto relative">
@@ -293,7 +409,7 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
             </TableRow>
           </TableHeader>
           <TableBody>
-            {hotels.map((hotel) => (
+            {paginatedHotels.map((hotel) => (
               <React.Fragment key={hotel.hotel_id}>
                 {hotel.room_types?.map((roomType, index) => (
                   <TableRow key={roomType.room_type_id}>
@@ -356,6 +472,14 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
           </TableBody>
         </Table>
       </div>
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={Math.ceil(filteredHotels.length / itemsPerPage)}
+        onPageChange={setCurrentPage}
+        totalItems={filteredHotels.length}
+        itemsPerPage={itemsPerPage}
+      />
     </div>
   );
 } 

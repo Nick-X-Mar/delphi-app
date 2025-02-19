@@ -30,9 +30,11 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // Validate dates
+    // Parse dates and set to noon UTC
     const startDate = new Date(start_date);
+    startDate.setUTCHours(12, 0, 0, 0);
     const endDate = new Date(end_date);
+    endDate.setUTCHours(12, 0, 0, 0);
 
     if (endDate < startDate) {
       return NextResponse.json({
@@ -52,8 +54,8 @@ export async function POST(request) {
 
     const { rows } = await pool.query(query, [
       name,
-      start_date,
-      end_date
+      startDate.toISOString(),
+      endDate.toISOString()
     ]);
 
     return NextResponse.json(rows[0], { status: 201 });

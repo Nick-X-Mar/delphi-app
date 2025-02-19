@@ -23,104 +23,72 @@ export async function GET(request, { params }) {
 
 // PUT/Update details
 export async function PUT(request, { params }) {
-  const { id } = await params;
+  const client = await pool.connect();
+  
   try {
-    // First check if the person exists in the people table
-    const personExists = await pool.query(
-      'SELECT person_id FROM people WHERE person_id = $1',
-      [id]
-    );
-
-    if (personExists.rows.length === 0) {
-      console.error('Person does not exist in people table:', id);
-      return NextResponse.json({ 
-        error: 'Person does not exist',
-        field: 'person_id'
-      }, { status: 404 });
-    }
-
-    const { company, job_title, room_size, notes, group_id } = await request.json();
-    console.log('Received data:', { company, job_title, room_size, notes, group_id });
-
-    // Validate room_size if provided
-    if (room_size !== undefined && room_size !== '' && isNaN(parseInt(room_size))) {
-      return NextResponse.json({ 
-        error: 'Room size must be a valid number',
-        field: 'room_size'
-      }, { status: 400 });
-    }
-
-    // Check if the person has details
-    const checkQuery = 'SELECT person_id FROM people_details WHERE person_id = $1';
-    const checkResult = await pool.query(checkQuery, [id]);
-    console.log('Check result:', checkResult.rows);
+    const personId = await params.id;
+    const data = await request.json();
     
-    let result;
-    try {
-      if (checkResult.rows.length === 0) {
-        // Record doesn't exist, create new one
-        console.log('Creating new record for person:', id);
-        const insertQuery = `
-          INSERT INTO people_details (
-            person_id,
-            company,
-            job_title,
-            room_size,
-            notes,
-            group_id,
-            updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
-          RETURNING *
-        `;
+    await client.query('BEGIN');
 
-        result = await pool.query(insertQuery, [
-          id,
-          company || null,
-          job_title || null,
-          room_size === '' ? null : room_size,
-          notes || null,
-          group_id || null
-        ]);
-        console.log('Insert result:', result.rows[0]);
-      } else {
-        // Record exists, update it
-        console.log('Updating existing record for person:', id);
-        const updateQuery = `
-          UPDATE people_details 
-          SET 
-            company = $1,
-            job_title = $2,
-            room_size = $3,
-            notes = $4,
-            group_id = $5,
-            updated_at = CURRENT_TIMESTAMP
-          WHERE person_id = $6
-          RETURNING *
-        `;
+    // Update people_details
+    const updateQuery = `
+      INSERT INTO people_details (
+        person_id, company, job_title, room_size, 
+        group_id, notes, will_not_attend, updated_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+      ON CONFLICT (person_id) 
+      DO UPDATE SET 
+        company = EXCLUDED.company,
+        job_title = EXCLUDED.job_title,
+        room_size = EXCLUDED.room_size,
+        group_id = EXCLUDED.group_id,
+        notes = EXCLUDED.notes,
+        will_not_attend = EXCLUDED.will_not_attend,
+        updated_at = CURRENT_TIMESTAMP
+      RETURNING *
+    `;
 
-        result = await pool.query(updateQuery, [
-          company || null,
-          job_title || null,
-          room_size === '' ? null : room_size,
-          notes || null,
-          group_id || null,
-          id
-        ]);
-        console.log('Update result:', result.rows[0]);
-      }
+    const values = [
+      personId,
+      data.company,
+      data.job_title,
+      data.room_size,
+      data.group_id,
+      data.notes,
+      data.will_not_attend
+    ];
 
-      return NextResponse.json(result.rows[0]);
-    } catch (dbError) {
-      console.error('Database operation failed:', dbError);
-      throw dbError;
+    const { rows } = await client.query(updateQuery, values);
+
+    // If will_not_attend is true, cancel all active bookings
+    if (data.will_not_attend) {
+      const updateBookingsQuery = `
+        UPDATE bookings
+        SET 
+          status = 'cancelled',
+          modification_type = 'cancelled',
+          modification_date = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE person_id = $1
+        AND status NOT IN ('cancelled', 'invalidated')
+      `;
+
+      await client.query(updateBookingsQuery, [personId]);
     }
+
+    await client.query('COMMIT');
+    return NextResponse.json(rows[0]);
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Error updating person details:', error);
-    return NextResponse.json({ 
-      error: error.message,
-      field: error.column || null,
-      detail: error.detail || null
-    }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 }
+    );
+  } finally {
+    client.release();
   }
 }
 

@@ -34,6 +34,7 @@ export default function HotelDetailPage() {
   const [selectedEventId, setSelectedEventId] = useState('');
   const [errors, setErrors] = useState({});
   const [s3Debug, setS3Debug] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchHotel();
@@ -267,6 +268,40 @@ export default function HotelDetailPage() {
     }));
   };
 
+  const handleDelete = async () => {
+    try {
+      // First get deletion impact
+      const impactRes = await fetch(`/api/hotels/${hotelId}/deletion-impact`);
+      if (!impactRes.ok) throw new Error('Failed to fetch deletion impact');
+      const impact = await impactRes.json();
+
+      const confirmMessage = `Are you sure you want to delete this hotel?\n\n` +
+        `This will permanently delete:\n` +
+        `- ${impact.room_types_count} room type(s)\n` +
+        `- ${impact.bookings_count} booking(s)\n\n` +
+        `This action cannot be undone.`;
+
+      if (!confirm(confirmMessage)) return;
+
+      setIsDeleting(true);
+
+      const deleteRes = await fetch(`/api/hotels/${hotelId}`, {
+        method: 'DELETE'
+      });
+
+      if (!deleteRes.ok) {
+        throw new Error('Failed to delete hotel');
+      }
+
+      toast.success('Hotel deleted successfully');
+      router.push('/hotels');
+    } catch (error) {
+      console.error('Error deleting hotel:', error);
+      toast.error(error.message || 'Failed to delete hotel');
+      setIsDeleting(false);
+    }
+  };
+
   const renderStars = (count) => {
     const stars = [];
     const fullStars = Math.floor(count);
@@ -352,12 +387,23 @@ export default function HotelDetailPage() {
           >
             Back to Hotels
           </Button>
-          <Button
-            variant={isEditing ? "outline" : "default"}
-            onClick={() => setIsEditing(!isEditing)}
-          >
-            {isEditing ? 'Cancel' : 'Edit Hotel'}
-          </Button>
+          {!isEditing && (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setIsEditing(true)}
+              >
+                Edit Hotel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete Hotel'}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
