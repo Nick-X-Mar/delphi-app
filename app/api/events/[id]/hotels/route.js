@@ -79,15 +79,13 @@ export async function POST(request, { params }) {
     try {
       await client.query('BEGIN');
 
-      // Delete existing associations for this event
-      await client.query('DELETE FROM event_hotels WHERE event_id = $1', [eventId]);
-
-      // Insert new associations
+      // Insert new associations using ON CONFLICT DO NOTHING to preserve existing ones
       if (hotelIds.length > 0) {
         const values = hotelIds.map((hotelId) => `(${eventId}, ${hotelId})`).join(',');
         await client.query(`
           INSERT INTO event_hotels (event_id, hotel_id)
           VALUES ${values}
+          ON CONFLICT (event_id, hotel_id) DO NOTHING
         `);
       }
 

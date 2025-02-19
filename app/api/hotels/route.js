@@ -190,28 +190,13 @@ export async function GET(request) {
 // POST create new hotel
 export async function POST(request) {
   const client = await pool.connect();
+  
   try {
-    const body = await request.json();
-    console.log('Debug - Received request body:', body);
-
-    const {
-      name,
-      area,
-      stars,
-      address,
-      phone_number,
-      email,
-      website_link,
-      map_link,
-      category,
-      contact_name,
-      contact_phone,
-      contact_mobile,
-      contact_email,
-      eventId
-    } = body;
-
-    console.log('Debug - Extracted eventId:', eventId);
+    const { 
+      name, area, stars, category, address, phone_number, email, 
+      website_link, map_link, contact_name, contact_phone, 
+      contact_mobile, contact_email, eventId 
+    } = await request.json();
 
     // Validate required fields
     if (!name || !area || !category || !address || !eventId) {
@@ -220,93 +205,40 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // Convert stars to numeric and validate range if provided
-    let starsNumeric = null;
-    if (stars !== null && stars !== undefined && stars !== '') {
-      starsNumeric = Number(stars);
-      if (isNaN(starsNumeric) || starsNumeric < 0.0 || starsNumeric > 5.0) {
-        return NextResponse.json({
-          error: 'Stars must be between 0.0 and 5.0'
-        }, { status: 400 });
-      }
-    }
-
-    // Validate category
-    if (!isValidHotelCategory(category)) {
-      return NextResponse.json({
-        error: 'Invalid category'
-      }, { status: 400 });
-    }
-
     await client.query('BEGIN');
 
-    // First verify that the event exists
-    const eventQuery = `
-      SELECT event_id
-      FROM events
-      WHERE event_id = $1
-    `;
-    const { rows: eventRows } = await client.query(eventQuery, [eventId]);
-    if (eventRows.length === 0) {
-      await client.query('ROLLBACK');
-      return NextResponse.json({
-        error: 'Event not found'
-      }, { status: 404 });
-    }
-
-    // Then create the hotel
-    const hotelQuery = `
+    // Insert the new hotel
+    const insertHotelQuery = `
       INSERT INTO hotels (
-        name,
-        area,
-        stars,
-        address,
-        phone_number,
-        email,
-        website_link,
-        map_link,
-        category,
-        contact_name,
-        contact_phone,
-        contact_mobile,
-        contact_email
+        name, area, stars, category, address, phone_number, 
+        email, website_link, map_link, contact_name, 
+        contact_phone, contact_mobile, contact_email
       ) 
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING *
     `;
 
-    const hotelValues = [
-      name,
-      area,
-      starsNumeric,
-      address,
-      phone_number,
-      email,
-      website_link,
-      map_link,
-      category,
-      contact_name,
-      contact_phone,
-      contact_mobile,
-      contact_email
+    const values = [
+      name, area, stars, category, address, phone_number, 
+      email, website_link, map_link, contact_name, 
+      contact_phone, contact_mobile, contact_email
     ];
 
-    const { rows: [hotel] } = await client.query(hotelQuery, hotelValues);
+    const { rows: [hotel] } = await client.query(insertHotelQuery, values);
 
-    // Then create the event_hotels association
+    // Create event_hotels association
     const eventHotelQuery = `
       INSERT INTO event_hotels (event_id, hotel_id)
       VALUES ($1, $2)
-      ON CONFLICT (event_id, hotel_id) DO NOTHING
     `;
 
     await client.query(eventHotelQuery, [eventId, hotel.hotel_id]);
 
     await client.query('COMMIT');
-    return NextResponse.json(hotel, { status: 201 });
+    return NextResponse.json(hotel);
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('Create error:', error);
+    console.error('Creation error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   } finally {
     client.release();
