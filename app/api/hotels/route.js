@@ -205,6 +205,24 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
+    // Convert stars to numeric and validate range if provided
+    let starsNumeric = null;
+    if (stars !== null && stars !== undefined && stars !== '') {
+      starsNumeric = Number(stars);
+      if (isNaN(starsNumeric) || starsNumeric < 0.0 || starsNumeric > 5.0) {
+        return NextResponse.json({
+          error: 'Stars must be between 0.0 and 5.0'
+        }, { status: 400 });
+      }
+    }
+
+    // Validate category
+    if (!isValidHotelCategory(category)) {
+      return NextResponse.json({
+        error: 'Invalid category'
+      }, { status: 400 });
+    }
+
     await client.query('BEGIN');
 
     // Insert the new hotel
@@ -219,9 +237,19 @@ export async function POST(request) {
     `;
 
     const values = [
-      name, area, stars, category, address, phone_number, 
-      email, website_link, map_link, contact_name, 
-      contact_phone, contact_mobile, contact_email
+      name, 
+      area, 
+      starsNumeric,  // Use the validated stars value
+      category, 
+      address, 
+      phone_number || null, 
+      email || null, 
+      website_link || null, 
+      map_link || null, 
+      contact_name || null, 
+      contact_phone || null, 
+      contact_mobile || null, 
+      contact_email || null
     ];
 
     const { rows: [hotel] } = await client.query(insertHotelQuery, values);
