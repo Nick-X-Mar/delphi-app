@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ChevronDown, ChevronRight, Pencil, Trash2, X, Minimize2, Maximize2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pencil, Trash2, X, Minimize2, Maximize2, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import AccommodationHotelList from './AccommodationHotelList';
@@ -373,7 +373,15 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
                 <TableCell>{hotel.category}</TableCell>
                 <TableCell>{hotel.area}</TableCell>
                 <TableCell>{hotel.total_bookings || 0} bookings</TableCell>
-                <TableCell className="text-right">-</TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.open(`/accommodation/${hotel.hotel_id}/room-list`, '_blank')}
+                  >
+                    <FileText className="h-4 w-4" />
+                  </Button>
+                </TableCell>
               </TableRow>
               {expandedHotels.has(hotel.hotel_id) &&
                 hotel.room_types?.map((roomType) => (

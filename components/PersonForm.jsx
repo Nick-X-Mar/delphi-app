@@ -7,6 +7,7 @@ import { X, Check, ChevronsUpDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 
 export default function PersonForm({ person, formData, setFormData, onSubmit, onCancel }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -206,30 +207,10 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700">Full Name</Label>
-              <input 
-                type="text"
-                value={person?.full_name || ''} 
-                disabled
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
-              />
-            </div>
-
-            <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">Email</Label>
               <input 
                 type="email"
                 value={person?.email || ''} 
-                disabled
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700">Nationality</Label>
-              <input 
-                type="text"
-                value={person?.nationality || ''} 
                 disabled
                 className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
               />
@@ -260,6 +241,26 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
               <input 
                 type="text"
                 value={person?.guest_type || ''} 
+                disabled
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Nationality</Label>
+              <input 
+                type="text"
+                value={person?.nationality || ''} 
+                disabled
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Companion Full Name</Label>
+              <input 
+                type="text"
+                value={person?.companion_full_name || ''} 
                 disabled
                 className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
               />

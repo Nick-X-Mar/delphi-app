@@ -42,94 +42,60 @@ export async function POST(request) {
         console.log(`[Sync] Attempting to update person_id: ${person.person_id}`);
         // Try to update first
         const updateQuery = `
-          UPDATE people 
+          UPDATE people
           SET 
-            salutation = $1,
-            first_name = $2,
-            last_name = $3,
-            nationality = $4,
-            mobile_phone = $5,
-            email = $6,
-            room_type = $7,
-            full_name = $8,
-            companion_email = $9,
-            checkin_date = $10,
-            checkout_date = $11,
-            comments = $12,
-            app_synced = $13,
-            app_synced_date = $14,
-            guest_type = $15,
-            synced_at = CURRENT_TIMESTAMP AT TIME ZONE 'UTC'
-          WHERE person_id = $16
+            first_name = $1,
+            last_name = $2,
+            email = $3,
+            mobile_phone = $4,
+            company = $5,
+            companion_full_name = $6,
+            companion_email = $7,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE person_id = $8
           RETURNING *
         `;
 
-        const updateValues = [
-          person.salutation,
+        const values = [
           person.first_name,
           person.last_name,
-          person.nationality,
-          person.mobile_phone,
           person.email,
-          person.room_type,
-          person.full_name,
+          person.mobile_phone,
+          person.company,
+          person.companion_full_name,
           person.companion_email,
-          person.checkin_date,
-          person.checkout_date,
-          person.comments,
-          person.app_synced,
-          person.app_synced_date,
-          person.guest_type,
           person.person_id
         ];
 
-        console.log(`[Sync] Update values for person_id ${person.person_id}:`, updateValues);
+        console.log(`[Sync] Update values for person_id ${person.person_id}:`, values);
         
-        const updateResult = await individualClient.query(updateQuery, updateValues);
+        const updateResult = await individualClient.query(updateQuery, values);
 
         if (updateResult.rows.length === 0) {
           console.log(`[Sync] No existing record found for person_id: ${person.person_id}, attempting insert`);
           // If update didn't find the record, insert it
           const insertQuery = `
             INSERT INTO people (
-              person_id,
-              salutation,
               first_name,
               last_name,
-              nationality,
-              mobile_phone,
               email,
-              room_type,
-              full_name,
-              companion_email,
-              checkin_date,
-              checkout_date,
-              comments,
-              app_synced,
-              app_synced_date,
-              guest_type,
-              synced_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, CURRENT_TIMESTAMP AT TIME ZONE 'UTC')
+              mobile_phone,
+              company,
+              companion_full_name,
+              companion_email
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *
           `;
 
           const insertValues = [
-            person.person_id,
-            person.salutation,
             person.first_name,
             person.last_name,
-            person.nationality,
-            person.mobile_phone,
             person.email,
-            person.room_type,
-            person.full_name,
-            person.companion_email,
-            person.checkin_date,
-            person.checkout_date,
-            person.comments,
-            person.app_synced,
-            person.app_synced_date,
-            person.guest_type
+            person.mobile_phone,
+            person.company,
+            person.companion_full_name,
+            person.companion_email
           ];
 
           console.log(`[Sync] Insert values for person_id ${person.person_id}:`, insertValues);

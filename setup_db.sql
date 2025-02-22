@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS people (
     mobile_phone VARCHAR(30),
     email VARCHAR(100),
     room_type VARCHAR(10) CHECK (room_type IN ('single', 'double')),
-    full_name VARCHAR(200),
+    companion_full_name VARCHAR(200),
     companion_email VARCHAR(100),
     checkin_date DATE,
     checkout_date DATE,
@@ -16,7 +16,9 @@ CREATE TABLE IF NOT EXISTS people (
     app_synced BOOLEAN,
     app_synced_date DATE,
     guest_type VARCHAR(10) CHECK (guest_type IN ('speaker', 'press', 'guest')),
-    synced_at TIMESTAMP WITH TIME ZONE DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')
+    synced_at TIMESTAMP WITH TIME ZONE DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create the people_details table (managed by our system)

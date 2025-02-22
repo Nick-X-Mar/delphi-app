@@ -97,14 +97,6 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
     return <div className="text-center py-4">Loading people...</div>;
   }
 
-  if (people.length === 0) {
-    return (
-      <div className="text-center py-4 text-gray-500">
-        No people assigned to this event. Please assign people to the event first.
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -183,51 +175,59 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
           </TableRow>
         </TableHeader>
         <TableBody>
-          {people.map((person) => (
-            <TableRow 
-              key={person.person_id}
-              className={`
-                ${person.booking_id ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'cursor-pointer hover:bg-gray-100'}
-                ${selectedPerson?.person_id === person.person_id ? 'bg-blue-50' : ''}
-                ${person.will_not_attend ? 'line-through text-gray-500 cursor-not-allowed' : ''}
-              `}
-              onClick={() => handlePersonClick(person)}
-              title={
-                person.booking_id 
-                  ? "This person already has a booking and cannot be selected"
-                  : person.will_not_attend
-                    ? "This person will not attend and cannot be selected"
-                    : ""
-              }
-            >
-              <TableCell>
-                {person.first_name} {person.last_name}
-              </TableCell>
-              <TableCell>{person.email}</TableCell>
-              <TableCell>{person.company}</TableCell>
-              <TableCell>{person.room_size || '-'}</TableCell>
-              <TableCell>{person.group_id ? `Group ${person.group_id}` : '-'}</TableCell>
-              <TableCell>
-                {person.booking_id ? (
-                  <span className="text-sm">
-                    {person.hotel_name} - {person.room_type_name}
-                    <br />
-                    <span className="text-gray-500">
-                      {formatDate(person.check_in_date)} - {formatDate(person.check_out_date)}
-                    </span>
-                  </span>
-                ) : (
-                  <span className="text-gray-500">No current booking</span>
-                )}
+          {people.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                No people available for accommodation
               </TableCell>
             </TableRow>
-          ))}
+          ) : (
+            people.map((person) => (
+              <TableRow 
+                key={person.person_id}
+                className={`
+                  ${person.booking_id ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'cursor-pointer hover:bg-gray-100'}
+                  ${selectedPerson?.person_id === person.person_id ? 'bg-blue-50' : ''}
+                  ${person.will_not_attend ? 'line-through text-gray-500 cursor-not-allowed' : ''}
+                `}
+                onClick={() => handlePersonClick(person)}
+                title={
+                  person.booking_id 
+                    ? "This person already has a booking and cannot be selected"
+                    : person.will_not_attend
+                      ? "This person will not attend and cannot be selected"
+                      : ""
+                }
+              >
+                <TableCell>
+                  {person.first_name} {person.last_name}
+                </TableCell>
+                <TableCell>{person.email}</TableCell>
+                <TableCell>{person.company}</TableCell>
+                <TableCell>{person.room_size || '-'}</TableCell>
+                <TableCell>{person.group_id ? `Group ${person.group_id}` : '-'}</TableCell>
+                <TableCell>
+                  {person.booking_id ? (
+                    <span className="text-sm">
+                      {person.hotel_name} - {person.room_type_name}
+                      <br />
+                      <span className="text-gray-500">
+                        {formatDate(person.check_in_date)} - {formatDate(person.check_out_date)}
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="text-gray-500">No current booking</span>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-500">
-          Showing {((pagination.currentPage - 1) * pagination.itemsPerPage) + 1} to {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} of {pagination.totalItems} people
+          Showing {people.length > 0 ? ((pagination.currentPage - 1) * pagination.itemsPerPage) + 1 : 0} to {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} of {pagination.totalItems} people
         </p>
         <div className="flex items-center gap-1.5">
           <button

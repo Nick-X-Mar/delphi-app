@@ -26,7 +26,7 @@ export async function GET(request) {
         p.mobile_phone,
         p.email,
         p.room_type,
-        p.full_name,
+        p.companion_full_name,
         p.companion_email,
         p.checkin_date,
         p.checkout_date,
