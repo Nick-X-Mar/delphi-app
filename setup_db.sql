@@ -292,3 +292,32 @@ $$ language 'plpgsql';
 ALTER TABLE people_details 
   DROP COLUMN IF EXISTS group_id,
   ADD COLUMN group_id VARCHAR(100);
+
+-- Create users table for authentication
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255),
+    role VARCHAR(20) CHECK (role IN ('admin', 'level-1', 'level-2')),
+    google_id VARCHAR(255) UNIQUE,
+    image VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create trigger for users table
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
+CREATE TRIGGER update_users_updated_at
+    BEFORE UPDATE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Insert initial admin user (password will be 'admin123' - should be changed immediately)
+INSERT INTO users (name, email, password, role) 
+VALUES (
+    'Admin User', 
+    'admin@example.com',
+    '$2b$10$nD1MyB0K8xqka/9x5yyMau.xhLhi29Pmhuv3qYE2FkIhg1ksqI2oK',
+    'admin'
+) ON CONFLICT (email) DO NOTHING;

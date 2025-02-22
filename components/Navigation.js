@@ -7,13 +7,15 @@ import {
   HomeIcon, 
   UserGroupIcon,
   ChartBarIcon,
-  BuildingOffice2Icon
+  BuildingOffice2Icon,
+  UsersIcon
 } from '@heroicons/react/24/outline';
 
 export default function Navigation() {
   const pathname = usePathname();
 
   const mainNavigation = [
+    { name: 'Users', href: '/users', icon: UsersIcon },
     { name: 'Events', href: '/events', icon: CalendarIcon },
     { name: 'Hotels', href: '/hotels', icon: HomeIcon },
     { name: 'People', href: '/people', icon: UserGroupIcon },
