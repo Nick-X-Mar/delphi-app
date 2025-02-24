@@ -79,10 +79,13 @@ CREATE TABLE IF NOT EXISTS room_types (
     base_price_per_night DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
-    CONSTRAINT positive_base_price CHECK (base_price_per_night > 0)
+    CONSTRAINT positive_base_price CHECK (base_price_per_night >= 0)
 );
 
-CREATE TABLE IF NOT EXISTS room_availability
+-- Create room_availability table
+DROP TABLE IF EXISTS public.room_availability;
+
+CREATE TABLE IF NOT EXISTS public.room_availability
 (
     room_type_id integer NOT NULL,
     date date NOT NULL,
@@ -90,10 +93,14 @@ CREATE TABLE IF NOT EXISTS room_availability
     price_per_night numeric(10,2) NOT NULL,
     CONSTRAINT room_availability_pkey PRIMARY KEY (room_type_id, date),
     CONSTRAINT room_availability_room_type_id_fkey FOREIGN KEY (room_type_id)
-        REFERENCES room_types (room_type_id) MATCH SIMPLE
+        REFERENCES public.room_types (room_type_id) MATCH SIMPLE
         ON UPDATE NO ACTION
         ON DELETE CASCADE
 )
+TABLESPACE pg_default;
+
+ALTER TABLE IF EXISTS public.room_availability
+    OWNER to delphiapp;
 
 -- Create bookings table (managed by our system)
 CREATE TABLE IF NOT EXISTS bookings
