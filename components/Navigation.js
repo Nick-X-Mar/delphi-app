@@ -8,7 +8,8 @@ import {
   UserGroupIcon,
   ChartBarIcon,
   BuildingOffice2Icon,
-  UsersIcon
+  UsersIcon,
+  EnvelopeIcon
 } from '@heroicons/react/24/outline';
 
 export default function Navigation() {
@@ -24,6 +25,7 @@ export default function Navigation() {
 
   const secondaryNavigation = [
     { name: 'Accommodation', href: '/accommodation', icon: BuildingOffice2Icon },
+    { name: 'Email Logs', href: '/email-logs', icon: EnvelopeIcon },
   ];
 
   return (

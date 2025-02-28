@@ -1,12 +1,14 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ChevronDown, ChevronRight, Pencil, Trash2, X, Minimize2, Maximize2, FileText } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pencil, Trash2, X, Minimize2, Maximize2, FileText, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import AccommodationHotelList from './AccommodationHotelList';
 import Pagination from './Pagination';
 import { formatDate } from '@/utils/dateFormatters';
+import { sendEmail, getGuestsWithChanges, getLastEmailNotification, recordEmailNotification } from '@/lib/emailService';
+import { emailQueue } from '@/lib/emailQueue';
 
 const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
   const [expandedHotels, setExpandedHotels] = useState(new Set());
@@ -20,6 +22,8 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
     totalItems: 0,
     totalPages: 0
   });
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [lastBulkEmailTime, setLastBulkEmailTime] = useState(null);
 
   const formatDisplayDate = (dateString) => {
     const date = new Date(dateString);
@@ -76,6 +80,26 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
     setIsLoading(true);
     fetchData();
   }, [eventId, pagination.currentPage]);
+
+  useEffect(() => {
+    const fetchLastBulkEmailTime = async () => {
+      if (!eventId) return;
+      try {
+        const lastNotification = await getLastEmailNotification(null, eventId);
+        if (lastNotification) {
+          setLastBulkEmailTime(lastNotification.sent_at);
+        } else {
+          console.log('No previous bulk email found for this event');
+          setLastBulkEmailTime(null);
+        }
+      } catch (error) {
+        console.error('Error fetching last bulk email time:', error);
+        setLastBulkEmailTime(null);
+      }
+    };
+
+    fetchLastBulkEmailTime();
+  }, [eventId]);
 
   // Filter hotels based on search and category
   const filteredHotels = useMemo(() => {
@@ -306,6 +330,244 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
     }));
   };
 
+  const handleSendEmail = async (booking, hotelName, roomTypeName) => {
+    try {
+      setIsSendingEmail(true);
+      
+      const result = await sendEmail({
+        to: booking.email,
+        subject: 'Your Hotel Booking Confirmation',
+        eventId,
+        guestId: booking.person_id,
+        bookingId: booking.booking_id,
+        notificationType: 'INDIVIDUAL',
+        firstName: booking.first_name,
+        lastName: booking.last_name,
+        ticketId: booking.booking_id
+      });
+
+      if (result.success) {
+        toast.success('Email sent successfully');
+      } else {
+        console.error('Error sending email:', result.error);
+        toast.error(`Failed to send email: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error sending email:', error);
+      toast.error('Failed to send email');
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  const handleSendBulkEmails = async () => {
+    try {
+      setIsSendingEmail(true);
+      let emailsToSend = [];
+
+      // Prepare all emails
+      for (const hotel of hotels) {
+        for (const roomType of hotel.room_types || []) {
+          for (const booking of roomType.bookings || []) {
+            // Include both confirmed and pending bookings
+            if (booking.status === 'confirmed' || booking.status === 'pending') {
+              emailsToSend.push({
+                to: booking.email,
+                subject: 'Your Hotel Booking Confirmation',
+                eventId,
+                guestId: booking.person_id,
+                bookingId: booking.booking_id,
+                notificationType: 'BULK',
+                firstName: booking.first_name,
+                lastName: booking.last_name,
+                ticketId: booking.booking_id
+              });
+              
+              // If the booking is pending, update it to confirmed after sending the email
+              if (booking.status === 'pending') {
+                try {
+                  await fetch(`/api/bookings/${booking.booking_id}`, {
+                    method: 'PUT',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      status: 'confirmed'
+                    }),
+                  });
+                } catch (updateError) {
+                  console.error('Error updating booking status:', updateError);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Set up progress tracking
+      const progressToast = toast.loading(`Sending 0/${emailsToSend.length} emails...`);
+      
+      // Add to queue and process
+      emailQueue
+        .clear()
+        .addBulkToQueue(emailsToSend)
+        .onProgress(progress => {
+          toast.loading(
+            `Sending emails: ${progress.sent}/${progress.total} (${progress.percentComplete}%)`, 
+            { id: progressToast }
+          );
+        })
+        .onComplete(async result => {
+          toast.dismiss(progressToast);
+          
+          // Record a new bulk email notification to update the reference point
+          if (result.sent > 0) {
+            try {
+              await recordEmailNotification({
+                guestId: null, // null for bulk emails
+                eventId,
+                bookingId: null,
+                notificationType: 'BULK',
+                to: 'multiple-recipients',
+                subject: 'Bulk Confirmation Email',
+                status: 'sent',
+                statusId: null,
+                errorMessage: null
+              });
+              
+              // Refresh the last bulk email time
+              const lastNotification = await getLastEmailNotification(null, eventId);
+              if (lastNotification) {
+                setLastBulkEmailTime(lastNotification.sent_at);
+              }
+            } catch (recordError) {
+              console.error('Error recording bulk email notification:', recordError);
+            }
+          }
+          
+          if (result.failed > 0) {
+            toast.warning(`Sent ${result.sent} emails, ${result.failed} failed`);
+          } else {
+            toast.success(`Successfully sent ${result.sent} emails`);
+          }
+          setIsSendingEmail(false);
+        })
+        .process();
+      
+    } catch (error) {
+      console.error('Error sending bulk emails:', error);
+      toast.error('Failed to send bulk emails');
+      setIsSendingEmail(false);
+    }
+  };
+
+  const handleSendEmailsForChanges = async () => {
+    if (!lastBulkEmailTime) {
+      toast.error('No previous bulk email found to compare changes against');
+      return;
+    }
+
+    try {
+      setIsSendingEmail(true);
+      const { guests } = await getGuestsWithChanges(eventId, lastBulkEmailTime);
+      
+      if (!guests || guests.length === 0) {
+        toast.info('No booking changes found since last bulk email');
+        setIsSendingEmail(false);
+        return;
+      }
+
+      // Prepare all emails
+      const emailsToSend = guests.map(guest => {
+        return {
+          to: guest.email,
+          subject: 'Your Hotel Booking Update',
+          eventId,
+          guestId: guest.person_id,
+          bookingId: guest.booking_id,
+          notificationType: 'CHANGES',
+          firstName: guest.first_name,
+          lastName: guest.last_name,
+          ticketId: guest.booking_id
+        };
+      });
+
+      // Set up progress tracking
+      const progressToast = toast.loading(`Sending 0/${emailsToSend.length} update emails...`);
+      
+      // Add to queue and process
+      emailQueue
+        .clear()
+        .addBulkToQueue(emailsToSend)
+        .onProgress(progress => {
+          toast.loading(
+            `Sending updates: ${progress.sent}/${progress.total} (${progress.percentComplete}%)`, 
+            { id: progressToast }
+          );
+        })
+        .onComplete(async result => {
+          toast.dismiss(progressToast);
+          
+          // Update any pending bookings to confirmed
+          for (const guest of guests) {
+            if (guest.status === 'pending') {
+              try {
+                await fetch(`/api/bookings/${guest.booking_id}`, {
+                  method: 'PUT',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    status: 'confirmed'
+                  }),
+                });
+              } catch (updateError) {
+                console.error('Error updating booking status:', updateError);
+              }
+            }
+          }
+          
+          // Record a new bulk email notification to update the reference point
+          if (result.sent > 0) {
+            try {
+              await recordEmailNotification({
+                guestId: null, // null for bulk emails
+                eventId,
+                bookingId: null,
+                notificationType: 'BULK',
+                to: 'multiple-recipients',
+                subject: 'Bulk Update Email',
+                status: 'sent',
+                statusId: null,
+                errorMessage: null
+              });
+              
+              // Refresh the last bulk email time
+              const lastNotification = await getLastEmailNotification(null, eventId);
+              if (lastNotification) {
+                setLastBulkEmailTime(lastNotification.sent_at);
+              }
+            } catch (recordError) {
+              console.error('Error recording bulk email notification:', recordError);
+            }
+          }
+          
+          if (result.failed > 0) {
+            toast.warning(`Sent ${result.sent} updates, ${result.failed} failed`);
+          } else {
+            toast.success(`Successfully sent ${result.sent} update emails`);
+          }
+          setIsSendingEmail(false);
+        })
+        .process();
+      
+    } catch (error) {
+      console.error('Error sending update emails:', error);
+      toast.error('Failed to send update emails');
+      setIsSendingEmail(false);
+    }
+  };
+
   if (isLoading) {
     return <div className="text-center py-4">Loading...</div>;
   }
@@ -328,6 +590,25 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end gap-4 mb-4">
+        <Button
+          onClick={handleSendEmailsForChanges}
+          disabled={isSendingEmail || !hotels.length || !lastBulkEmailTime}
+          className="flex items-center gap-2"
+        >
+          <Mail className="h-4 w-4" />
+          {isSendingEmail ? 'Sending Updates...' : 'Send Updates Since Last Bulk Email'}
+        </Button>
+        <Button
+          onClick={handleSendBulkEmails}
+          disabled={isSendingEmail || !hotels.length}
+          className="flex items-center gap-2"
+        >
+          <Mail className="h-4 w-4" />
+          {isSendingEmail ? 'Sending Emails...' : 'Send Emails to All Guests'}
+        </Button>
+      </div>
+
       <Table>
         <TableHeader>
           <TableRow>
@@ -440,6 +721,14 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
                               <div className="flex justify-end gap-2">
                                 {booking.status !== 'cancelled' && (
                                   <>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleSendEmail(booking, hotel.name, roomType.name)}
+                                      disabled={isSendingEmail}
+                                    >
+                                      <Mail className="h-4 w-4" />
+                                    </Button>
                                     {editingBooking?.booking_id === booking.booking_id ? (
                                       <Button
                                         variant="ghost"

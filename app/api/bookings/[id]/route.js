@@ -45,7 +45,7 @@ export async function PUT(request, { params }) {
     const { roomTypeId, checkInDate, checkOutDate, totalCost, originalBooking } = body;
 
     // Validate required fields for full update
-    if (!roomTypeId || !checkInDate || !checkOutDate || !totalCost || !originalBooking) {
+    if (!roomTypeId || !checkInDate || !checkOutDate || totalCost === undefined || !originalBooking) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }

@@ -328,3 +328,20 @@ VALUES (
     '$2b$10$nD1MyB0K8xqka/9x5yyMau.xhLhi29Pmhuv3qYE2FkIhg1ksqI2oK',
     'admin'
 ) ON CONFLICT (email) DO NOTHING;
+
+
+CREATE TABLE email_notifications (
+    id SERIAL PRIMARY KEY,
+    guest_id INTEGER,
+    event_id INTEGER NOT NULL,
+    sent_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    notification_type VARCHAR(50) NOT NULL, 
+    booking_id INTEGER REFERENCES bookings(booking_id),
+    recipient_email VARCHAR(255),
+    subject VARCHAR(255),
+    status VARCHAR(50) DEFAULT 'sent' CHECK (status IN ('sent', 'failed', 'pending')),
+    status_id VARCHAR(100),
+    error_message TEXT,
+    FOREIGN KEY (guest_id) REFERENCES people(person_id),
+    FOREIGN KEY (event_id) REFERENCES events(event_id)
+);
