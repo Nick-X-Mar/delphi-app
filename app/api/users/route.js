@@ -26,12 +26,12 @@ export async function GET() {
   }
 }
 
-// POST /api/users - Create a new user (admin only)
+// POST /api/users - Create a new user (admin and level-1 users)
 export async function POST(request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized - Only admin can create users' }, { status: 401 });
+    if (!session || !['admin', 'level-1'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Unauthorized - Only admin and level-1 users can create users' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -51,6 +51,14 @@ export async function POST(request) {
       return NextResponse.json(
         { error: 'Invalid role' },
         { status: 400 }
+      );
+    }
+
+    // Level-1 users cannot create admin users
+    if (session.user.role === 'level-1' && role === 'admin') {
+      return NextResponse.json(
+        { error: 'Level-1 users cannot create admin users' },
+        { status: 403 }
       );
     }
 
