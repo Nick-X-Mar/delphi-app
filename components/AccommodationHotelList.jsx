@@ -173,15 +173,16 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
       return;
     }
 
-    // Get all dates between check-in and check-out
+    // Get all dates between check-in and check-out (excluding checkout date)
     const dates = [];
     let currentDate = new Date(checkIn);
-    while (currentDate <= checkOut) {
+    // Only check availability up to the day before checkout
+    while (currentDate < checkOut) {
       dates.push(new Date(currentDate));
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    // Check availability for all dates
+    // Check availability for all dates (excluding checkout date)
     const unavailableDates = dates.filter(date => {
       const availability = getAvailabilityForDate(roomType, date);
       return availability.available_rooms < 1;
@@ -442,16 +443,25 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
                       const availability = getAvailabilityForDate(roomType, date);
                       const isSelected = isDateSelected(roomType.room_type_id, date);
                       const isInRange = isDateInRange(roomType.room_type_id, date);
+                      
+                      // Check if this could be a valid checkout date (if we have one date selected already)
+                      const couldBeCheckoutDate = selection.dates.length === 1 && 
+                        selection.roomTypeId === roomType.room_type_id && 
+                        date > selection.dates[0];
+                      
                       return (
                         <TableCell 
                           key={date.toISOString()} 
                           className={`text-center whitespace-nowrap cursor-pointer transition-colors
-                            ${availability.available_rooms > 0 ? 'hover:bg-gray-50' : 'bg-gray-100 cursor-not-allowed'}
+                            ${(availability.available_rooms > 0 || couldBeCheckoutDate) ? 'hover:bg-gray-50' : 'bg-gray-100 cursor-not-allowed'}
                             ${isSelected ? 'bg-blue-100 hover:bg-blue-200' : ''}
                             ${isInRange ? 'bg-blue-50' : ''}
                           `}
                           onClick={() => {
-                            if (availability.available_rooms > 0) {
+                            // Allow clicking if:
+                            // 1. The room is available, OR
+                            // 2. This could be a checkout date (we already have a check-in date selected)
+                            if (availability.available_rooms > 0 || couldBeCheckoutDate) {
                               handleCellClick(roomType, date);
                             }
                           }}
