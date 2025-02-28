@@ -21,9 +21,9 @@ export async function POST(request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        emailId: process.env.HUBSPOT_EMAIL_TEMPLATE_ID || '182444167092',
+        emailId: process.env.HUBSPOT_EMAIL_TEMPLATE_ID,
         message: {
-          from: process.env.EMAIL_FROM_ADDRESS || 'nmarianos93@gmail.com',
+          // from: process.env.EMAIL_FROM_ADDRESS,
           to: to
         },
         customProperties: {

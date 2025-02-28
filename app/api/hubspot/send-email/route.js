@@ -17,12 +17,12 @@ export async function POST(request) {
 
     // Prepare the request payload
     const payload = {
-      emailId: process.env.HUBSPOT_EMAIL_TEMPLATE_ID || '182444167092',
+      emailId: process.env.HUBSPOT_EMAIL_TEMPLATE_ID,
       message: {
         // from: process.env.EMAIL_FROM_ADDRESS || 'nmarianos93@gmail.com',
-        // to: to,
+        to: to,
         // cc: ['nmarianos93@gmail.com']
-        to: 'nmarianos93@gmail.com'
+        // to: 'nmarianos93@gmail.com'
       },
       customProperties: {
         first_name: firstName || '',
