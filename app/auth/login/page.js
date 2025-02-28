@@ -32,17 +32,19 @@ export default function LoginPage() {
       const result = await signIn('credentials', {
         email: formData.email,
         password: formData.password,
-        redirect: false
+        redirect: false,
+        callbackUrl: '/'
       });
 
       if (result.error) {
         toast.error(result.error);
       } else {
-        router.push('/');
-        router.refresh();
+        // Force a hard navigation to the home page
+        window.location.href = '/';
       }
     } catch (error) {
       toast.error('An error occurred during login');
+      console.error('Login error:', error);
     } finally {
       setIsLoading(false);
     }
