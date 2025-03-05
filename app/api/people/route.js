@@ -31,8 +31,6 @@ export async function GET(request) {
         p.checkin_date,
         p.checkout_date,
         p.comments,
-        p.app_synced,
-        p.app_synced_date,
         p.guest_type,
         p.synced_at,
         pd.company,
@@ -142,25 +140,78 @@ export async function GET(request) {
 // POST create new person
 export async function POST(request) {
   try {
-    const { first_name, last_name, email } = await request.json();
-    
+    const person = await request.json();
+    console.log(`[Create] Processing new person with data:`, person);
+
     // Validate required fields
-    if (!first_name || !last_name || !email) {
+    if (!person.person_id || !person.first_name || !person.last_name || !person.email) {
+      console.error('[Create] Validation error: Missing required fields');
       return NextResponse.json({ 
-        error: 'First name, last name, and email are required' 
+        success: false, 
+        error: 'Missing required fields (person_id, first_name, last_name, email)' 
       }, { status: 400 });
     }
 
-    const query = `
-      INSERT INTO people (first_name, last_name, email) 
-      VALUES ($1, $2, $3)
-      RETURNING *
+    // Insert into people table
+    const insertQuery = `
+      INSERT INTO people (
+        person_id,
+        salutation,
+        first_name,
+        last_name,
+        nationality,
+        mobile_phone,
+        email,
+        room_type,
+        companion_full_name,
+        companion_email,
+        checkin_date,
+        checkout_date,
+        comments,
+        guest_type,
+        app_synced
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      RETURNING person_id
     `;
 
-    const { rows } = await pool.query(query, [first_name, last_name, email]);
-    return NextResponse.json(rows[0], { status: 201 });
+    const values = [
+      person.person_id,
+      person.salutation,
+      person.first_name,
+      person.last_name,
+      person.nationality,
+      person.mobile_phone,
+      person.email,
+      person.room_type,
+      person.full_name, // This seems to be used for companion_full_name
+      person.companion_email,
+      person.checkin_date,
+      person.checkout_date,
+      person.comments,
+      person.guest_type,
+      person.app_synced || false
+    ];
+
+    const { rows } = await pool.query(insertQuery, values);
+    
+    // Assign to event 1 by default
+    const assignToEventQuery = `
+      INSERT INTO event_people (event_id, person_id)
+      VALUES (1, $1)
+    `;
+    await pool.query(assignToEventQuery, [rows[0].person_id]);
+
+    return NextResponse.json({ 
+      success: true, 
+      error: null 
+    }, { status: 201 });
+
   } catch (error) {
-    console.error('Create error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[Create] Error:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: error.message 
+    }, { status: 500 });
   }
 } 
