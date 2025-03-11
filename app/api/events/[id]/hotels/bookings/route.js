@@ -4,8 +4,10 @@ import pool from '@/lib/db';
 export async function GET(request, { params }) {
   try {
     const eventId = await params.id;
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get('search') || '';
     
-    const query = `
+    let query = `
       WITH event_hotels AS (
         SELECT h.*,
           (
@@ -22,6 +24,13 @@ export async function GET(request, { params }) {
         FROM hotels h
         INNER JOIN event_hotels eh ON h.hotel_id = eh.hotel_id
         WHERE eh.event_id = $1
+        ${search ? `
+          AND (
+            LOWER(h.name) LIKE LOWER($2) OR
+            LOWER(h.area) LIKE LOWER($2) OR
+            LOWER(h.address) LIKE LOWER($2)
+          )
+        ` : ''}
       )
       SELECT 
         h.*,
@@ -63,7 +72,11 @@ export async function GET(request, { params }) {
       ORDER BY h.category DESC, h.stars DESC, h.name;
     `;
 
-    const { rows } = await pool.query(query, [eventId]);
+    const queryParams = search 
+      ? [eventId, `%${search}%`] 
+      : [eventId];
+      
+    const { rows } = await pool.query(query, queryParams);
     return NextResponse.json(rows);
   } catch (error) {
     console.error('Error getting event hotels bookings:', error);

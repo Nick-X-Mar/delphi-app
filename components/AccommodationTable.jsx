@@ -41,7 +41,16 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
 
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/events/${eventId}/hotels/bookings`);
+      
+      // Get search term from filters if available
+      const searchTerm = filters?.hotelSearch || '';
+      
+      // Build URL with search parameter if provided
+      const url = searchTerm 
+        ? `/api/events/${eventId}/hotels/bookings?search=${encodeURIComponent(searchTerm)}`
+        : `/api/events/${eventId}/hotels/bookings`;
+        
+      const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch hotels');
       const data = await response.json();
       const allHotels = Array.isArray(data) ? data : [];
@@ -79,7 +88,7 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
   useEffect(() => {
     setIsLoading(true);
     fetchData();
-  }, [eventId, pagination.currentPage]);
+  }, [eventId, pagination.currentPage, filters]);
 
   useEffect(() => {
     const fetchLastBulkEmailTime = async () => {
