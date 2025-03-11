@@ -15,9 +15,8 @@ export async function GET(request, { params }) {
       SELECT b.* 
       FROM bookings b
       INNER JOIN people p ON b.person_id = p.person_id
-      INNER JOIN people_details pd ON p.person_id = pd.person_id
       WHERE b.event_id = $1 
-      AND pd.company = $2
+      AND p.company = $2
       AND b.status NOT IN ('cancelled', 'invalidated')
     `;
 

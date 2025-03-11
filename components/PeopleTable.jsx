@@ -407,6 +407,7 @@ export default function PeopleTable() {
                 disabled={true}
               />
             </TableHead>
+            <TableHead>Synced at</TableHead>
             <TableHead>First Name</TableHead>
             <TableHead>Last Name</TableHead>
             <TableHead>Email</TableHead>
@@ -438,12 +439,13 @@ export default function PeopleTable() {
                   disabled={true}
                 />
               </TableCell>
+              <TableCell>{formatDateTime(person.synced_at)}</TableCell>
               <TableCell>{person.first_name}</TableCell>
               <TableCell>{person.last_name}</TableCell>
               <TableCell>{person.email}</TableCell>
               <TableCell>{person.company}</TableCell>
               <TableCell>{person.job_title}</TableCell>
-              <TableCell>{person.room_size}</TableCell>
+              <TableCell>{person.room_size || (person.room_type === 'single' ? '1' : person.room_type === 'double' ? '2' : '-')}</TableCell>
               <TableCell>
                 {person.group_id ? (
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${getGroupColor(person.group_id)}`}>

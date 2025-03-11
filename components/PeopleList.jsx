@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useDebounce } from 'use-debounce';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { formatDate } from '@/utils/dateFormatters';
+import { formatDate, formatDateTime } from '@/utils/dateFormatters';
 
 export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) {
   const [people, setPeople] = useState([]);
@@ -166,18 +166,21 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>Synced at</TableHead>
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Company</TableHead>
-            <TableHead>Room Size</TableHead>
+            <TableHead>Number of pax</TableHead>
             <TableHead>Stay Together</TableHead>
             <TableHead>Current Booking</TableHead>
+            <TableHead className="w-[200px]">Comments</TableHead>
+            <TableHead className="w-[200px]">Notes</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {people.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+              <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                 No people available for accommodation
               </TableCell>
             </TableRow>
@@ -199,12 +202,13 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
                       : ""
                 }
               >
+                <TableCell>{formatDateTime(person.synced_at)}</TableCell>
                 <TableCell>
                   {person.first_name} {person.last_name}
                 </TableCell>
                 <TableCell>{person.email}</TableCell>
                 <TableCell>{person.company}</TableCell>
-                <TableCell>{person.room_size || '-'}</TableCell>
+                <TableCell>{person.room_size || (person.room_type === 'single' ? '1' : person.room_type === 'double' ? '2' : '-')}</TableCell>
                 <TableCell>{person.group_id ? `Group ${person.group_id}` : '-'}</TableCell>
                 <TableCell>
                   {person.booking_id ? (
@@ -218,6 +222,12 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
                   ) : (
                     <span className="text-gray-500">No current booking</span>
                   )}
+                </TableCell>
+                <TableCell className="max-w-[200px] truncate" title={person.comments}>
+                  {person.comments || '-'}
+                </TableCell>
+                <TableCell className="max-w-[200px] truncate" title={person.notes}>
+                  {person.notes || '-'}
                 </TableCell>
               </TableRow>
             ))

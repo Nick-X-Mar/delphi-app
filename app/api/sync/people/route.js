@@ -39,6 +39,10 @@ export async function POST(request) {
           continue;
         }
 
+        // Generate a single timestamp in UTC+0
+        const timestampResult = await individualClient.query("SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AS current_time");
+        const currentTimestamp = timestampResult.rows[0].current_time;
+
         console.log(`[Sync] Attempting to update person_id: ${person.person_id}`);
         // Try to update first
         const updateQuery = `
@@ -51,8 +55,11 @@ export async function POST(request) {
             company = $5,
             companion_full_name = $6,
             companion_email = $7,
-            updated_at = CURRENT_TIMESTAMP
-          WHERE person_id = $8
+            job_title = $8,
+            room_type = $9,
+            synced_at = $11,
+            updated_at = $11
+          WHERE person_id = $10
           RETURNING *
         `;
 
@@ -64,7 +71,10 @@ export async function POST(request) {
           person.company,
           person.companion_full_name,
           person.companion_email,
-          person.person_id
+          person.job_title,
+          person.room_type,
+          person.person_id,
+          currentTimestamp
         ];
 
         console.log(`[Sync] Update values for person_id ${person.person_id}:`, values);
@@ -76,32 +86,66 @@ export async function POST(request) {
           // If update didn't find the record, insert it
           const insertQuery = `
             INSERT INTO people (
+              person_id,
               first_name,
               last_name,
               email,
               mobile_phone,
               company,
               companion_full_name,
-              companion_email
+              companion_email,
+              job_title,
+              room_type,
+              synced_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             RETURNING *
           `;
 
           const insertValues = [
+            person.person_id,
             person.first_name,
             person.last_name,
             person.email,
             person.mobile_phone,
             person.company,
             person.companion_full_name,
-            person.companion_email
+            person.companion_email,
+            person.job_title,
+            person.room_type,
+            currentTimestamp
           ];
 
           console.log(`[Sync] Insert values for person_id ${person.person_id}:`, insertValues);
           
           const insertResult = await individualClient.query(insertQuery, insertValues);
           console.log(`[Sync] Successfully inserted person_id: ${person.person_id}`);
+          
+          // Determine room_size based on room_type
+          let roomSize = null;
+          if (person.room_type) {
+            if (person.room_type === 'single') {
+              roomSize = 1;
+            } else if (person.room_type === 'double') {
+              roomSize = 2;
+            }
+          }
+          
+          // Create entry in people_details table
+          const detailsQuery = `
+            INSERT INTO people_details (
+              person_id,
+              room_size,
+              updated_at
+            )
+            VALUES ($1, $2, $3)
+            ON CONFLICT (person_id) 
+            DO UPDATE SET 
+              room_size = EXCLUDED.room_size,
+              updated_at = $3
+          `;
+          
+          await individualClient.query(detailsQuery, [person.person_id, roomSize, currentTimestamp]);
           
           // Assign newly created person to event 1
           const assignToEventQuery = `

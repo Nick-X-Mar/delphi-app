@@ -24,6 +24,8 @@ export async function GET(request, { params }) {
       SELECT 
         p.*,
         pd.will_not_attend,
+        pd.room_size,
+        pd.notes,
         b.booking_id,
         b.check_in_date,
         b.check_out_date,
@@ -78,7 +80,7 @@ export async function GET(request, { params }) {
     const { rows: [{ count }] } = await pool.query(countQuery, queryParams);
 
     // Add ordering and pagination to the main query
-    query += ` ORDER BY p.first_name, p.last_name
+    query += ` ORDER BY p.synced_at DESC NULLS LAST, p.first_name, p.last_name
                LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
     queryParams.push(limit, offset);
 

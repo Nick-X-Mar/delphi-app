@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { formatDateTime } from "@/utils/dateFormatters";
 
 export default function PersonForm({ person, formData, setFormData, onSubmit, onCancel }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,10 +25,16 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
   // Initialize formData with person's data when component mounts
   useEffect(() => {
     if (person) {
+      // Automatically set room_size based on room_type
+      let roomSize = person.room_size || '';
+      if (!roomSize && person.room_type) {
+        roomSize = person.room_type === 'single' ? '1' : person.room_type === 'double' ? '2' : '';
+      }
+      
       setFormData({
         company: person.company || '',
         job_title: person.job_title || '',
-        room_size: person.room_size || '',
+        room_size: roomSize,
         group_id: person.group_id || '',
         notes: person.notes || '',
         will_not_attend: person.will_not_attend || false
@@ -54,6 +61,13 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
       toast.error('Invalid person data');
       return;
     }
+
+    // Ensure we're using the company and job_title from the person object (source system)
+    const submitData = {
+      ...formData,
+      company: person.company || '',
+      job_title: person.job_title || ''
+    };
 
     // If will_not_attend is being set to true, check for active bookings
     if (formData.will_not_attend) {
@@ -82,7 +96,7 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       });
 
       if (!response.ok) {
@@ -227,6 +241,26 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
             </div>
 
             <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Company</Label>
+              <input 
+                type="text"
+                value={person?.company || ''} 
+                disabled
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Job Title</Label>
+              <input 
+                type="text"
+                value={person?.job_title || ''} 
+                disabled
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">Room Type</Label>
               <input 
                 type="text"
@@ -296,32 +330,22 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
               />
             </div>
 
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Synced at</Label>
+              <input 
+                type="text"
+                value={person?.synced_at ? formatDateTime(person.synced_at) : 'Never'} 
+                disabled
+                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+              />
+            </div>
+
             <div className="col-span-3 space-y-2">
               <Label className="text-sm font-medium text-gray-700">Comments</Label>
               <textarea 
                 value={person?.comments || ''} 
                 disabled
                 rows={3}
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700">App Synced</Label>
-              <input 
-                type="text"
-                value={person?.app_synced ? 'Yes' : 'No'} 
-                disabled
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700">App Synced Date</Label>
-              <input 
-                type="date"
-                value={person?.app_synced_date ? person.app_synced_date.split('T')[0] : ''} 
-                disabled
                 className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
               />
             </div>
@@ -335,30 +359,6 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
         
         {/* Grid layout for form fields */}
         <div className="grid grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <Label htmlFor="company" className="text-sm font-medium text-gray-700">Company</Label>
-            <input
-              type="text"
-              id="company"
-              name="company"
-              value={formData.company || ''}
-              onChange={handleChange}
-              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="job_title" className="text-sm font-medium text-gray-700">Job Title</Label>
-            <input
-              type="text"
-              id="job_title"
-              name="job_title"
-              value={formData.job_title || ''}
-              onChange={handleChange}
-              className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="room_size" className="text-sm font-medium text-gray-700">
               Number of pax <span className="text-red-500">*</span>
@@ -384,7 +384,7 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
             <Label className="text-sm font-medium text-gray-700">Updated At</Label>
             <input 
               type="text"
-              value={person?.updated_at ? new Date(person.updated_at).toLocaleString() : 'Never'} 
+              value={person?.updated_at ? formatDateTime(person.updated_at) : 'Never'} 
               disabled
               className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
             />

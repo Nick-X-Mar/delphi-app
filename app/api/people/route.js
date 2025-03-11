@@ -33,8 +33,8 @@ export async function GET(request) {
         p.comments,
         p.guest_type,
         p.synced_at,
-        pd.company,
-        pd.job_title,
+        p.company,
+        p.job_title,
         pd.room_size,
         pd.group_id,
         pd.notes,
@@ -83,7 +83,7 @@ export async function GET(request) {
     }
 
     if (company && company !== 'all') {
-      conditions.push(`pd.company = $${paramCount}`);
+      conditions.push(`p.company = $${paramCount}`);
       queryParams.push(company);
       paramCount++;
     }
@@ -97,7 +97,7 @@ export async function GET(request) {
     }
 
     // Add ORDER BY and pagination
-    query += ` ORDER BY pd.updated_at DESC NULLS LAST, p.synced_at DESC NULLS LAST, p.last_name, p.first_name
+    query += ` ORDER BY p.synced_at DESC NULLS LAST, pd.updated_at DESC NULLS LAST, p.last_name, p.first_name
                LIMIT $${paramCount} 
                OFFSET $${paramCount + 1}`;
     queryParams.push(limit, offset);
@@ -139,6 +139,7 @@ export async function GET(request) {
 
 // POST create new person
 export async function POST(request) {
+  const client = await pool.connect();
   try {
     const person = await request.json();
     console.log(`[Create] Processing new person with data:`, person);
@@ -151,6 +152,12 @@ export async function POST(request) {
         error: 'Missing required fields (person_id, first_name, last_name, email)' 
       }, { status: 400 });
     }
+
+    await client.query('BEGIN');
+
+    // Generate a single timestamp in UTC+0
+    const timestampResult = await client.query("SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AS current_time");
+    const currentTimestamp = timestampResult.rows[0].current_time;
 
     // Insert into people table
     const insertQuery = `
@@ -169,10 +176,13 @@ export async function POST(request) {
         checkout_date,
         comments,
         guest_type,
-        app_synced
+        app_synced,
+        company,
+        job_title,
+        synced_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-      RETURNING person_id
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+      RETURNING person_id, room_type
     `;
 
     const values = [
@@ -190,17 +200,49 @@ export async function POST(request) {
       person.checkout_date,
       person.comments,
       person.guest_type,
-      person.app_synced || false
+      person.app_synced || false,
+      person.company,
+      person.job_title,
+      currentTimestamp
     ];
 
-    const { rows } = await pool.query(insertQuery, values);
+    const { rows } = await client.query(insertQuery, values);
+    const newPerson = rows[0];
+    
+    // Determine room_size based on room_type
+    let roomSize = null;
+    if (newPerson.room_type) {
+      if (newPerson.room_type === 'single') {
+        roomSize = 1;
+      } else if (newPerson.room_type === 'double') {
+        roomSize = 2;
+      }
+    }
+    
+    // Create entry in people_details table
+    const detailsQuery = `
+      INSERT INTO people_details (
+        person_id,
+        room_size,
+        updated_at
+      )
+      VALUES ($1, $2, $3)
+      ON CONFLICT (person_id) 
+      DO UPDATE SET 
+        room_size = EXCLUDED.room_size,
+        updated_at = $3
+    `;
+    
+    await client.query(detailsQuery, [newPerson.person_id, roomSize, currentTimestamp]);
     
     // Assign to event 1 by default
     const assignToEventQuery = `
       INSERT INTO event_people (event_id, person_id)
       VALUES (1, $1)
     `;
-    await pool.query(assignToEventQuery, [rows[0].person_id]);
+    await client.query(assignToEventQuery, [newPerson.person_id]);
+
+    await client.query('COMMIT');
 
     return NextResponse.json({ 
       success: true, 
@@ -208,10 +250,13 @@ export async function POST(request) {
     }, { status: 201 });
 
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('[Create] Error:', error);
     return NextResponse.json({ 
       success: false, 
       error: error.message 
     }, { status: 500 });
+  } finally {
+    client.release();
   }
 } 

@@ -23,10 +23,9 @@ export async function POST(request, { params }) {
         modification_date = CURRENT_TIMESTAMP,
         updated_at = CURRENT_TIMESTAMP
       FROM people p
-      INNER JOIN people_details pd ON p.person_id = pd.person_id
       WHERE b.person_id = p.person_id
       AND b.event_id = $1
-      AND pd.company = $2
+      AND p.company = $2
       AND b.status NOT IN ('cancelled', 'invalidated')
       RETURNING b.*
     `;
