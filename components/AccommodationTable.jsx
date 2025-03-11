@@ -341,6 +341,13 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
 
   const handleSendEmail = async (booking, hotelName, roomTypeName) => {
     try {
+      // Add confirmation dialog
+      const confirmMessage = `Are you sure you want to send a booking confirmation email to ${booking.first_name} ${booking.last_name} (${booking.email})?\n\n` +
+        `Hotel: ${hotelName}\n` +
+        `Room Type: ${roomTypeName}`;
+
+      if (!confirm(confirmMessage)) return;
+      
       setIsSendingEmail(true);
       
       const result = await sendEmail({
@@ -371,10 +378,11 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
 
   const handleSendBulkEmails = async () => {
     try {
-      setIsSendingEmail(true);
+      // Prepare all emails to count them first
       let emailsToSend = [];
+      let pendingBookings = [];
 
-      // Prepare all emails
+      // Count emails to send
       for (const hotel of hotels) {
         for (const roomType of hotel.room_types || []) {
           for (const booking of roomType.bookings || []) {
@@ -392,26 +400,23 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
                 ticketId: booking.booking_id
               });
               
-              // If the booking is pending, update it to confirmed after sending the email
+              // Track pending bookings to update later
               if (booking.status === 'pending') {
-                try {
-                  await fetch(`/api/bookings/${booking.booking_id}`, {
-                    method: 'PUT',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                      status: 'confirmed'
-                    }),
-                  });
-                } catch (updateError) {
-                  console.error('Error updating booking status:', updateError);
-                }
+                pendingBookings.push(booking);
               }
             }
           }
         }
       }
+
+      // Add confirmation dialog
+      const confirmMessage = `Are you sure you want to send booking confirmation emails to ALL guests?\n\n` +
+        `This will send ${emailsToSend.length} email(s).\n` +
+        `${pendingBookings.length} pending booking(s) will be updated to confirmed status.`;
+
+      if (!confirm(confirmMessage)) return;
+      
+      setIsSendingEmail(true);
 
       // Set up progress tracking
       const progressToast = toast.loading(`Sending 0/${emailsToSend.length} emails...`);
@@ -428,6 +433,23 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
         })
         .onComplete(async result => {
           toast.dismiss(progressToast);
+          
+          // Update pending bookings to confirmed status
+          for (const booking of pendingBookings) {
+            try {
+              await fetch(`/api/bookings/${booking.booking_id}`, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  status: 'confirmed'
+                }),
+              });
+            } catch (updateError) {
+              console.error('Error updating booking status:', updateError);
+            }
+          }
           
           // Record a new bulk email notification to update the reference point
           if (result.sent > 0) {
@@ -482,6 +504,16 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
       
       if (!guests || guests.length === 0) {
         toast.info('No booking changes found since last bulk email');
+        setIsSendingEmail(false);
+        return;
+      }
+
+      // Add confirmation dialog
+      const confirmMessage = `Are you sure you want to send booking update emails to guests with changes?\n\n` +
+        `This will send ${guests.length} email(s) for bookings that have changed since the last bulk email.\n` +
+        `Pending bookings will be updated to confirmed status.`;
+
+      if (!confirm(confirmMessage)) {
         setIsSendingEmail(false);
         return;
       }

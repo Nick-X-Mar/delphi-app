@@ -148,14 +148,10 @@ export default function HotelPdfView({ params }) {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Full Name</TableHead>
-                    <TableHead>Email</TableHead>
                     <TableHead>Companion Full Name</TableHead>
-                    <TableHead>Companion Email</TableHead>
-                    <TableHead>Phone</TableHead>
                     <TableHead>Notes</TableHead>
                     <TableHead>Check In</TableHead>
                     <TableHead>Check Out</TableHead>
-                    <TableHead>Cost</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Updated At</TableHead>
                   </TableRow>
@@ -166,10 +162,7 @@ export default function HotelPdfView({ params }) {
                       <TableCell>
                         {booking.first_name} {booking.last_name}
                       </TableCell>
-                      <TableCell>{booking.email}</TableCell>
                       <TableCell>{booking.companion_full_name || '-'}</TableCell>
-                      <TableCell>{booking.companion_email || '-'}</TableCell>
-                      <TableCell>{booking.phone || '-'}</TableCell>
                       <TableCell className="whitespace-pre-wrap">
                         {booking.notes || '-'}
                       </TableCell>
@@ -179,7 +172,6 @@ export default function HotelPdfView({ params }) {
                       <TableCell>
                         {format(new Date(booking.check_out_date), 'PP')}
                       </TableCell>
-                      <TableCell>€{booking.total_cost}</TableCell>
                       <TableCell>
                         <span className={`capitalize ${getStatusColor(booking)}`}>
                           {getStatusText(booking)}
