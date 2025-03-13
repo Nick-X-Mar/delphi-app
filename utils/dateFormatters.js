@@ -13,20 +13,18 @@ export const formatDate = (date) => {
 export const formatDateTime = (datetime) => {
   if (!datetime) return '-';
   try {
-    // Parse the timestamp
+    // Parse the timestamp as UTC
     const date = new Date(datetime);
     
-    // Add 2 hours to the hours
-    date.setHours(date.getHours() + 2);
-    
-    // Format as dd/MM/yyyy HH:mm
+    // Format using toLocaleString with explicit UTC timezone handling
     return date.toLocaleString('en-GB', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-      hour12: false
+      hour12: false,
+      timeZone: 'Europe/Athens' // Use Athens timezone (UTC+2/UTC+3)
     });
   } catch (error) {
     console.error('DateTime parsing error:', error);
