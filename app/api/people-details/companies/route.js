@@ -5,7 +5,7 @@ export async function GET() {
   try {
     const query = `
       SELECT DISTINCT company as value, company as label
-      FROM people_details
+      FROM people
       WHERE company IS NOT NULL AND company != ''
       ORDER BY company
     `;

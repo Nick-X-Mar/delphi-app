@@ -3,7 +3,18 @@ import { NextResponse } from 'next/server';
 export async function POST(request) {
   try {
     // Get the request body
-    const { to, subject, firstName, lastName, ticketId } = await request.json();
+    const { 
+      to, 
+      subject, 
+      firstName, 
+      salutation,
+      hotel_name,
+      hotel_address,
+      contact_information,
+      hotel_website,
+      checkin_date,
+      checkout_date
+    } = await request.json();
     
     // Check if HubSpot API key exists
     const hubspotApiKey = process.env.HUBSPOT_API_KEY;
@@ -25,9 +36,14 @@ export async function POST(request) {
         // to: 'nmarianos93@gmail.com'
       },
       customProperties: {
+        salutation: salutation || '',
         first_name: firstName || '',
-        last_name: lastName || '',
-        ticket_id: ticketId || ''
+        hotel_name: hotel_name || '',
+        hotel_address: hotel_address || '',
+        contact_information: contact_information || '',
+        hotel_website: hotel_website || '',
+        checkin_date: checkin_date || '',
+        checkout_date: checkout_date || ''
       }
     };
 

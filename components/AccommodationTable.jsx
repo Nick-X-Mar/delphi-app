@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import AccommodationHotelList from './AccommodationHotelList';
 import Pagination from './Pagination';
-import { formatDate } from '@/utils/dateFormatters';
+import { formatDate, formatDateTime } from '@/utils/dateFormatters';
 import { sendEmail, getGuestsWithChanges, getLastEmailNotification, recordEmailNotification } from '@/lib/emailService';
 import { emailQueue } from '@/lib/emailQueue';
 
@@ -54,6 +54,11 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
       if (!response.ok) throw new Error('Failed to fetch hotels');
       const data = await response.json();
       const allHotels = Array.isArray(data) ? data : [];
+      
+      // Log the first hotel to see its structure
+      if (allHotels.length > 0) {
+        console.log('Hotel data structure:', allHotels[0]);
+      }
       
       // Update total items count
       setPagination(prev => ({
@@ -339,7 +344,7 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
     }));
   };
 
-  const handleSendEmail = async (booking, hotelName, roomTypeName) => {
+  const handleSendEmail = async (booking, hotelName, roomTypeName, hotel) => {
     try {
       // Add confirmation dialog
       const confirmMessage = `Are you sure you want to send a booking confirmation email to ${booking.first_name} ${booking.last_name} (${booking.email})?\n\n` +
@@ -350,6 +355,13 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
       
       setIsSendingEmail(true);
       
+      // Format dates for email
+      const formattedCheckinDate = booking.check_in_date ? formatDate(booking.check_in_date) : '';
+      const formattedCheckoutDate = booking.check_out_date ? formatDate(booking.check_out_date) : '';
+      
+      console.log('Hotel data:', hotel);
+      console.log('Booking data:', booking);
+      
       const result = await sendEmail({
         to: booking.email,
         subject: 'Your Hotel Booking Confirmation',
@@ -358,8 +370,13 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
         bookingId: booking.booking_id,
         notificationType: 'INDIVIDUAL',
         firstName: booking.first_name,
-        lastName: booking.last_name,
-        ticketId: booking.booking_id
+        salutation: booking.salutation || '',
+        hotel_name: hotelName,
+        hotel_address: hotel?.address || '',
+        contact_information: hotel?.phone_number || hotel?.phone || '',
+        hotel_website: hotel?.website_link || hotel?.website || '',
+        checkin_date: formattedCheckinDate,
+        checkout_date: formattedCheckoutDate
       });
 
       if (result.success) {
@@ -388,6 +405,10 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
           for (const booking of roomType.bookings || []) {
             // Include both confirmed and pending bookings
             if (booking.status === 'confirmed' || booking.status === 'pending') {
+              // Format dates for email
+              const formattedCheckinDate = booking.check_in_date ? formatDate(booking.check_in_date) : '';
+              const formattedCheckoutDate = booking.check_out_date ? formatDate(booking.check_out_date) : '';
+              
               emailsToSend.push({
                 to: booking.email,
                 subject: 'Your Hotel Booking Confirmation',
@@ -396,8 +417,13 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
                 bookingId: booking.booking_id,
                 notificationType: 'BULK',
                 firstName: booking.first_name,
-                lastName: booking.last_name,
-                ticketId: booking.booking_id
+                salutation: booking.salutation || '',
+                hotel_name: hotel.name,
+                hotel_address: hotel.address || '',
+                contact_information: hotel.phone_number || hotel.phone || '',
+                hotel_website: hotel.website_link || hotel.website || '',
+                checkin_date: formattedCheckinDate,
+                checkout_date: formattedCheckoutDate
               });
               
               // Track pending bookings to update later
@@ -520,6 +546,31 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
 
       // Prepare all emails
       const emailsToSend = guests.map(guest => {
+        // Find the hotel and room type for this guest
+        let hotelName = '';
+        let hotelAddress = '';
+        let hotelPhone = '';
+        let hotelWebsite = '';
+        
+        // Look up the hotel information
+        for (const hotel of hotels) {
+          for (const roomType of hotel.room_types || []) {
+            for (const booking of roomType.bookings || []) {
+              if (booking.booking_id === guest.booking_id) {
+                hotelName = hotel.name;
+                hotelAddress = hotel.address || '';
+                hotelPhone = hotel.phone_number || hotel.phone || '';
+                hotelWebsite = hotel.website_link || hotel.website || '';
+                break;
+              }
+            }
+          }
+        }
+        
+        // Format dates for email
+        const formattedCheckinDate = guest.check_in_date ? formatDate(guest.check_in_date) : '';
+        const formattedCheckoutDate = guest.check_out_date ? formatDate(guest.check_out_date) : '';
+        
         return {
           to: guest.email,
           subject: 'Your Hotel Booking Update',
@@ -528,8 +579,13 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
           bookingId: guest.booking_id,
           notificationType: 'CHANGES',
           firstName: guest.first_name,
-          lastName: guest.last_name,
-          ticketId: guest.booking_id
+          salutation: guest.salutation || '',
+          hotel_name: hotelName,
+          hotel_address: hotelAddress,
+          contact_information: hotelPhone,
+          hotel_website: hotelWebsite,
+          checkin_date: formattedCheckinDate,
+          checkout_date: formattedCheckoutDate
         };
       });
 
@@ -765,7 +821,7 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => handleSendEmail(booking, hotel.name, roomType.name)}
+                                      onClick={() => handleSendEmail(booking, hotel.name, roomType.name, hotel)}
                                       disabled={isSendingEmail}
                                     >
                                       <Mail className="h-4 w-4" />

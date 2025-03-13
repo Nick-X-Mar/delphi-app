@@ -15,7 +15,7 @@ export async function GET(request, { params }) {
     }
 
     const result = await pool.query(
-      `SELECT DISTINCT b.*, p.first_name, p.last_name, p.email, h.name as hotel_name, rt.name as room_type_name
+      `SELECT DISTINCT b.*, p.first_name, p.last_name, p.email, p.salutation, h.name as hotel_name, h.phone_number, h.website_link, rt.name as room_type_name
       FROM bookings b
       JOIN people p ON b.person_id = p.person_id
       JOIN room_types rt ON b.room_type_id = rt.room_type_id

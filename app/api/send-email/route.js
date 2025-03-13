@@ -2,7 +2,17 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request) {
   try {
-    const { to, firstName, lastName, ticketId } = await request.json();
+    const { 
+      to, 
+      firstName, 
+      salutation,
+      hotel_name,
+      hotel_address,
+      contact_information,
+      hotel_website,
+      checkin_date,
+      checkout_date
+    } = await request.json();
 
     // Check if API key exists
     if (!process.env.HUBSPOT_API_KEY) {
@@ -27,9 +37,14 @@ export async function POST(request) {
           to: to
         },
         customProperties: {
+          salutation: salutation || '',
           first_name: firstName || '',
-          last_name: lastName || '',
-          ticket_id: ticketId || ''
+          hotel_name: hotel_name || '',
+          hotel_address: hotel_address || '',
+          contact_information: contact_information || '',
+          hotel_website: hotel_website || '',
+          checkin_date: checkin_date || '',
+          checkout_date: checkout_date || ''
           // Add any other custom properties needed for your email template
         }
       }),

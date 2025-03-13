@@ -33,7 +33,15 @@ export async function GET(request, { params }) {
         ` : ''}
       )
       SELECT 
-        h.*,
+        h.hotel_id,
+        h.name,
+        h.area,
+        h.address,
+        h.category,
+        h.stars,
+        h.phone_number,
+        h.website_link,
+        h.total_bookings,
         (
           SELECT json_agg(room_type_info)
           FROM (
@@ -55,7 +63,8 @@ export async function GET(request, { params }) {
                     p.last_name,
                     p.email,
                     p.guest_type,
-                    p.company
+                    p.company,
+                    p.salutation
                   FROM bookings b
                   INNER JOIN people p ON b.person_id = p.person_id
                   LEFT JOIN people_details pd ON p.person_id = pd.person_id
