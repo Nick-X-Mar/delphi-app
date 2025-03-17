@@ -172,7 +172,11 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
             <TableHead>Company</TableHead>
             <TableHead>Number of pax</TableHead>
             <TableHead>Stay Together</TableHead>
-            <TableHead>Current Booking</TableHead>
+            <TableHead>Check-in</TableHead>
+            <TableHead>Check-out</TableHead>
+            {!filters.onlyAvailable && (
+              <TableHead>Current Booking</TableHead>
+            )}
             <TableHead className="w-[200px]">Comments</TableHead>
             <TableHead className="w-[200px]">Notes</TableHead>
           </TableRow>
@@ -180,7 +184,7 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
         <TableBody>
           {people.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+              <TableCell colSpan={filters.onlyAvailable ? 10 : 11} className="text-center py-8 text-gray-500">
                 No people available for accommodation
               </TableCell>
             </TableRow>
@@ -210,19 +214,23 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
                 <TableCell>{person.company}</TableCell>
                 <TableCell>{person.room_size || (person.room_type === 'single' ? '1' : person.room_type === 'double' ? '2' : '-')}</TableCell>
                 <TableCell>{person.group_id ? `Group ${person.group_id}` : '-'}</TableCell>
-                <TableCell>
-                  {person.booking_id ? (
-                    <span className="text-sm">
-                      {person.hotel_name} - {person.room_type_name}
-                      <br />
-                      <span className="text-gray-500">
-                        {formatDate(person.check_in_date)} - {formatDate(person.check_out_date)}
+                <TableCell>{formatDate(person.checkin_date) || '-'}</TableCell>
+                <TableCell>{formatDate(person.checkout_date) || '-'}</TableCell>
+                {!filters.onlyAvailable && (
+                  <TableCell>
+                    {person.booking_id ? (
+                      <span className="text-sm">
+                        {person.hotel_name} - {person.room_type_name}
+                        <br />
+                        <span className="text-gray-500">
+                          {formatDate(person.check_in_date)} - {formatDate(person.check_out_date)}
+                        </span>
                       </span>
-                    </span>
-                  ) : (
-                    <span className="text-gray-500">No current booking</span>
-                  )}
-                </TableCell>
+                    ) : (
+                      <span className="text-gray-500">No current booking</span>
+                    )}
+                  </TableCell>
+                )}
                 <TableCell className="max-w-[200px] truncate" title={person.comments}>
                   {person.comments || '-'}
                 </TableCell>
