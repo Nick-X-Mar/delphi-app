@@ -4,7 +4,7 @@ export async function POST(request) {
   try {
     const { 
       to, 
-      firstName, 
+      lastName, 
       salutation,
       hotel_name,
       hotel_address,
@@ -38,7 +38,7 @@ export async function POST(request) {
         },
         customProperties: {
           salutation: salutation || '',
-          first_name: firstName || '',
+          last_name: lastName || '',
           hotel_name: hotel_name || '',
           hotel_address: hotel_address || '',
           contact_information: contact_information || '',
