@@ -32,8 +32,6 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
       }
       
       setFormData({
-        company: person.company || '',
-        job_title: person.job_title || '',
         room_size: roomSize,
         group_id: person.group_id || '',
         notes: person.notes || '',
@@ -62,13 +60,6 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
       return;
     }
 
-    // Ensure we're using the company and job_title from the person object (source system)
-    const submitData = {
-      ...formData,
-      company: person.company || '',
-      job_title: person.job_title || ''
-    };
-
     // If will_not_attend is being set to true, check for active bookings
     if (formData.will_not_attend) {
       try {
@@ -96,7 +87,7 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(submitData),
+        body: JSON.stringify(formData),
       });
 
       if (!response.ok) {
@@ -160,8 +151,6 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
   const handleEdit = (person) => {
     setEditPerson(person);
     setFormData({
-      company: person.company || '',
-      job_title: person.job_title || '',
       room_size: person.room_size || '',
       group_id: person.group_id || '',
       notes: person.notes || '',

@@ -34,14 +34,12 @@ export async function PUT(request, { params }) {
     // Update people_details
     const updateQuery = `
       INSERT INTO people_details (
-        person_id, company, job_title, room_size, 
+        person_id, room_size, 
         group_id, notes, will_not_attend, updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+      VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
       ON CONFLICT (person_id) 
       DO UPDATE SET 
-        company = EXCLUDED.company,
-        job_title = EXCLUDED.job_title,
         room_size = EXCLUDED.room_size,
         group_id = EXCLUDED.group_id,
         notes = EXCLUDED.notes,
@@ -52,8 +50,6 @@ export async function PUT(request, { params }) {
 
     const values = [
       personId,
-      data.company,
-      data.job_title,
       data.room_size,
       data.group_id,
       data.notes,
