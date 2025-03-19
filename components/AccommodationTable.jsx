@@ -42,23 +42,38 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
     try {
       setIsLoading(true);
       
-      // Get search term from filters if available
-      const searchTerm = filters?.hotelSearch || '';
+      // Build query parameters
+      const queryParams = new URLSearchParams();
       
-      // Build URL with search parameter if provided
-      const url = searchTerm 
-        ? `/api/events/${eventId}/hotels/bookings?search=${encodeURIComponent(searchTerm)}`
-        : `/api/events/${eventId}/hotels/bookings`;
+      // Add hotel filters
+      if (filters?.hotelSearch) {
+        queryParams.append('search', filters.hotelSearch);
+      }
+      
+      // Add people filters
+      if (filters?.firstName) {
+        queryParams.append('firstName', filters.firstName);
+      }
+      if (filters?.lastName) {
+        queryParams.append('lastName', filters.lastName);
+      }
+      if (filters?.email) {
+        queryParams.append('email', filters.email);
+      }
+      if (filters?.guestType && filters.guestType !== 'all') {
+        queryParams.append('guestType', filters.guestType);
+      }
+      if (filters?.company && filters.company !== 'all') {
+        queryParams.append('company', filters.company);
+      }
+      
+      // Build URL with query parameters
+      const url = `/api/events/${eventId}/hotels/bookings${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
         
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch hotels');
       const data = await response.json();
       const allHotels = Array.isArray(data) ? data : [];
-      
-      // Log the first hotel to see its structure
-      if (allHotels.length > 0) {
-        console.log('Hotel data structure:', allHotels[0]);
-      }
       
       // Update total items count
       setPagination(prev => ({
