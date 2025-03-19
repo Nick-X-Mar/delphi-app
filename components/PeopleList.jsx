@@ -5,7 +5,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { useDebounce } from 'use-debounce';
 import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
 import { formatDate, formatDateTime } from '@/utils/dateFormatters';
 
 export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) {
@@ -17,8 +16,8 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
     onlyAvailable: true,
     hideNotAttending: true
   });
-  const [debouncedFilters] = useDebounce(filters, 300);
-  const [isLoading, setIsLoading] = useState(true);
+  const [debouncedFilters] = useDebounce(filters, 500);
+  const [isLoading, setIsLoading] = useState(false);
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
@@ -26,18 +25,21 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
     itemsPerPage: 10
   });
 
+  // Fetch people data when debounced filters or pagination changes
   useEffect(() => {
     const fetchPeople = async () => {
+      if (!eventId) return;
+      
       try {
         setIsLoading(true);
         const queryParams = new URLSearchParams({
           page: pagination.currentPage,
           limit: pagination.itemsPerPage,
-          firstName: filters.firstName,
-          lastName: filters.lastName,
-          email: filters.email,
-          onlyAvailable: filters.onlyAvailable,
-          hideNotAttending: filters.hideNotAttending
+          firstName: debouncedFilters.firstName,
+          lastName: debouncedFilters.lastName,
+          email: debouncedFilters.email,
+          onlyAvailable: debouncedFilters.onlyAvailable,
+          hideNotAttending: debouncedFilters.hideNotAttending
         });
 
         const response = await fetch(`/api/events/${eventId}/people?${queryParams}`);
@@ -45,7 +47,7 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
           throw new Error('Failed to fetch people');
         }
         const data = await response.json();
-        setPeople(data.items);
+        setPeople(data.items || []);
         setPagination(prev => ({
           ...prev,
           totalPages: Math.ceil(data.total / pagination.itemsPerPage),
@@ -53,26 +55,30 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
         }));
       } catch (error) {
         console.error('Error fetching people:', error);
+        setPeople([]);
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (eventId) {
-      fetchPeople();
-    }
-  }, [eventId, pagination.currentPage, debouncedFilters]);
+    fetchPeople();
+  }, [eventId, pagination.currentPage, pagination.itemsPerPage, debouncedFilters]);
 
+  // Handle filter changes without losing focus
   const handleFilterChange = (field, value) => {
     setFilters(prev => ({
       ...prev,
       [field]: value
     }));
+  };
+
+  // Reset to first page when filters change - in a separate useEffect
+  useEffect(() => {
     setPagination(prev => ({
       ...prev,
-      currentPage: 1 // Reset to first page when filters change
+      currentPage: 1
     }));
-  };
+  }, [debouncedFilters]);
 
   const handlePageChange = (newPage) => {
     setPagination(prev => ({
@@ -93,155 +99,164 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
     onPersonSelect(person);
   };
 
-  if (isLoading) {
-    return <div className="text-center py-4">Loading people...</div>;
-  }
+  // Render the filter section separately to avoid re-rendering
+  const renderFilters = () => (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div>
+        <label className="text-sm font-medium mb-1 block">
+          First Name
+        </label>
+        <Input
+          type="text"
+          placeholder="Filter by first name"
+          value={filters.firstName}
+          onChange={(e) => handleFilterChange('firstName', e.target.value)}
+        />
+      </div>
+      <div>
+        <label className="text-sm font-medium mb-1 block">
+          Last Name
+        </label>
+        <Input
+          type="text"
+          placeholder="Filter by last name"
+          value={filters.lastName}
+          onChange={(e) => handleFilterChange('lastName', e.target.value)}
+        />
+      </div>
+      <div>
+        <label className="text-sm font-medium mb-1 block">
+          Email
+        </label>
+        <Input
+          type="text"
+          placeholder="Filter by email"
+          value={filters.email}
+          onChange={(e) => handleFilterChange('email', e.target.value)}
+        />
+      </div>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="onlyAvailable"
+            checked={filters.onlyAvailable}
+            onCheckedChange={(checked) => handleFilterChange('onlyAvailable', checked)}
+          />
+          <label
+            htmlFor="onlyAvailable"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
+            Available for Accommodation
+          </label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="hideNotAttending"
+            checked={filters.hideNotAttending}
+            onCheckedChange={(checked) => handleFilterChange('hideNotAttending', checked)}
+          />
+          <label
+            htmlFor="hideNotAttending"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
+            Hide People Not Attending
+          </label>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div>
-          <label className="text-sm font-medium mb-1 block">
-            First Name
-          </label>
-          <Input
-            type="text"
-            placeholder="Filter by first name"
-            value={filters.firstName}
-            onChange={(e) => handleFilterChange('firstName', e.target.value)}
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium mb-1 block">
-            Last Name
-          </label>
-          <Input
-            type="text"
-            placeholder="Filter by last name"
-            value={filters.lastName}
-            onChange={(e) => handleFilterChange('lastName', e.target.value)}
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium mb-1 block">
-            Email
-          </label>
-          <Input
-            type="text"
-            placeholder="Filter by email"
-            value={filters.email}
-            onChange={(e) => handleFilterChange('email', e.target.value)}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="onlyAvailable"
-              checked={filters.onlyAvailable}
-              onCheckedChange={(checked) => handleFilterChange('onlyAvailable', checked)}
-            />
-            <label
-              htmlFor="onlyAvailable"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              Available for Accommodation
-            </label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="hideNotAttending"
-              checked={filters.hideNotAttending}
-              onCheckedChange={(checked) => handleFilterChange('hideNotAttending', checked)}
-            />
-            <label
-              htmlFor="hideNotAttending"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              Hide People Not Attending
-            </label>
-          </div>
-        </div>
-      </div>
+      {renderFilters()}
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Synced at</TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Company</TableHead>
-            <TableHead>Number of pax</TableHead>
-            <TableHead>Stay Together</TableHead>
-            <TableHead>Check-in</TableHead>
-            <TableHead>Check-out</TableHead>
-            {!filters.onlyAvailable && (
-              <TableHead>Current Booking</TableHead>
-            )}
-            <TableHead className="w-[200px]">Comments</TableHead>
-            <TableHead className="w-[200px]">Notes</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {people.length === 0 ? (
+      <div className="relative">
+        {isLoading && (
+          <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-10">
+            <div className="text-gray-500">Loading...</div>
+          </div>
+        )}
+        
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell colSpan={filters.onlyAvailable ? 10 : 11} className="text-center py-8 text-gray-500">
-                No people available for accommodation
-              </TableCell>
+              <TableHead>Synced at</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Company</TableHead>
+              <TableHead>Number of pax</TableHead>
+              <TableHead>Stay Together</TableHead>
+              <TableHead>Check-in</TableHead>
+              <TableHead>Check-out</TableHead>
+              {!filters.onlyAvailable && (
+                <TableHead>Current Booking</TableHead>
+              )}
+              <TableHead className="w-[200px]">Comments</TableHead>
+              <TableHead className="w-[200px]">Notes</TableHead>
             </TableRow>
-          ) : (
-            people.map((person) => (
-              <TableRow 
-                key={person.person_id}
-                className={`
-                  ${person.booking_id ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'cursor-pointer hover:bg-gray-100'}
-                  ${selectedPerson?.person_id === person.person_id ? 'bg-blue-50' : ''}
-                  ${person.will_not_attend ? 'line-through text-gray-500 cursor-not-allowed' : ''}
-                `}
-                onClick={() => handlePersonClick(person)}
-                title={
-                  person.booking_id 
-                    ? "This person already has a booking and cannot be selected"
-                    : person.will_not_attend
-                      ? "This person will not attend and cannot be selected"
-                      : ""
-                }
-              >
-                <TableCell>{formatDateTime(person.synced_at)}</TableCell>
-                <TableCell>
-                  {person.first_name} {person.last_name}
-                </TableCell>
-                <TableCell>{person.email}</TableCell>
-                <TableCell>{person.company}</TableCell>
-                <TableCell>{person.room_size || (person.room_type === 'single' ? '1' : person.room_type === 'double' ? '2' : '-')}</TableCell>
-                <TableCell>{person.group_id ? `Group ${person.group_id}` : '-'}</TableCell>
-                <TableCell>{formatDate(person.checkin_date) || '-'}</TableCell>
-                <TableCell>{formatDate(person.checkout_date) || '-'}</TableCell>
-                {!filters.onlyAvailable && (
-                  <TableCell>
-                    {person.booking_id ? (
-                      <span className="text-sm">
-                        {person.hotel_name} - {person.room_type_name}
-                        <br />
-                        <span className="text-gray-500">
-                          {formatDate(person.check_in_date)} - {formatDate(person.check_out_date)}
-                        </span>
-                      </span>
-                    ) : (
-                      <span className="text-gray-500">No current booking</span>
-                    )}
-                  </TableCell>
-                )}
-                <TableCell className="max-w-[200px] truncate" title={person.comments}>
-                  {person.comments || '-'}
-                </TableCell>
-                <TableCell className="max-w-[200px] truncate" title={person.notes}>
-                  {person.notes || '-'}
+          </TableHeader>
+          <TableBody>
+            {people.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={filters.onlyAvailable ? 10 : 11} className="text-center py-8 text-gray-500">
+                  No people available for accommodation
                 </TableCell>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            ) : (
+              people.map((person) => (
+                <TableRow 
+                  key={person.person_id}
+                  className={`
+                    ${person.booking_id ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'cursor-pointer hover:bg-gray-100'}
+                    ${selectedPerson?.person_id === person.person_id ? 'bg-blue-50' : ''}
+                    ${person.will_not_attend ? 'line-through text-gray-500 cursor-not-allowed' : ''}
+                  `}
+                  onClick={() => handlePersonClick(person)}
+                  title={
+                    person.booking_id 
+                      ? "This person already has a booking and cannot be selected"
+                      : person.will_not_attend
+                        ? "This person will not attend and cannot be selected"
+                        : ""
+                  }
+                >
+                  <TableCell>{formatDateTime(person.synced_at)}</TableCell>
+                  <TableCell>
+                    {person.first_name} {person.last_name}
+                  </TableCell>
+                  <TableCell>{person.email}</TableCell>
+                  <TableCell>{person.company}</TableCell>
+                  <TableCell>{person.room_size || (person.room_type === 'single' ? '1' : person.room_type === 'double' ? '2' : '-')}</TableCell>
+                  <TableCell>{person.group_id ? `Group ${person.group_id}` : '-'}</TableCell>
+                  <TableCell>{formatDate(person.checkin_date) || '-'}</TableCell>
+                  <TableCell>{formatDate(person.checkout_date) || '-'}</TableCell>
+                  {!filters.onlyAvailable && (
+                    <TableCell>
+                      {person.booking_id ? (
+                        <span className="text-sm">
+                          {person.hotel_name} - {person.room_type_name}
+                          <br />
+                          <span className="text-gray-500">
+                            {formatDate(person.check_in_date)} - {formatDate(person.check_out_date)}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-gray-500">No current booking</span>
+                      )}
+                    </TableCell>
+                  )}
+                  <TableCell className="max-w-[200px] truncate" title={person.comments}>
+                    {person.comments || '-'}
+                  </TableCell>
+                  <TableCell className="max-w-[200px] truncate" title={person.notes}>
+                    {person.notes || '-'}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-500">
