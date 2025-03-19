@@ -32,7 +32,8 @@ export default function PeopleTable() {
     firstName: '',
     lastName: '',
     email: '',
-    guestType: 'all'
+    guestType: 'all',
+    allocationStatus: 'all'
   });
   const [selectedPeople, setSelectedPeople] = useState(new Set());
   const [debouncedFilters] = useDebounce(filters, 500);
@@ -96,6 +97,7 @@ export default function PeopleTable() {
       if (debouncedFilters.lastName) params.append('lastName', debouncedFilters.lastName);
       if (debouncedFilters.email) params.append('email', debouncedFilters.email);
       if (debouncedFilters.guestType && debouncedFilters.guestType !== 'all') params.append('guestType', debouncedFilters.guestType);
+      if (debouncedFilters.allocationStatus && debouncedFilters.allocationStatus !== 'all') params.append('allocationStatus', debouncedFilters.allocationStatus);
       
       const response = await fetch(`/api/people?${params.toString()}`);
       
@@ -356,6 +358,26 @@ export default function PeopleTable() {
                       {guestType}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Allocation Status
+              </label>
+              <Select
+                value={filters.allocationStatus}
+                onValueChange={(value) => handleFilterChange('allocationStatus', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All Statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="allocated">Allocated</SelectItem>
+                  <SelectItem value="not_allocated">Not Allocated</SelectItem>
+                  <SelectItem value="will_not_attend">Will Not Attend</SelectItem>
                 </SelectContent>
               </Select>
             </div>

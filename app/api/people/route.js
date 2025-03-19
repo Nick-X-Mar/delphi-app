@@ -13,6 +13,7 @@ export async function GET(request) {
     const eventId = searchParams.get('eventId') || '';
     const guestType = searchParams.get('guestType') || '';
     const company = searchParams.get('company') || '';
+    const allocationStatus = searchParams.get('allocationStatus') || 'all';
     const offset = (page - 1) * limit;
 
     // Base query
@@ -40,6 +41,7 @@ export async function GET(request) {
         pd.notes,
         pd.will_not_attend,
         pd.updated_at,
+        b.booking_id,
         CASE 
           WHEN ep.event_id IS NOT NULL THEN true
           ELSE false
@@ -51,6 +53,11 @@ export async function GET(request) {
           WHEN $1 = '' OR $1 = 'all' THEN NULL 
           ELSE CAST($1 AS INTEGER) 
         END
+      LEFT JOIN (
+        SELECT *
+        FROM bookings
+        WHERE status NOT IN ('cancelled', 'invalidated')
+      ) b ON p.person_id = b.person_id
     `;
 
     // Build WHERE clause
@@ -92,6 +99,16 @@ export async function GET(request) {
       conditions.push(`ep.event_id = CAST($1 AS INTEGER)`);
     }
 
+    // Handle allocation status filter
+    if (allocationStatus === 'allocated') {
+      conditions.push(`b.booking_id IS NOT NULL`);
+    } else if (allocationStatus === 'not_allocated') {
+      conditions.push(`b.booking_id IS NULL`);
+      conditions.push(`(pd.will_not_attend IS NULL OR pd.will_not_attend = false)`);
+    } else if (allocationStatus === 'will_not_attend') {
+      conditions.push(`pd.will_not_attend = true`);
+    }
+
     if (conditions.length > 0) {
       query += ` WHERE ${conditions.join(' AND ')}`;
     }
@@ -112,6 +129,11 @@ export async function GET(request) {
           WHEN $1 = '' OR $1 = 'all' THEN NULL 
           ELSE CAST($1 AS INTEGER) 
         END
+      LEFT JOIN (
+        SELECT *
+        FROM bookings
+        WHERE status NOT IN ('cancelled', 'invalidated')
+      ) b ON p.person_id = b.person_id
     `;
 
     if (conditions.length > 0) {
