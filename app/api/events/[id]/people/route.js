@@ -36,6 +36,7 @@ export async function GET(request, { params }) {
         p.checkin_date,
         p.checkout_date,
         p.comments,
+        p.companion_full_name,
         pd.will_not_attend,
         pd.room_size,
         pd.notes,

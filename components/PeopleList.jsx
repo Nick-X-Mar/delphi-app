@@ -185,12 +185,14 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
               <TableHead>Email</TableHead>
               <TableHead>Company</TableHead>
               <TableHead>Number of pax</TableHead>
+              <TableHead>Companion</TableHead>
               <TableHead>Stay Together</TableHead>
               <TableHead>Check-in</TableHead>
               <TableHead>Check-out</TableHead>
               {!filters.onlyAvailable && (
                 <TableHead>Current Booking</TableHead>
               )}
+              <TableHead>Guest Type</TableHead>
               <TableHead className="w-[200px]">Comments</TableHead>
               <TableHead className="w-[200px]">Notes</TableHead>
             </TableRow>
@@ -198,7 +200,7 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
           <TableBody>
             {people.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={filters.onlyAvailable ? 10 : 11} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={filters.onlyAvailable ? 12 : 13} className="text-center py-8 text-gray-500">
                   No people available for accommodation
                 </TableCell>
               </TableRow>
@@ -227,6 +229,7 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
                   <TableCell>{person.email}</TableCell>
                   <TableCell>{person.company}</TableCell>
                   <TableCell>{person.room_size || (person.room_type === 'single' ? '1' : person.room_type === 'double' ? '2' : '-')}</TableCell>
+                  <TableCell>{person.companion_full_name || '-'}</TableCell>
                   <TableCell>{person.group_id ? `Group ${person.group_id}` : '-'}</TableCell>
                   <TableCell>{formatDate(person.checkin_date) || '-'}</TableCell>
                   <TableCell>{formatDate(person.checkout_date) || '-'}</TableCell>
@@ -245,6 +248,7 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
                       )}
                     </TableCell>
                   )}
+                  <TableCell>{person.guest_type || '-'}</TableCell>
                   <TableCell className="max-w-[200px] truncate" title={person.comments}>
                     {person.comments || '-'}
                   </TableCell>
