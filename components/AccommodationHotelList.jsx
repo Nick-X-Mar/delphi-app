@@ -328,6 +328,39 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
 
   return (
     <div className="space-y-6">
+      <style jsx>{`
+        .table-container {
+          max-height: 70vh;
+          overflow: auto;
+          position: relative;
+        }
+        
+        .table-container thead tr {
+          position: sticky;
+          top: 0;
+          background: white;
+          z-index: 10;
+        }
+        
+        .table-container th {
+          background: white;
+        }
+        
+        .sticky-left {
+          position: sticky;
+          left: 0;
+          z-index: 20;
+          background: white;
+        }
+        
+        .sticky-left-2 {
+          position: sticky;
+          left: 200px;
+          z-index: 20;
+          background: white;
+        }
+      `}</style>
+      
       <div className="bg-blue-50 p-4 rounded-lg">
         <h3 className="font-medium">Event: {event.name}</h3>
         <p className="text-sm text-gray-600">
@@ -383,104 +416,114 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
         </div>
       </div>
 
-      <div className="border rounded-lg overflow-x-auto relative">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead 
-                className="sticky left-0 bg-white z-20 border-r"
-                style={{ minWidth: '200px' }}
-              >
-                Hotel
-              </TableHead>
-              <TableHead 
-                className="sticky left-[200px] bg-white z-20 border-r"
-                style={{ minWidth: '150px' }}
-              >
-                Room Type
-              </TableHead>
-              {dates.map(date => (
-                <TableHead 
-                  key={date.toISOString()} 
-                  className="text-center min-w-[120px] z-10"
+      <div className="border rounded-lg">
+        <div className="max-h-[70vh] overflow-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr>
+                <th 
+                  className="sticky top-0 left-0 bg-white z-30 border-r p-4 text-left font-medium text-sm"
+                  style={{ width: '200px', minWidth: '200px' }}
                 >
-                  {date.toLocaleDateString()}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedHotels.map((hotel) => (
-              <React.Fragment key={hotel.hotel_id}>
-                {hotel.room_types?.map((roomType, index) => (
-                  <TableRow key={roomType.room_type_id}>
-                    {index === 0 ? (
-                      <TableCell 
-                        rowSpan={hotel.room_types.length} 
-                        className="sticky left-0 bg-white z-20 border-r"
-                      >
-                        <div>
-                          <div className="font-medium">{hotel.name}</div>
-                          <div className="flex items-center mt-1">
-                            {renderStars(hotel.stars)}
-                          </div>
-                          <div className="text-sm text-gray-600 mt-1">{hotel.area}</div>
-                          <div className="mt-1">
-                            <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${getHotelCategoryColor(hotel.category)}`}>
-                              {hotel.category}
-                            </span>
-                          </div>
-                        </div>
-                      </TableCell>
-                    ) : null}
-                    <TableCell 
-                      className="sticky left-[200px] bg-white z-20 border-r"
-                    >
-                      <div className="font-medium">{roomType.name}</div>
-                      <div className="text-sm text-gray-600">Base: €{roomType.base_price_per_night}</div>
-                    </TableCell>
-                    {dates.map(date => {
-                      const availability = getAvailabilityForDate(roomType, date);
-                      const isSelected = isDateSelected(roomType.room_type_id, date);
-                      const isInRange = isDateInRange(roomType.room_type_id, date);
-                      
-                      // Check if this could be a valid checkout date (if we have one date selected already)
-                      const couldBeCheckoutDate = selection.dates.length === 1 && 
-                        selection.roomTypeId === roomType.room_type_id && 
-                        date > selection.dates[0];
-                      
-                      return (
-                        <TableCell 
-                          key={date.toISOString()} 
-                          className={`text-center whitespace-nowrap cursor-pointer transition-colors
-                            ${(availability.available_rooms > 0 || couldBeCheckoutDate) ? 'hover:bg-gray-50' : 'bg-gray-100 cursor-not-allowed'}
-                            ${isSelected ? 'bg-blue-100 hover:bg-blue-200' : ''}
-                            ${isInRange ? 'bg-blue-50' : ''}
-                          `}
-                          onClick={() => {
-                            // Allow clicking if:
-                            // 1. The room is available, OR
-                            // 2. This could be a checkout date (we already have a check-in date selected)
-                            if (availability.available_rooms > 0 || couldBeCheckoutDate) {
-                              handleCellClick(roomType, date);
-                            }
-                          }}
-                        >
-                          <div className="font-medium">
-                            {availability.available_rooms} rooms
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            €{availability.price_per_night}
-                          </div>
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
+                  Hotel
+                </th>
+                <th 
+                  className="sticky top-0 left-[200px] bg-white z-30 border-r p-4 text-left font-medium text-sm"
+                  style={{ width: '150px', minWidth: '150px' }}
+                >
+                  Room Type
+                </th>
+                {dates.map(date => (
+                  <th 
+                    key={date.toISOString()} 
+                    className="sticky top-0 bg-white z-20 p-4 text-center font-medium text-sm"
+                    style={{ width: '120px', minWidth: '120px' }}
+                  >
+                    {date.toLocaleDateString()}
+                  </th>
                 ))}
-              </React.Fragment>
-            ))}
-          </TableBody>
-        </Table>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedHotels.map((hotel) => (
+                <React.Fragment key={hotel.hotel_id}>
+                  {hotel.room_types?.map((roomType, index) => (
+                    <tr key={roomType.room_type_id} className="border-b">
+                      {index === 0 ? (
+                        <td 
+                          rowSpan={hotel.room_types.length} 
+                          className="sticky left-0 bg-white z-10 border-r p-4 align-top"
+                          style={{ width: '200px', minWidth: '200px' }}
+                        >
+                          <div>
+                            <div className="font-medium">{hotel.name}</div>
+                            <div className="flex items-center mt-1">
+                              {renderStars(hotel.stars)}
+                            </div>
+                            <div className="text-sm text-gray-600 mt-1">{hotel.area}</div>
+                            <div className="mt-1">
+                              <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${getHotelCategoryColor(hotel.category)}`}>
+                                {hotel.category}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                      ) : null}
+                      <td 
+                        className="sticky left-[200px] bg-white z-10 border-r p-4 align-top"
+                        style={{ width: '150px', minWidth: '150px' }}
+                      >
+                        <div className="font-medium">{roomType.name}</div>
+                        <div className="text-sm text-gray-600">Base: €{roomType.base_price_per_night}</div>
+                      </td>
+                      {dates.map(date => {
+                        const availability = getAvailabilityForDate(roomType, date);
+                        const isSelected = isDateSelected(roomType.room_type_id, date);
+                        const isInRange = isDateInRange(roomType.room_type_id, date);
+                        
+                        const couldBeCheckoutDate = selection.dates.length === 1 && 
+                          selection.roomTypeId === roomType.room_type_id && 
+                          date > selection.dates[0];
+                        
+                        const bgClass = isSelected 
+                          ? 'bg-blue-100 hover:bg-blue-200'
+                          : isInRange 
+                            ? 'bg-blue-50' 
+                            : (availability.available_rooms > 0 || couldBeCheckoutDate)
+                              ? 'hover:bg-gray-50'
+                              : 'bg-gray-100';
+                        
+                        const cursorClass = (availability.available_rooms > 0 || couldBeCheckoutDate)
+                          ? 'cursor-pointer'
+                          : 'cursor-not-allowed';
+                        
+                        return (
+                          <td 
+                            key={date.toISOString()} 
+                            className={`p-4 text-center whitespace-nowrap ${bgClass} ${cursorClass}`}
+                            style={{ width: '120px', minWidth: '120px' }}
+                            onClick={() => {
+                              if (availability.available_rooms > 0 || couldBeCheckoutDate) {
+                                handleCellClick(roomType, date);
+                              }
+                            }}
+                          >
+                            <div className="font-medium">
+                              {availability.available_rooms} rooms
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              €{availability.price_per_night}
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <Pagination
