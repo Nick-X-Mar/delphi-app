@@ -328,39 +328,6 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
 
   return (
     <div className="space-y-6">
-      <style jsx>{`
-        .table-container {
-          max-height: 70vh;
-          overflow: auto;
-          position: relative;
-        }
-        
-        .table-container thead tr {
-          position: sticky;
-          top: 0;
-          background: white;
-          z-index: 10;
-        }
-        
-        .table-container th {
-          background: white;
-        }
-        
-        .sticky-left {
-          position: sticky;
-          left: 0;
-          z-index: 20;
-          background: white;
-        }
-        
-        .sticky-left-2 {
-          position: sticky;
-          left: 200px;
-          z-index: 20;
-          background: white;
-        }
-      `}</style>
-      
       <div className="bg-blue-50 p-4 rounded-lg">
         <h3 className="font-medium">Event: {event.name}</h3>
         <p className="text-sm text-gray-600">
@@ -417,7 +384,7 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
       </div>
 
       <div className="border rounded-lg">
-        <div className="max-h-[70vh] overflow-auto">
+        <div className="max-h-[70vh] overflow-auto relative">
           <table className="w-full border-collapse">
             <thead>
               <tr>
