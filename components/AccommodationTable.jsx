@@ -410,42 +410,51 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
 
   const handleSendBulkEmails = async () => {
     try {
-      // Prepare all emails to count them first
+      setIsSendingEmail(true);
+      
+      // Fetch ALL bookings for this event, not just the ones on the current page
+      const response = await fetch(`/api/events/${eventId}/all-bookings`);
+      if (!response.ok) throw new Error('Failed to fetch all bookings');
+      const { bookings } = await response.json();
+      
+      if (!bookings || bookings.length === 0) {
+        toast.info('No active bookings found');
+        setIsSendingEmail(false);
+        return;
+      }
+      
+      // Count emails to send and prepare booking data
       let emailsToSend = [];
       let pendingBookings = [];
 
-      // Count emails to send
-      for (const hotel of hotels) {
-        for (const roomType of hotel.room_types || []) {
-          for (const booking of roomType.bookings || []) {
-            // Include both confirmed and pending bookings
-            if (booking.status === 'confirmed' || booking.status === 'pending') {
-              // Format dates for email
-              const formattedCheckinDate = booking.check_in_date ? formatDate(booking.check_in_date) : '';
-              const formattedCheckoutDate = booking.check_out_date ? formatDate(booking.check_out_date) : '';
-              
-              emailsToSend.push({
-                to: booking.email,
-                subject: 'Your Hotel Booking Confirmation',
-                eventId,
-                guestId: booking.person_id,
-                bookingId: booking.booking_id,
-                notificationType: 'BULK',
-                lastName: booking.last_name,
-                salutation: booking.salutation || '',
-                hotel_name: hotel.name,
-                hotel_address: hotel.address || '',
-                contact_information: hotel.phone_number || hotel.phone || '',
-                hotel_website: hotel.website_link || hotel.website || '',
-                checkin_date: formattedCheckinDate,
-                checkout_date: formattedCheckoutDate
-              });
-              
-              // Track pending bookings to update later
-              if (booking.status === 'pending') {
-                pendingBookings.push(booking);
-              }
-            }
+      // Process all bookings
+      for (const booking of bookings) {
+        // Include both confirmed and pending bookings
+        if (booking.status === 'confirmed' || booking.status === 'pending') {
+          // Format dates for email
+          const formattedCheckinDate = booking.check_in_date ? formatDate(booking.check_in_date) : '';
+          const formattedCheckoutDate = booking.check_out_date ? formatDate(booking.check_out_date) : '';
+          
+          emailsToSend.push({
+            to: booking.email,
+            subject: 'Your Hotel Booking Confirmation',
+            eventId,
+            guestId: booking.person_id,
+            bookingId: booking.booking_id,
+            notificationType: 'BULK',
+            lastName: booking.last_name,
+            salutation: booking.salutation || '',
+            hotel_name: booking.hotel_name,
+            hotel_address: booking.hotel_address || '',
+            contact_information: booking.contact_information || '',
+            hotel_website: booking.hotel_website || '',
+            checkin_date: formattedCheckinDate,
+            checkout_date: formattedCheckoutDate
+          });
+          
+          // Track pending bookings to update later
+          if (booking.status === 'pending') {
+            pendingBookings.push(booking);
           }
         }
       }
@@ -455,9 +464,10 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
         `This will send ${emailsToSend.length} email(s).\n` +
         `${pendingBookings.length} pending booking(s) will be updated to confirmed status.`;
 
-      if (!confirm(confirmMessage)) return;
-      
-      setIsSendingEmail(true);
+      if (!confirm(confirmMessage)) {
+        setIsSendingEmail(false);
+        return;
+      }
 
       // Set up progress tracking
       const progressToast = toast.loading(`Sending 0/${emailsToSend.length} emails...`);
@@ -541,6 +551,8 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
 
     try {
       setIsSendingEmail(true);
+      
+      // Fetch ALL guests with changes directly from the API
       const { guests } = await getGuestsWithChanges(eventId, lastBulkEmailTime);
       
       if (!guests || guests.length === 0) {
@@ -559,34 +571,28 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
         return;
       }
 
+      // Fetch hotel details for all hotels in this event to ensure we have complete information
+      const hotelsResponse = await fetch(`/api/events/${eventId}/hotels`);
+      if (!hotelsResponse.ok) throw new Error('Failed to fetch hotels');
+      const allHotels = await hotelsResponse.json();
+      
+      // Create a map for quick hotel lookup
+      const hotelMap = new Map();
+      allHotels.forEach(hotel => {
+        hotelMap.set(hotel.hotel_id, hotel);
+      });
+
       // Prepare all emails
-      const emailsToSend = guests.map(guest => {
-        // Find the hotel and room type for this guest
-        let hotelName = '';
-        let hotelAddress = '';
-        let hotelPhone = '';
-        let hotelWebsite = '';
-        
-        // Look up the hotel information
-        for (const hotel of hotels) {
-          for (const roomType of hotel.room_types || []) {
-            for (const booking of roomType.bookings || []) {
-              if (booking.booking_id === guest.booking_id) {
-                hotelName = hotel.name;
-                hotelAddress = hotel.address || '';
-                hotelPhone = hotel.phone_number || hotel.phone || '';
-                hotelWebsite = hotel.website_link || hotel.website || '';
-                break;
-              }
-            }
-          }
-        }
+      const emailsToSend = [];
+      for (const guest of guests) {
+        // Find hotel details using the hotel_id from the guest data
+        const hotel = hotelMap.get(guest.hotel_id) || {};
         
         // Format dates for email
         const formattedCheckinDate = guest.check_in_date ? formatDate(guest.check_in_date) : '';
         const formattedCheckoutDate = guest.check_out_date ? formatDate(guest.check_out_date) : '';
         
-        return {
+        emailsToSend.push({
           to: guest.email,
           subject: 'Your Hotel Booking Update',
           eventId,
@@ -595,14 +601,14 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
           notificationType: 'CHANGES',
           lastName: guest.last_name,
           salutation: guest.salutation || '',
-          hotel_name: hotelName,
-          hotel_address: hotelAddress,
-          contact_information: hotelPhone,
-          hotel_website: hotelWebsite,
+          hotel_name: hotel.name || guest.hotel_name || '',
+          hotel_address: hotel.address || '',
+          contact_information: hotel.phone_number || hotel.phone || '',
+          hotel_website: hotel.website_link || hotel.website || '',
           checkin_date: formattedCheckinDate,
           checkout_date: formattedCheckoutDate
-        };
-      });
+        });
+      }
 
       // Set up progress tracking
       const progressToast = toast.loading(`Sending 0/${emailsToSend.length} update emails...`);
