@@ -12,7 +12,8 @@ export default function AccommodationConfirmation({
   selection,
   onConfirm,
   onCancel,
-  isLoading
+  isLoading,
+  isViewOnly = false
 }) {
   const [isPayable, setIsPayable] = useState(false);
 
@@ -62,6 +63,7 @@ export default function AccommodationConfirmation({
                 id="payable"
                 checked={isPayable}
                 onCheckedChange={setIsPayable}
+                disabled={isViewOnly}
               />
               <label
                 htmlFor="payable"
@@ -75,10 +77,10 @@ export default function AccommodationConfirmation({
       </div>
 
       <div className="flex justify-end gap-4">
-        <Button variant="outline" onClick={onCancel} disabled={isLoading}>
+        <Button variant="outline" onClick={onCancel} disabled={isLoading || isViewOnly}>
           Cancel
         </Button>
-        <Button onClick={handleConfirm} disabled={isLoading}>
+        <Button onClick={handleConfirm} disabled={isLoading || isViewOnly}>
           {isLoading ? 'Confirming...' : 'Confirm Booking'}
         </Button>
       </div>

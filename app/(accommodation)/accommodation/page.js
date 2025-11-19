@@ -17,8 +17,10 @@ import {
 } from "@/components/ui/select";
 import { getHotelCategories } from '@/lib/hotelCategories';
 import React from 'react';
+import { useViewOnlyMode } from '@/lib/viewOnlyMode';
 
 export default function Accommodation() {
+  const { isViewOnly } = useViewOnlyMode();
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [filters, setFilters] = useState({
     // People filters
@@ -146,12 +148,20 @@ export default function Accommodation() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {isViewOnly && (
+        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+          <p className="text-sm text-yellow-800">
+            <strong>View-Only Mode:</strong> This event has passed. All modifications are disabled.
+          </p>
+        </div>
+      )}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Accommodation Management</h1>
         <div className="w-[300px]">
           <EventSelector
             value={selectedEvent}
             onChange={setSelectedEvent}
+            disabled={isViewOnly}
           />
         </div>
       </div>
@@ -250,7 +260,7 @@ export default function Accommodation() {
                   <Button
                     variant="secondary"
                     onClick={handleCancelCompanyBookings}
-                    disabled={isCancellingBookings}
+                    disabled={isCancellingBookings || isViewOnly}
                     className="whitespace-nowrap bg-red-900 text-white hover:bg-red-800"
                   >
                     {isCancellingBookings ? 'Cancelling...' : 'Cancel all Company Bookings'}
@@ -311,6 +321,7 @@ export default function Accommodation() {
           ref={accommodationTableRef}
           eventId={selectedEvent}
           filters={filters}
+          isViewOnly={isViewOnly}
         />
       </Card>
     </div>

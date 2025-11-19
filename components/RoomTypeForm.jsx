@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 
-export default function RoomTypeForm({ hotelId, roomType, onSuccess }) {
+export default function RoomTypeForm({ hotelId, roomType, onSuccess, isViewOnly = false }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: roomType?.name || '',
@@ -118,7 +118,7 @@ export default function RoomTypeForm({ hotelId, roomType, onSuccess }) {
             onChange={handleChange}
             placeholder="e.g., Deluxe Double Room"
             className="mt-1"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isViewOnly}
             required
           />
         </div>
@@ -135,7 +135,7 @@ export default function RoomTypeForm({ hotelId, roomType, onSuccess }) {
             min="1"
             placeholder="e.g., 10"
             className="mt-1"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isViewOnly}
             required
           />
         </div>
@@ -177,7 +177,7 @@ export default function RoomTypeForm({ hotelId, roomType, onSuccess }) {
       <div className="flex justify-end">
         <Button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || isViewOnly}
         >
           {isSubmitting
             ? (roomType ? 'Updating...' : 'Creating...')

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { checkEventViewOnly } from '@/lib/apiViewOnlyCheck';
 
 // GET single person's details
 export async function GET(request, { params }) {
@@ -28,6 +29,23 @@ export async function PUT(request, { params }) {
   try {
     const personId = await params.id;
     const data = await request.json();
+    
+    // Get event ID from person's event associations
+    const eventResult = await client.query(
+      'SELECT event_id FROM event_people WHERE person_id = $1 ORDER BY created_at DESC LIMIT 1',
+      [personId]
+    );
+    
+    if (eventResult.rows.length > 0) {
+      const eventId = eventResult.rows[0].event_id;
+      // Check if event has passed (view-only mode)
+      const { isViewOnly } = await checkEventViewOnly(eventId);
+      if (isViewOnly) {
+        return NextResponse.json({
+          error: 'Event has passed. Modifications are not allowed.'
+        }, { status: 403 });
+      }
+    }
     
     await client.query('BEGIN');
 

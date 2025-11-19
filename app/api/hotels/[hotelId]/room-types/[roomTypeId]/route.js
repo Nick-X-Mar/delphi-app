@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { checkEventViewOnly } from '@/lib/apiViewOnlyCheck';
 
 // GET single room type
 export async function GET(request, { params }) {
@@ -68,6 +69,27 @@ export async function PUT(request, { params }) {
             return NextResponse.json({
                 error: 'Base price per night must be a valid number (0 or greater)'
             }, { status: 400 });
+        }
+
+        // Get event ID from room type's hotel
+        const eventResult = await client.query(
+            `SELECT e.event_id FROM events e
+             JOIN event_hotels eh ON e.event_id = eh.event_id
+             JOIN room_types rt ON rt.hotel_id = eh.hotel_id
+             WHERE rt.room_type_id = $1
+             ORDER BY e.start_date DESC LIMIT 1`,
+            [roomTypeId]
+        );
+        
+        if (eventResult.rows.length > 0) {
+            const eventId = eventResult.rows[0].event_id;
+            // Check if event has passed (view-only mode)
+            const { isViewOnly } = await checkEventViewOnly(eventId);
+            if (isViewOnly) {
+                return NextResponse.json({
+                    error: 'Event has passed. Modifications are not allowed.'
+                }, { status: 403 });
+            }
         }
 
         await client.query('BEGIN');
@@ -177,7 +199,28 @@ export async function DELETE(request, { params }) {
   const client = await pool.connect();
   
   try {
-    const { roomTypeId } = params;
+    const { roomTypeId } = await params;
+    
+    // Get event ID from room type's hotel
+    const eventResult = await client.query(
+        `SELECT e.event_id FROM events e
+         JOIN event_hotels eh ON e.event_id = eh.event_id
+         JOIN room_types rt ON rt.hotel_id = eh.hotel_id
+         WHERE rt.room_type_id = $1
+         ORDER BY e.start_date DESC LIMIT 1`,
+        [roomTypeId]
+    );
+    
+    if (eventResult.rows.length > 0) {
+        const eventId = eventResult.rows[0].event_id;
+        // Check if event has passed (view-only mode)
+        const { isViewOnly } = await checkEventViewOnly(eventId);
+        if (isViewOnly) {
+            return NextResponse.json({
+                error: 'Event has passed. Modifications are not allowed.'
+            }, { status: 403 });
+        }
+    }
     
     await client.query('BEGIN');
 

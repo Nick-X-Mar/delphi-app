@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import Pagination from '@/components/Pagination';
 
-export default function AccommodationHotelList({ eventId, personId, onRoomSelection }) {
+export default function AccommodationHotelList({ eventId, personId, onRoomSelection, isViewOnly = false }) {
   const [hotels, setHotels] = useState([]);
   const [filteredHotels, setFilteredHotels] = useState([]);
   const [event, setEvent] = useState(null);
@@ -109,6 +109,9 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
   };
 
   const handleCellClick = (roomType, date) => {
+    if (isViewOnly) {
+      return;
+    }
     // If clicking a different room type, reset selection
     if (selection.roomTypeId && selection.roomTypeId !== roomType.room_type_id) {
       setSelection({
@@ -465,7 +468,7 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
                               ? 'hover:bg-gray-50'
                               : 'bg-gray-100';
                         
-                        const cursorClass = (availability.available_rooms > 0 || couldBeCheckoutDate)
+                        const cursorClass = (!isViewOnly && (availability.available_rooms > 0 || couldBeCheckoutDate))
                           ? 'cursor-pointer'
                           : 'cursor-not-allowed';
                         
@@ -475,7 +478,7 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
                             className={`p-4 text-center whitespace-nowrap ${bgClass} ${cursorClass}`}
                             style={{ width: '120px', minWidth: '120px' }}
                             onClick={() => {
-                              if (availability.available_rooms > 0 || couldBeCheckoutDate) {
+                              if (!isViewOnly && (availability.available_rooms > 0 || couldBeCheckoutDate)) {
                                 handleCellClick(roomType, date);
                               }
                             }}

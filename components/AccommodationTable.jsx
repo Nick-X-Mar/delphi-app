@@ -10,7 +10,7 @@ import { formatDate, formatDateTime } from '@/utils/dateFormatters';
 import { sendEmail, getGuestsWithChanges, getLastEmailNotification, recordEmailNotification } from '@/lib/emailService';
 import { emailQueue } from '@/lib/emailQueue';
 
-const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
+const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = false }, ref) => {
   const [expandedHotels, setExpandedHotels] = useState(new Set());
   const [expandedRoomTypes, setExpandedRoomTypes] = useState(new Set());
   const [hotels, setHotels] = useState([]);
@@ -719,7 +719,7 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
       <div className="flex justify-end gap-4 mb-4">
         <Button
           onClick={handleSendEmailsForChanges}
-          disabled={isSendingEmail || !hotels.length || !lastBulkEmailTime}
+          disabled={isSendingEmail || !hotels.length || !lastBulkEmailTime || isViewOnly}
           className="flex items-center gap-2"
         >
           <Mail className="h-4 w-4" />
@@ -727,7 +727,7 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
         </Button>
         <Button
           onClick={handleSendBulkEmails}
-          disabled={isSendingEmail || !hotels.length}
+          disabled={isSendingEmail || !hotels.length || isViewOnly}
           className="flex items-center gap-2"
         >
           <Mail className="h-4 w-4" />
@@ -851,7 +851,7 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
                                       variant="ghost"
                                       size="sm"
                                       onClick={() => handleSendEmail(booking, hotel.name, roomType.name, hotel)}
-                                      disabled={isSendingEmail}
+                                      disabled={isSendingEmail || isViewOnly}
                                     >
                                       <Mail className="h-4 w-4" />
                                     </Button>
@@ -868,6 +868,7 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => handleEditBooking(booking)}
+                                        disabled={isViewOnly}
                                       >
                                         <Pencil className="h-4 w-4" />
                                       </Button>
@@ -876,6 +877,7 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
                                       variant="ghost"
                                       size="sm"
                                       onClick={() => handleDeleteBooking(booking, hotel.name, roomType.name)}
+                                      disabled={isViewOnly}
                                     >
                                       <Trash2 className="h-4 w-4 text-red-500" />
                                     </Button>

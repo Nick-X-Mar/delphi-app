@@ -1,5 +1,6 @@
 import pool from '@/lib/db';
 import { NextResponse } from 'next/server';
+import { checkEventViewOnly } from '@/lib/apiViewOnlyCheck';
 
 export async function PUT(request, { params }) {
     const client = await pool.connect();
@@ -11,6 +12,27 @@ export async function PUT(request, { params }) {
 
         if (!Array.isArray(updates)) {
             return NextResponse.json({ error: 'Updates must be an array' }, { status: 400 });
+        }
+
+        // Get event ID from room type's hotel
+        const eventResult = await client.query(
+            `SELECT e.event_id FROM events e
+             JOIN event_hotels eh ON e.event_id = eh.event_id
+             JOIN room_types rt ON rt.hotel_id = eh.hotel_id
+             WHERE rt.room_type_id = $1
+             ORDER BY e.start_date DESC LIMIT 1`,
+            [roomTypeId]
+        );
+        
+        if (eventResult.rows.length > 0) {
+            const eventId = eventResult.rows[0].event_id;
+            // Check if event has passed (view-only mode)
+            const { isViewOnly } = await checkEventViewOnly(eventId);
+            if (isViewOnly) {
+                return NextResponse.json({
+                    error: 'Event has passed. Modifications are not allowed.'
+                }, { status: 403 });
+            }
         }
 
         // Start a transaction

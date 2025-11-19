@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export default function HotelList({ searchTerm: initialSearchTerm, eventId: initialEventId }) {
+export default function HotelList({ searchTerm: initialSearchTerm, eventId: initialEventId, isViewOnly = false }) {
   const router = useRouter();
   const [hotels, setHotels] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -397,7 +397,8 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
                   <div className="mt-2">
                     <button
                       onClick={() => handleManageHotel(hotel.hotel_id)}
-                      className="w-full px-4 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                      disabled={isViewOnly}
+                      className="w-full px-4 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       View Details & Manage Rooms
                     </button>
@@ -424,7 +425,8 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
                 )}
                 <button
                   onClick={() => handleManageHotel(hotel.hotel_id)}
-                  className="px-3 py-1 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                  disabled={isViewOnly}
+                  className="px-3 py-1 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Manage Hotel
                 </button>

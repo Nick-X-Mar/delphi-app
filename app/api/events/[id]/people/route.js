@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { checkEventViewOnly } from '@/lib/apiViewOnlyCheck';
 
 // GET people associated with an event
 export async function GET(request, { params }) {
@@ -119,6 +120,14 @@ export async function POST(request, { params }) {
   try {
     const eventId = await params.id;
     const { personIds, action } = await request.json();
+
+    // Check if event has passed (view-only mode)
+    const { isViewOnly } = await checkEventViewOnly(eventId);
+    if (isViewOnly) {
+      return NextResponse.json({
+        error: 'Event has passed. Modifications are not allowed.'
+      }, { status: 403 });
+    }
 
     if (!Array.isArray(personIds)) {
       return NextResponse.json({ error: 'personIds must be an array' }, { status: 400 });

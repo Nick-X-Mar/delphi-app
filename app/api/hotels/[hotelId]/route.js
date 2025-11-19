@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { getAgreementUrl } from '@/lib/s3';
 import { isValidHotelCategory } from '@/lib/hotelCategories';
+import { checkEventViewOnly } from '@/lib/apiViewOnlyCheck';
 
 // GET single hotel
 export async function GET(request, { params }) {
@@ -93,6 +94,14 @@ export async function PUT(request, { params }) {
             }, { status: 400 });
         }
 
+        // Check if event has passed (view-only mode)
+        const { isViewOnly } = await checkEventViewOnly(eventId);
+        if (isViewOnly) {
+            return NextResponse.json({
+                error: 'Event has passed. Modifications are not allowed.'
+            }, { status: 403 });
+        }
+
         await client.query('BEGIN');
 
         // First update the hotel
@@ -168,6 +177,23 @@ export async function DELETE(request, { params }) {
     
     try {
         const { hotelId } = await params;
+        
+        // Get event ID from hotel associations
+        const eventResult = await client.query(
+            'SELECT event_id FROM event_hotels WHERE hotel_id = $1 LIMIT 1',
+            [hotelId]
+        );
+        
+        if (eventResult.rows.length > 0) {
+            const eventId = eventResult.rows[0].event_id;
+            // Check if event has passed (view-only mode)
+            const { isViewOnly } = await checkEventViewOnly(eventId);
+            if (isViewOnly) {
+                return NextResponse.json({
+                    error: 'Event has passed. Modifications are not allowed.'
+                }, { status: 403 });
+            }
+        }
         
         await client.query('BEGIN');
 

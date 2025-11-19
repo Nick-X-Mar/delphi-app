@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { checkEventViewOnly } from '@/lib/apiViewOnlyCheck';
 
 // GET room types for a hotel
 export async function GET(request, { params }) {
@@ -77,6 +78,14 @@ export async function POST(request, { params }) {
         }
         
         const eventId = eventResult.rows[0].event_id;
+
+        // Check if event has passed (view-only mode)
+        const { isViewOnly } = await checkEventViewOnly(eventId);
+        if (isViewOnly) {
+            return NextResponse.json({
+                error: 'Event has passed. Modifications are not allowed.'
+            }, { status: 403 });
+        }
 
         // 3. Create the event_room_types association
         const createAssociationQuery = `

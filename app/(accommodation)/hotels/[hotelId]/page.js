@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { toast } from 'sonner';
+import { useViewOnlyMode } from '@/lib/viewOnlyMode';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,7 @@ import { StarRating } from '@/components/ui/star-rating';
 export default function HotelDetailPage() {
   const router = useRouter();
   const { hotelId } = useParams();
+  const { isViewOnly } = useViewOnlyMode();
   const [hotel, setHotel] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -378,6 +380,13 @@ export default function HotelDetailPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {isViewOnly && (
+        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+          <p className="text-sm text-yellow-800">
+            <strong>View-Only Mode:</strong> This event has passed. All modifications are disabled.
+          </p>
+        </div>
+      )}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Hotel Details</h1>
         <div className="space-x-4">
@@ -392,13 +401,14 @@ export default function HotelDetailPage() {
               <Button
                 variant="outline"
                 onClick={() => setIsEditing(true)}
+                disabled={isViewOnly}
               >
                 Edit Hotel
               </Button>
               <Button
                 variant="destructive"
                 onClick={handleDelete}
-                disabled={isDeleting}
+                disabled={isDeleting || isViewOnly}
               >
                 {isDeleting ? 'Deleting...' : 'Delete Hotel'}
               </Button>
@@ -407,7 +417,7 @@ export default function HotelDetailPage() {
         </div>
       </div>
 
-      {isEditing ? (
+      {isEditing && !isViewOnly ? (
         <form onSubmit={handleSubmit} className="space-y-6">
           <Card>
             <CardHeader>
@@ -823,7 +833,9 @@ export default function HotelDetailPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Room Types</CardTitle>
-              <Button onClick={handleAddRoomType}>Add Room Type</Button>
+              <Button onClick={handleAddRoomType} disabled={isViewOnly}>
+                Add Room Type
+              </Button>
             </CardHeader>
             <CardContent>
               {hotel.room_types && hotel.room_types.length > 0 ? (
@@ -845,6 +857,7 @@ export default function HotelDetailPage() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleEditRoomType(roomType.room_type_id)}
+                              disabled={isViewOnly}
                             >
                               Manage
                             </Button>

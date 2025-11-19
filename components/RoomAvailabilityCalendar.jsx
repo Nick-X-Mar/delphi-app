@@ -13,7 +13,8 @@ export default function RoomAvailabilityCalendar({
   basePrice = 0, 
   totalRooms = 0,
   eventStartDate,
-  eventEndDate 
+  eventEndDate,
+  isViewOnly = false
 }) {
   // Convert string IDs to numbers
   const numericHotelId = parseInt(hotelId);
@@ -94,8 +95,8 @@ export default function RoomAvailabilityCalendar({
   };
 
   const handleInputChange = (date, field, value) => {
-    // Prevent changes to past dates
-    if (isPastDate(date)) {
+    // Prevent changes to past dates or in view-only mode
+    if (isPastDate(date) || isViewOnly) {
       return;
     }
 
@@ -206,7 +207,7 @@ export default function RoomAvailabilityCalendar({
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        {hasPendingChanges && (
+        {hasPendingChanges && !isViewOnly && (
           <Button 
             onClick={saveChanges} 
             disabled={isSaving}
@@ -247,7 +248,7 @@ export default function RoomAvailabilityCalendar({
                     value={dayAvailability.available_rooms}
                     onChange={(e) => handleInputChange(date, 'available_rooms', e.target.value)}
                     className="h-8 text-sm"
-                    disabled={isPast}
+                    disabled={isPast || isViewOnly}
                   />
                 </div>
                 <div>
@@ -259,7 +260,7 @@ export default function RoomAvailabilityCalendar({
                     value={dayAvailability.price_per_night}
                     onChange={(e) => handleInputChange(date, 'price_per_night', e.target.value)}
                     className="h-8 text-sm"
-                    disabled={isPast}
+                    disabled={isPast || isViewOnly}
                   />
                 </div>
               </div>
