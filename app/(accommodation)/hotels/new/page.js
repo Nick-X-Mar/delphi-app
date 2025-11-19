@@ -16,6 +16,8 @@ import {
 import { DocumentIcon, XCircleIcon } from '@heroicons/react/24/solid';
 import hotelConfig from '@/config/hotels.json';
 import { StarRating } from '@/components/ui/star-rating';
+import HotelConfirmation from '@/components/HotelConfirmation';
+import { formatDate } from '@/utils/dateFormatters';
 
 export default function NewHotelPage() {
   const router = useRouter();
@@ -25,6 +27,8 @@ export default function NewHotelPage() {
   const [events, setEvents] = useState([]);
   const [selectedEventId, setSelectedEventId] = useState('');
   const [errors, setErrors] = useState({});
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     area: '',
@@ -42,6 +46,11 @@ export default function NewHotelPage() {
     agreement_file_link: null
   });
 
+  // Set client flag to prevent hydration mismatches
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   // Fetch events when component mounts
   useEffect(() => {
     async function initializeEvents() {
@@ -49,15 +58,39 @@ export default function NewHotelPage() {
         const response = await fetch('/api/events');
         if (!response.ok) throw new Error('Failed to fetch events');
         const data = await response.json();
+        setEvents(data);
         
-        // Set both states at once if there's only one event
-        if (data.length === 1) {
-          const eventId = data[0].event_id.toString();
-          setEvents(data);
-          setSelectedEventId(eventId);
-          setErrors(prev => ({ ...prev, event: undefined }));
-        } else {
-          setEvents(data);
+        // Helper function to check if event is past
+        const isPastEvent = (event) => {
+          return event.end_date ? new Date(event.end_date) < new Date() : false;
+        };
+        
+        // Only set selected event on client side to avoid hydration mismatch
+        if (isClient) {
+          // Prioritize working event from localStorage, otherwise auto-select first non-past event
+          const workingEventId = localStorage.getItem('workingEventId');
+          if (workingEventId) {
+            // Verify the working event exists in the fetched events and is not past
+            const workingEvent = data.find(e => e.event_id.toString() === workingEventId);
+            if (workingEvent && !isPastEvent(workingEvent)) {
+              setSelectedEventId(workingEventId);
+              setErrors(prev => ({ ...prev, event: undefined }));
+              return;
+            }
+          }
+          
+          // If no working event or working event not found/is past, auto-select first non-past event
+          const firstNonPastEvent = data.find(e => !isPastEvent(e));
+          if (firstNonPastEvent) {
+            const eventId = firstNonPastEvent.event_id.toString();
+            setSelectedEventId(eventId);
+            setErrors(prev => ({ ...prev, event: undefined }));
+          } else if (data.length === 1) {
+            // If all events are past, still select the first one (user can see it's disabled)
+            const eventId = data[0].event_id.toString();
+            setSelectedEventId(eventId);
+            setErrors(prev => ({ ...prev, event: undefined }));
+          }
         }
       } catch (error) {
         console.error('Error fetching events:', error);
@@ -67,7 +100,32 @@ export default function NewHotelPage() {
 
     // Call and await the initialization
     initializeEvents();
-  }, []);
+  }, [isClient]);
+
+  // Listen for working event changes
+  useEffect(() => {
+    const handleWorkingEventChange = () => {
+      if (typeof window !== 'undefined') {
+        const workingEventId = localStorage.getItem('workingEventId');
+        if (workingEventId) {
+          // Verify the working event exists in the events list and is not past
+          const workingEvent = events.find(e => e.event_id.toString() === workingEventId);
+          if (workingEvent) {
+            const isPastEvent = workingEvent.end_date ? new Date(workingEvent.end_date) < new Date() : false;
+            if (!isPastEvent) {
+              setSelectedEventId(workingEventId);
+              setErrors(prev => ({ ...prev, event: undefined }));
+            }
+          }
+        }
+      }
+    };
+
+    window.addEventListener('workingEventChanged', handleWorkingEventChange);
+    return () => {
+      window.removeEventListener('workingEventChanged', handleWorkingEventChange);
+    };
+  }, [events]);
 
   // Debug effect to monitor state changes
   useEffect(() => {
@@ -124,7 +182,18 @@ export default function NewHotelPage() {
     if (!formData.area) newErrors.area = 'Area is required';
     if (!formData.address) newErrors.address = 'Address is required';
     if (!formData.category) newErrors.category = 'Category is required';
-    if (!selectedEventId) newErrors.event = 'Event selection is required';
+    if (!selectedEventId) {
+      newErrors.event = 'Event selection is required';
+    } else {
+      // Check if selected event is past
+      const selectedEvent = events.find(e => e.event_id.toString() === selectedEventId);
+      if (selectedEvent) {
+        const isPastEvent = selectedEvent.end_date ? new Date(selectedEvent.end_date) < new Date() : false;
+        if (isPastEvent) {
+          newErrors.event = 'Cannot select a past event';
+        }
+      }
+    }
 
     if (formData.stars) {
       const starsNum = Number(formData.stars);
@@ -146,6 +215,13 @@ export default function NewHotelPage() {
       return;
     }
 
+    // Open confirmation dialog instead of submitting immediately
+    setIsConfirmOpen(true);
+  };
+
+  const handleConfirmSubmit = async () => {
+    setIsConfirmOpen(false);
+    
     try {
       setIsSubmitting(true);
 
@@ -367,21 +443,26 @@ export default function NewHotelPage() {
                   <SelectTrigger 
                     className={errors.event ? 'border-red-500' : ''}
                   >
-                    <SelectValue>
-                      {selectedEventId 
-                        ? events.find(e => e.event_id.toString() === selectedEventId)?.name 
-                        : "Select an event"}
-                    </SelectValue>
+                    <SelectValue placeholder="Select an event" suppressHydrationWarning />
                   </SelectTrigger>
                   <SelectContent>
-                    {events.map(event => (
-                      <SelectItem 
-                        key={event.event_id} 
-                        value={event.event_id.toString()}
-                      >
-                        {event.name}
-                      </SelectItem>
-                    ))}
+                    {events.map(event => {
+                      const displayName = event.tag || event.name;
+                      const eventDates = event.start_date && event.end_date
+                        ? ` (${formatDate(event.start_date)} - ${formatDate(event.end_date)})`
+                        : '';
+                      const isPastEvent = event.end_date ? new Date(event.end_date) < new Date() : false;
+                      
+                      return (
+                        <SelectItem 
+                          key={event.event_id} 
+                          value={event.event_id.toString()}
+                          disabled={isPastEvent}
+                        >
+                          {displayName}{eventDates}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -551,6 +632,14 @@ export default function NewHotelPage() {
           </Button>
         </div>
       </form>
+
+      <HotelConfirmation
+        isOpen={isConfirmOpen}
+        onClose={() => setIsConfirmOpen(false)}
+        onConfirm={handleConfirmSubmit}
+        hotelName={formData.name}
+        eventId={selectedEventId}
+      />
     </div>
   );
 } 

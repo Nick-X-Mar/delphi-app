@@ -1,19 +1,44 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format, addDays, subDays, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatDate, formatDateForAPI } from '@/utils/dateFormatters';
 
 export default function EventForm({ event, onSuccess, onCancel }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [allEvents, setAllEvents] = useState([]);
   const [formData, setFormData] = useState({
     name: event?.name || '',
     start_date: event?.start_date ? format(parseISO(event.start_date), 'yyyy-MM-dd') : '',
-    end_date: event?.end_date ? format(parseISO(event.end_date), 'yyyy-MM-dd') : ''
+    end_date: event?.end_date ? format(parseISO(event.end_date), 'yyyy-MM-dd') : '',
+    tag: event?.tag || '',
+    migrateFromEventId: '',
+    isWorkingEvent: false
   });
+
+  // Fetch all events for migrate hotels dropdown (only when creating new event)
+  useEffect(() => {
+    if (!event) {
+      fetchAllEvents();
+    }
+  }, [event]);
+
+  const fetchAllEvents = async () => {
+    try {
+      const response = await fetch('/api/events');
+      const data = await response.json();
+      if (!data.error) {
+        setAllEvents(data);
+      }
+    } catch (error) {
+      console.error('Error fetching events:', error);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,9 +71,10 @@ export default function EventForm({ event, onSuccess, onCancel }) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...formData,
+          name: formData.name,
           start_date: startDate.toISOString(),
-          end_date: endDate.toISOString()
+          end_date: endDate.toISOString(),
+          tag: formData.tag || null
         }),
       });
 
@@ -58,11 +84,42 @@ export default function EventForm({ event, onSuccess, onCancel }) {
         throw new Error(data.error);
       }
 
-      toast.success(
-        event
-          ? 'Event updated successfully'
-          : 'Event created successfully'
-      );
+      // If creating new event and migrate hotels is selected, migrate hotels
+      if (!event && formData.migrateFromEventId) {
+        try {
+          const migrateResponse = await fetch(`/api/events/${data.event_id}/migrate-hotels`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              sourceEventId: formData.migrateFromEventId
+            }),
+          });
+
+          const migrateData = await migrateResponse.json();
+          if (migrateData.error) {
+            toast.warning('Event created but hotel migration failed: ' + migrateData.error);
+          } else {
+            toast.success(`Event created and ${migrateData.hotelsMigrated || 0} hotels migrated successfully`);
+          }
+        } catch (migrateError) {
+          console.error('Migration error:', migrateError);
+          toast.warning('Event created but hotel migration failed');
+        }
+      } else {
+        toast.success(
+          event
+            ? 'Event updated successfully'
+            : 'Event created successfully'
+        );
+      }
+
+      // Handle working event checkbox (only for new events)
+      if (!event && formData.isWorkingEvent) {
+        localStorage.setItem('workingEventId', data.event_id.toString());
+        window.dispatchEvent(new CustomEvent('workingEventChanged'));
+      }
 
       if (onSuccess) {
         onSuccess(data);
@@ -76,10 +133,17 @@ export default function EventForm({ event, onSuccess, onCancel }) {
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleSelectChange = (value) => {
+    setFormData(prev => ({
+      ...prev,
+      migrateFromEventId: value
     }));
   };
 
@@ -138,6 +202,70 @@ export default function EventForm({ event, onSuccess, onCancel }) {
             disabled={isSubmitting}
           />
         </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Tag
+          </label>
+          <Input
+            type="text"
+            name="tag"
+            value={formData.tag}
+            onChange={handleChange}
+            placeholder="e.g., CONF2024"
+            className="mt-1"
+            disabled={isSubmitting}
+          />
+        </div>
+
+        {!event && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Migrate Hotels
+              </label>
+              <Select
+                value={formData.migrateFromEventId}
+                onValueChange={handleSelectChange}
+                disabled={isSubmitting}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select an event to copy hotels from" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allEvents.map((evt) => (
+                    <SelectItem key={evt.event_id} value={evt.event_id.toString()}>
+                      {evt.name} ({format(parseISO(evt.start_date), 'dd/MM/yyyy')} - {format(parseISO(evt.end_date), 'dd/MM/yyyy')})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="mt-1 text-xs text-gray-500">
+                Select an event to copy all its hotels to this new event
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="isWorkingEvent"
+                checked={formData.isWorkingEvent}
+                onCheckedChange={(checked) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    isWorkingEvent: checked
+                  }));
+                }}
+                disabled={isSubmitting}
+              />
+              <label
+                htmlFor="isWorkingEvent"
+                className="text-sm font-medium text-gray-700 cursor-pointer"
+              >
+                Set as Working Event
+              </label>
+            </div>
+          </>
+        )}
 
         {(formData.start_date && formData.end_date) && (
           <div className="bg-gray-50 p-4 rounded-md">

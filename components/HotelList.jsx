@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useDebounce } from 'use-debounce';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -10,6 +10,7 @@ import Pagination from './Pagination';
 import { StarRating } from '@/components/ui/star-rating';
 import { Input } from '@/components/ui/input';
 import { getHotelCategories, getHotelCategoryColor } from '@/lib/hotelCategories';
+import { formatDate } from '@/utils/dateFormatters';
 import {
   Select,
   SelectContent,
@@ -27,9 +28,19 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
   const [expandedSections, setExpandedSections] = useState({});
   const [selectedCategory, setSelectedCategory] = useState('');
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm || '');
-  const [selectedEventId, setSelectedEventId] = useState(initialEventId || 'all');
+  const [selectedEventId, setSelectedEventId] = useState(() => {
+    // Initialize from localStorage working event or initialEventId prop
+    if (typeof window !== 'undefined') {
+      const workingEventId = localStorage.getItem('workingEventId');
+      if (workingEventId) return workingEventId;
+    }
+    return initialEventId || null;
+  });
   const [events, setEvents] = useState([]);
-  const itemsPerPage = 6;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
+  const searchInputRef = useRef(null);
+  const wasSearchFocusedRef = useRef(false);
 
   const categories = [
     { value: 'all', label: 'All Categories' },
@@ -43,6 +54,22 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
         if (!response.ok) throw new Error('Failed to fetch events');
         const data = await response.json();
         setEvents(data);
+        
+        // If no event is selected and we have events, select the first one or working event
+        setSelectedEventId(current => {
+          if (current) return current; // Keep current selection
+          
+          if (data.length > 0) {
+            if (typeof window !== 'undefined') {
+              const workingEventId = localStorage.getItem('workingEventId');
+              if (workingEventId && data.find(e => e.event_id.toString() === workingEventId)) {
+                return workingEventId;
+              }
+            }
+            return data[0].event_id.toString();
+          }
+          return current;
+        });
       } catch (error) {
         console.error('Error fetching events:', error);
         toast.error('Failed to load events');
@@ -52,13 +79,41 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
     fetchEvents();
   }, []);
 
+  // Listen for working event changes
+  useEffect(() => {
+    const handleWorkingEventChange = () => {
+      if (typeof window !== 'undefined') {
+        const workingEventId = localStorage.getItem('workingEventId');
+        if (workingEventId) {
+          setSelectedEventId(workingEventId);
+          setCurrentPage(1); // Reset to first page when event changes
+        }
+      }
+    };
+
+    window.addEventListener('workingEventChanged', handleWorkingEventChange);
+    return () => {
+      window.removeEventListener('workingEventChanged', handleWorkingEventChange);
+    };
+  }, []);
+
+  // Reset to page 1 when event filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedEventId]);
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when page size changes
+  };
+
   useEffect(() => {
     const fetchHotels = async () => {
       try {
         setIsLoading(true);
         const params = new URLSearchParams();
-        if (searchTerm) params.append('search', searchTerm);
-        if (selectedEventId && selectedEventId !== 'all') params.append('eventId', selectedEventId);
+        if (debouncedSearchTerm) params.append('search', debouncedSearchTerm);
+        if (selectedEventId) params.append('eventId', selectedEventId);
         if (selectedCategory && selectedCategory !== 'all') params.append('category', selectedCategory);
         params.append('page', currentPage.toString());
         params.append('limit', itemsPerPage.toString());
@@ -79,36 +134,28 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
     };
 
     fetchHotels();
-  }, [selectedEventId, currentPage, itemsPerPage, selectedCategory]);
+  }, [selectedEventId, currentPage, itemsPerPage, selectedCategory, debouncedSearchTerm]);
+
+  // Restore focus to search input after results update if it was previously focused
+  useEffect(() => {
+    if (!isLoading && wasSearchFocusedRef.current && searchInputRef.current) {
+      // Use setTimeout to ensure the DOM has updated and check if input still needs focus
+      const timeoutId = setTimeout(() => {
+        if (wasSearchFocusedRef.current && searchInputRef.current) {
+          searchInputRef.current.focus();
+          // Restore cursor position to end of input
+          const length = searchInputRef.current.value.length;
+          searchInputRef.current.setSelectionRange(length, length);
+        }
+      }, 0);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isLoading, hotels]);
 
   const handleSearch = () => {
     setCurrentPage(1);
-    const fetchHotels = async () => {
-      try {
-        setIsLoading(true);
-        const params = new URLSearchParams();
-        if (searchTerm) params.append('search', searchTerm);
-        if (selectedEventId && selectedEventId !== 'all') params.append('eventId', selectedEventId);
-        if (selectedCategory && selectedCategory !== 'all') params.append('category', selectedCategory);
-        params.append('page', '1');
-        params.append('limit', itemsPerPage.toString());
-        
-        const response = await fetch(`/api/hotels?${params.toString()}`);
-        if (!response.ok) throw new Error('Failed to fetch hotels');
-        const data = await response.json();
-        setHotels(Array.isArray(data.items) ? data.items : []);
-        setTotalItems(data.total || 0);
-      } catch (error) {
-        console.error('Error fetching hotels:', error);
-        toast.error('Failed to load hotels');
-        setHotels([]);
-        setTotalItems(0);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchHotels();
+    // The search will be triggered automatically by the useEffect when debouncedSearchTerm updates
+    // This function is kept for the button click, but the actual search happens via debounce
   };
 
   const handleKeyPress = (e) => {
@@ -203,10 +250,17 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
             <div className="relative flex gap-2">
               <div className="relative flex-1">
                 <Input
+                  ref={searchInputRef}
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyPress={handleKeyPress}
+                  onFocus={() => {
+                    wasSearchFocusedRef.current = true;
+                  }}
+                  onBlur={() => {
+                    wasSearchFocusedRef.current = false;
+                  }}
                   placeholder="Search hotels..."
                   className="pl-10"
                 />
@@ -226,20 +280,23 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
               <span className="text-gray-500 text-xs ml-1">(Filter by event)</span>
             </label>
             <Select
-              value={selectedEventId}
+              value={selectedEventId || ''}
               onValueChange={setSelectedEventId}
-              disabled={true}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select event" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Events</SelectItem>
-                {events.map(event => (
-                  <SelectItem key={event.event_id} value={event.event_id.toString()}>
-                    {event.name}
-                  </SelectItem>
-                ))}
+                {events.map(event => {
+                  const eventDates = event.start_date && event.end_date
+                    ? ` (${formatDate(event.start_date)} - ${formatDate(event.end_date)})`
+                    : '';
+                  return (
+                    <SelectItem key={event.event_id} value={event.event_id.toString()}>
+                      {event.name}{eventDates}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
@@ -383,6 +440,7 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
         onPageChange={setCurrentPage}
         totalItems={totalItems}
         itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={handleItemsPerPageChange}
       />
     </div>
   );
