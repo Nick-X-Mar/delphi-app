@@ -17,11 +17,17 @@ import {
 } from "@/components/ui/select";
 import { getHotelCategories } from '@/lib/hotelCategories';
 import React from 'react';
-import { useViewOnlyMode } from '@/lib/viewOnlyMode';
+import { useViewOnlyMode, clearViewOnlyCache } from '@/lib/viewOnlyMode';
 
 export default function Accommodation() {
-  const { isViewOnly } = useViewOnlyMode();
-  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(() => {
+    // Initialize with working event from localStorage
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('workingEventId');
+    }
+    return null;
+  });
+  const { isViewOnly } = useViewOnlyMode(selectedEvent);
   const [filters, setFilters] = useState({
     // People filters
     firstName: '',
@@ -38,6 +44,29 @@ export default function Accommodation() {
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
   const [isCancellingBookings, setIsCancellingBookings] = useState(false);
   const accommodationTableRef = React.useRef();
+
+  // Handle event change - clear cache and re-check view-only mode
+  const handleEventChange = (eventId) => {
+    clearViewOnlyCache();
+    setSelectedEvent(eventId);
+  };
+
+  // Listen for working event changes
+  useEffect(() => {
+    const handleWorkingEventChange = () => {
+      if (typeof window !== 'undefined') {
+        const workingEventId = localStorage.getItem('workingEventId');
+        if (workingEventId && !selectedEvent) {
+          setSelectedEvent(workingEventId);
+        }
+      }
+    };
+
+    window.addEventListener('workingEventChanged', handleWorkingEventChange);
+    return () => {
+      window.removeEventListener('workingEventChanged', handleWorkingEventChange);
+    };
+  }, [selectedEvent]);
 
   // Fetch companies on component mount
   useEffect(() => {
@@ -160,7 +189,7 @@ export default function Accommodation() {
         <div className="w-[300px]">
           <EventSelector
             value={selectedEvent}
-            onChange={setSelectedEvent}
+            onChange={handleEventChange}
             disabled={isViewOnly}
           />
         </div>

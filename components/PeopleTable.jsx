@@ -21,14 +21,14 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@radix-ui/react-label";
 
-export default function PeopleTable({ isViewOnly = false }) {
+export default function PeopleTable({ isViewOnly = false, selectedEvent = null, onEventChange = null }) {
   const [people, setPeople] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [events, setEvents] = useState([]);
   const [categories, setCategories] = useState([]);
   const [groupColors, setGroupColors] = useState({});
   const [filters, setFilters] = useState({
-    eventId: 'all',
+    eventId: selectedEvent || 'all',
     firstName: '',
     lastName: '',
     email: '',
@@ -67,6 +67,40 @@ export default function PeopleTable({ isViewOnly = false }) {
 
     fetchEvents();
   }, []);
+
+  // Initialize event filter with selectedEvent or working event when events are loaded
+  useEffect(() => {
+    if (events.length === 0) return;
+    
+    if (selectedEvent && events.find(e => e.event_id.toString() === selectedEvent)) {
+      // Use selectedEvent from parent if it exists in events
+      setFilters(prev => {
+        if (prev.eventId !== selectedEvent) {
+          return { ...prev, eventId: selectedEvent };
+        }
+        return prev;
+      });
+    } else if (!selectedEvent && filters.eventId === 'all') {
+      // If no selectedEvent and filter is still 'all', use working event or first event
+      const workingEventId = typeof window !== 'undefined' 
+        ? localStorage.getItem('workingEventId') 
+        : null;
+      const eventToUse = workingEventId && events.find(e => e.event_id.toString() === workingEventId)
+        ? workingEventId
+        : events[0].event_id.toString();
+      setFilters(prev => ({ ...prev, eventId: eventToUse }));
+      if (onEventChange) {
+        onEventChange(eventToUse);
+      }
+    }
+  }, [events, selectedEvent, onEventChange, filters.eventId]);
+
+  // Update filters when selectedEvent changes from parent
+  useEffect(() => {
+    if (selectedEvent && selectedEvent !== filters.eventId && events.length > 0 && events.find(e => e.event_id.toString() === selectedEvent)) {
+      setFilters(prev => ({ ...prev, eventId: selectedEvent }));
+    }
+  }, [selectedEvent, filters.eventId, events]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -310,8 +344,13 @@ export default function PeopleTable({ isViewOnly = false }) {
               </label>
               <Select
                 value={filters.eventId}
-                onValueChange={(value) => handleFilterChange('eventId', value)}
-                disabled={true}
+                onValueChange={(value) => {
+                  handleFilterChange('eventId', value);
+                  if (onEventChange && value !== 'all') {
+                    onEventChange(value);
+                  }
+                }}
+                disabled={isViewOnly}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="All Events" />

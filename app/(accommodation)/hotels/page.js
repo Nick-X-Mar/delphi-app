@@ -5,7 +5,7 @@ import { useDebounce } from 'use-debounce';
 import { useRouter } from 'next/navigation';
 import HotelList from '@/components/HotelList';
 import { Button } from '@/components/ui/button';
-import { useViewOnlyMode } from '@/lib/viewOnlyMode';
+import { useViewOnlyMode, clearViewOnlyCache } from '@/lib/viewOnlyMode';
 import {
   Select,
   SelectContent,
@@ -16,21 +16,29 @@ import {
 
 export default function HotelsPage() {
   const router = useRouter();
-  const [workingEventId, setWorkingEventId] = useState(null);
-  const { isViewOnly } = useViewOnlyMode();
-
-  useEffect(() => {
-    // Get working event from localStorage
+  const [selectedEvent, setSelectedEvent] = useState(() => {
+    // Initialize with working event from localStorage
     if (typeof window !== 'undefined') {
-      const eventId = localStorage.getItem('workingEventId');
-      setWorkingEventId(eventId);
+      return localStorage.getItem('workingEventId');
     }
+    return null;
+  });
+  const { isViewOnly } = useViewOnlyMode(selectedEvent);
 
-    // Listen for working event changes
+  // Handle event change from HotelList
+  const handleEventChange = (eventId) => {
+    clearViewOnlyCache();
+    setSelectedEvent(eventId);
+  };
+
+  // Listen for working event changes
+  useEffect(() => {
     const handleWorkingEventChange = () => {
       if (typeof window !== 'undefined') {
-        const eventId = localStorage.getItem('workingEventId');
-        setWorkingEventId(eventId);
+        const workingEventId = localStorage.getItem('workingEventId');
+        if (workingEventId && !selectedEvent) {
+          setSelectedEvent(workingEventId);
+        }
       }
     };
 
@@ -38,7 +46,7 @@ export default function HotelsPage() {
     return () => {
       window.removeEventListener('workingEventChanged', handleWorkingEventChange);
     };
-  }, []);
+  }, [selectedEvent]);
 
   const handleAddHotel = () => {
     router.push('/hotels/new');
@@ -60,7 +68,11 @@ export default function HotelsPage() {
         </Button>
       </div>
 
-      <HotelList initialEventId={workingEventId} isViewOnly={isViewOnly} />
+      <HotelList 
+        initialEventId={selectedEvent} 
+        isViewOnly={isViewOnly}
+        onEventChange={handleEventChange}
+      />
     </div>
   );
 }

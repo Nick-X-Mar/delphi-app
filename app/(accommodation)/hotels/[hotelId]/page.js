@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { toast } from 'sonner';
-import { useViewOnlyMode } from '@/lib/viewOnlyMode';
+import { useViewOnlyMode, clearViewOnlyCache } from '@/lib/viewOnlyMode';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,7 +23,6 @@ import { StarRating } from '@/components/ui/star-rating';
 export default function HotelDetailPage() {
   const router = useRouter();
   const { hotelId } = useParams();
-  const { isViewOnly } = useViewOnlyMode();
   const [hotel, setHotel] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -33,7 +32,14 @@ export default function HotelDetailPage() {
   const [tempFile, setTempFile] = useState(null);
   const [originalFileUrl, setOriginalFileUrl] = useState(null);
   const [events, setEvents] = useState([]);
-  const [selectedEventId, setSelectedEventId] = useState('');
+  const [selectedEventId, setSelectedEventId] = useState(() => {
+    // Initialize with working event from localStorage
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('workingEventId') || '';
+    }
+    return '';
+  });
+  const { isViewOnly } = useViewOnlyMode(selectedEventId || null);
   const [errors, setErrors] = useState({});
   const [s3Debug, setS3Debug] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -76,6 +82,22 @@ export default function HotelDetailPage() {
         const eventData = await eventResponse.json();
         if (eventData.event_id) {
           setSelectedEventId(eventData.event_id.toString());
+        } else {
+          // If no associated event, use working event if available
+          const workingEventId = typeof window !== 'undefined' 
+            ? localStorage.getItem('workingEventId') 
+            : null;
+          if (workingEventId) {
+            setSelectedEventId(workingEventId);
+          }
+        }
+      } else {
+        // If fetch fails, use working event if available
+        const workingEventId = typeof window !== 'undefined' 
+          ? localStorage.getItem('workingEventId') 
+          : null;
+        if (workingEventId) {
+          setSelectedEventId(workingEventId);
         }
       }
     } catch (error) {
@@ -505,6 +527,7 @@ export default function HotelDetailPage() {
                   <Select
                     value={selectedEventId}
                     onValueChange={(value) => {
+                      clearViewOnlyCache();
                       setSelectedEventId(value);
                       if (errors.event) {
                         setErrors(prev => ({ ...prev, event: undefined }));
