@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { useDebounce } from 'use-debounce';
 import { Checkbox } from "@/components/ui/checkbox";
-import { formatDate, formatDateTime } from '@/utils/dateFormatters';
+import { formatDate, formatDateTime, calculateNights } from '@/utils/dateFormatters';
 import Pagination from '@/components/Pagination';
 
 export default function PeopleList({ eventId, onPersonSelect, selectedPerson, isViewOnly = false }) {
@@ -15,7 +15,8 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson, is
     lastName: '',
     email: '',
     onlyAvailable: true,
-    hideNotAttending: true
+    hideNotAttending: true,
+    minNights: ''
   });
   const [debouncedFilters] = useDebounce(filters, 500);
   const [isLoading, setIsLoading] = useState(false);
@@ -48,7 +49,20 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson, is
           throw new Error('Failed to fetch people');
         }
         const data = await response.json();
-        setPeople(data.items || []);
+        let filteredPeople = data.items || [];
+        
+        // Client-side filtering by nights
+        if (debouncedFilters.minNights && debouncedFilters.minNights !== '') {
+          const minNights = parseInt(debouncedFilters.minNights);
+          if (!isNaN(minNights)) {
+            filteredPeople = filteredPeople.filter(person => {
+              const nights = calculateNights(person.checkin_date, person.checkout_date);
+              return nights !== null && nights >= minNights;
+            });
+          }
+        }
+        
+        setPeople(filteredPeople);
         setPagination(prev => ({
           ...prev,
           totalPages: Math.ceil(data.total / pagination.itemsPerPage),
@@ -113,66 +127,82 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson, is
 
   // Render the filter section separately to avoid re-rendering
   const renderFilters = () => (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div>
-        <label className="text-sm font-medium mb-1 block">
-          First Name
-        </label>
-        <Input
-          type="text"
-          placeholder="Filter by first name"
-          value={filters.firstName}
-          onChange={(e) => handleFilterChange('firstName', e.target.value)}
-        />
-      </div>
-      <div>
-        <label className="text-sm font-medium mb-1 block">
-          Last Name
-        </label>
-        <Input
-          type="text"
-          placeholder="Filter by last name"
-          value={filters.lastName}
-          onChange={(e) => handleFilterChange('lastName', e.target.value)}
-        />
-      </div>
-      <div>
-        <label className="text-sm font-medium mb-1 block">
-          Email
-        </label>
-        <Input
-          type="text"
-          placeholder="Filter by email"
-          value={filters.email}
-          onChange={(e) => handleFilterChange('email', e.target.value)}
-        />
-      </div>
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="onlyAvailable"
-            checked={filters.onlyAvailable}
-            onCheckedChange={(checked) => handleFilterChange('onlyAvailable', checked)}
-          />
-          <label
-            htmlFor="onlyAvailable"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-          >
-            Available for Accommodation
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+          <label className="text-sm font-medium mb-1 block">
+            First Name
           </label>
+          <Input
+            type="text"
+            placeholder="Filter by first name"
+            value={filters.firstName}
+            onChange={(e) => handleFilterChange('firstName', e.target.value)}
+          />
         </div>
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="hideNotAttending"
-            checked={filters.hideNotAttending}
-            onCheckedChange={(checked) => handleFilterChange('hideNotAttending', checked)}
-          />
-          <label
-            htmlFor="hideNotAttending"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-          >
-            Hide People Not Attending
+        <div>
+          <label className="text-sm font-medium mb-1 block">
+            Last Name
           </label>
+          <Input
+            type="text"
+            placeholder="Filter by last name"
+            value={filters.lastName}
+            onChange={(e) => handleFilterChange('lastName', e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium mb-1 block">
+            Email
+          </label>
+          <Input
+            type="text"
+            placeholder="Filter by email"
+            value={filters.email}
+            onChange={(e) => handleFilterChange('email', e.target.value)}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="onlyAvailable"
+              checked={filters.onlyAvailable}
+              onCheckedChange={(checked) => handleFilterChange('onlyAvailable', checked)}
+            />
+            <label
+              htmlFor="onlyAvailable"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Available for Accommodation
+            </label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="hideNotAttending"
+              checked={filters.hideNotAttending}
+              onCheckedChange={(checked) => handleFilterChange('hideNotAttending', checked)}
+            />
+            <label
+              htmlFor="hideNotAttending"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Hide People Not Attending
+            </label>
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+          <label className="text-sm font-medium mb-1 block">
+            Min Nights
+          </label>
+          <Input
+            type="number"
+            placeholder="Minimum nights..."
+            value={filters.minNights}
+            onChange={(e) => handleFilterChange('minNights', e.target.value)}
+            min="0"
+          />
         </div>
       </div>
     </div>
@@ -201,6 +231,7 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson, is
               <TableHead>Stay Together</TableHead>
               <TableHead>Check-in</TableHead>
               <TableHead>Check-out</TableHead>
+              <TableHead>Nights</TableHead>
               {!filters.onlyAvailable && (
                 <TableHead>Current Booking</TableHead>
               )}
@@ -212,7 +243,7 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson, is
           <TableBody>
             {people.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={filters.onlyAvailable ? 12 : 13} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={filters.onlyAvailable ? 13 : 14} className="text-center py-8 text-gray-500">
                   No people available for accommodation
                 </TableCell>
               </TableRow>
@@ -245,6 +276,12 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson, is
                   <TableCell>{person.group_id ? `Group ${person.group_id}` : '-'}</TableCell>
                   <TableCell>{formatDate(person.checkin_date) || '-'}</TableCell>
                   <TableCell>{formatDate(person.checkout_date) || '-'}</TableCell>
+                  <TableCell>
+                    {(() => {
+                      const nights = calculateNights(person.checkin_date, person.checkout_date);
+                      return nights !== null ? nights : '-';
+                    })()}
+                  </TableCell>
                   {!filters.onlyAvailable && (
                     <TableCell>
                       {person.booking_id ? (

@@ -39,4 +39,29 @@ export const formatDateForAPI = (date) => {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+};
+
+// Calculate number of nights between checkin_date and checkout_date
+export const calculateNights = (checkinDate, checkoutDate) => {
+  if (!checkinDate || !checkoutDate) return null;
+  try {
+    const checkin = new Date(checkinDate);
+    const checkout = new Date(checkoutDate);
+    
+    if (isNaN(checkin.getTime()) || isNaN(checkout.getTime())) {
+      return null;
+    }
+    
+    // Calculate difference in milliseconds
+    const diffTime = checkout - checkin;
+    
+    // Convert to days and round up
+    const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Return null if the result is negative or invalid
+    return nights >= 0 ? nights : null;
+  } catch (error) {
+    console.error('Error calculating nights:', error);
+    return null;
+  }
 }; 
