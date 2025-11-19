@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useDebounce } from 'use-debounce';
 import { formatDateTime } from '@/utils/dateFormatters';
 import { AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import Pagination from '@/components/Pagination';
+import { Input } from '@/components/ui/input';
 
 export default function EmailLogsPage() {
   const [logs, setLogs] = useState([]);
@@ -23,8 +25,13 @@ export default function EmailLogsPage() {
     notificationType: '',
     status: '',
     startDate: '',
-    endDate: ''
+    endDate: '',
+    firstName: '',
+    lastName: '',
+    email: ''
   });
+  
+  const [debouncedFilters] = useDebounce(filters, 500);
   
   const [events, setEvents] = useState([]);
   const [notificationTypes, setNotificationTypes] = useState([
@@ -35,8 +42,11 @@ export default function EmailLogsPage() {
 
   useEffect(() => {
     fetchEvents();
+  }, []);
+
+  useEffect(() => {
     fetchLogs();
-  }, [pagination.page, pagination.itemsPerPage, filters]);
+  }, [pagination.page, pagination.itemsPerPage, debouncedFilters]);
 
   const fetchEvents = async () => {
     try {
@@ -55,7 +65,7 @@ export default function EmailLogsPage() {
       const queryParams = new URLSearchParams({
         page: pagination.page,
         limit: pagination.itemsPerPage,
-        ...Object.fromEntries(Object.entries(filters).filter(([_, v]) => v))
+        ...Object.fromEntries(Object.entries(debouncedFilters).filter(([_, v]) => v))
       });
       
       const response = await fetch(`/api/email-notifications/all?${queryParams}`);
@@ -88,6 +98,17 @@ export default function EmailLogsPage() {
     }));
   };
 
+  const handleTextFilterChange = (field, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    setPagination(prev => ({
+      ...prev,
+      page: 1 // Reset to first page when filters change
+    }));
+  };
+
   const handlePageChange = (newPage) => {
     if (newPage < 1 || newPage > pagination.totalPages) return;
     setPagination(prev => ({
@@ -110,7 +131,10 @@ export default function EmailLogsPage() {
       notificationType: '',
       status: '',
       startDate: '',
-      endDate: ''
+      endDate: '',
+      firstName: '',
+      lastName: '',
+      email: ''
     });
   };
 
@@ -155,7 +179,7 @@ export default function EmailLogsPage() {
       {/* Filters */}
       <div className="bg-white p-4 rounded-lg shadow mb-6">
         <h2 className="text-lg font-semibold mb-4">Filters</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Event</label>
             <select
@@ -228,6 +252,33 @@ export default function EmailLogsPage() {
               value={filters.endDate}
               onChange={handleFilterChange}
               className="w-full border border-gray-300 rounded-md px-3 py-2"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+            <Input
+              placeholder="Filter by first name..."
+              value={filters.firstName}
+              onChange={(e) => handleTextFilterChange('firstName', e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+            <Input
+              placeholder="Filter by last name..."
+              value={filters.lastName}
+              onChange={(e) => handleTextFilterChange('lastName', e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <Input
+              placeholder="Filter by email..."
+              value={filters.email}
+              onChange={(e) => handleTextFilterChange('email', e.target.value)}
             />
           </div>
         </div>

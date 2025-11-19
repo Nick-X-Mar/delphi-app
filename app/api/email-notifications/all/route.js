@@ -9,6 +9,9 @@ export async function GET(request) {
     const status = searchParams.get('status');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
+    const firstName = searchParams.get('firstName') || '';
+    const lastName = searchParams.get('lastName') || '';
+    const email = searchParams.get('email') || '';
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = (page - 1) * limit;
@@ -60,6 +63,24 @@ export async function GET(request) {
       paramIndex++;
     }
 
+    if (firstName) {
+      query += ` AND p.first_name ILIKE $${paramIndex}`;
+      queryParams.push(`%${firstName}%`);
+      paramIndex++;
+    }
+
+    if (lastName) {
+      query += ` AND p.last_name ILIKE $${paramIndex}`;
+      queryParams.push(`%${lastName}%`);
+      paramIndex++;
+    }
+
+    if (email) {
+      query += ` AND p.email ILIKE $${paramIndex}`;
+      queryParams.push(`%${email}%`);
+      paramIndex++;
+    }
+
     // Add order by and pagination
     query += ` ORDER BY en.sent_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
     queryParams.push(limit, offset);
@@ -68,6 +89,7 @@ export async function GET(request) {
     let countQuery = `
       SELECT COUNT(*) as total
       FROM email_notifications en
+      LEFT JOIN people p ON en.guest_id = p.person_id
       WHERE 1=1
     `;
     
@@ -106,6 +128,24 @@ export async function GET(request) {
       
       countQuery += ` AND en.sent_at < $${countParamIndex}`;
       countParams.push(adjustedEndDate);
+      countParamIndex++;
+    }
+
+    if (firstName) {
+      countQuery += ` AND p.first_name ILIKE $${countParamIndex}`;
+      countParams.push(`%${firstName}%`);
+      countParamIndex++;
+    }
+
+    if (lastName) {
+      countQuery += ` AND p.last_name ILIKE $${countParamIndex}`;
+      countParams.push(`%${lastName}%`);
+      countParamIndex++;
+    }
+
+    if (email) {
+      countQuery += ` AND p.email ILIKE $${countParamIndex}`;
+      countParams.push(`%${email}%`);
       countParamIndex++;
     }
 
