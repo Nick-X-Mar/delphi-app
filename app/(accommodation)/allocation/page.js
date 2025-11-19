@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
@@ -9,11 +9,17 @@ import AccommodationHotelList from '@/components/AccommodationHotelList';
 import AccommodationConfirmation from '@/components/AccommodationConfirmation';
 import EventSelector from '@/components/EventSelector';
 import { toast } from 'sonner';
-import { useViewOnlyMode } from '@/lib/viewOnlyMode';
+import { useViewOnlyMode, clearViewOnlyCache } from '@/lib/viewOnlyMode';
 
 export default function Allocation() {
-  const { isViewOnly } = useViewOnlyMode();
-  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(() => {
+    // Initialize with working event from localStorage
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('workingEventId');
+    }
+    return null;
+  });
+  const { isViewOnly } = useViewOnlyMode(selectedEvent);
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [roomSelection, setRoomSelection] = useState(null);
   const [expandedStep, setExpandedStep] = useState(1);
@@ -21,12 +27,30 @@ export default function Allocation() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleEventChange = (eventId) => {
+    clearViewOnlyCache();
     setSelectedEvent(eventId);
     setSelectedPerson(null);
     setRoomSelection(null);
     setBookingResult(null);
     setExpandedStep(1);
   };
+
+  // Listen for working event changes
+  useEffect(() => {
+    const handleWorkingEventChange = () => {
+      if (typeof window !== 'undefined') {
+        const workingEventId = localStorage.getItem('workingEventId');
+        if (workingEventId && !selectedEvent) {
+          setSelectedEvent(workingEventId);
+        }
+      }
+    };
+
+    window.addEventListener('workingEventChanged', handleWorkingEventChange);
+    return () => {
+      window.removeEventListener('workingEventChanged', handleWorkingEventChange);
+    };
+  }, [selectedEvent]);
 
   const handleRoomSelection = (selection) => {
     setRoomSelection(selection);

@@ -11,6 +11,7 @@ import { StarRating } from '@/components/ui/star-rating';
 import { Input } from '@/components/ui/input';
 import { getHotelCategories, getHotelCategoryColor } from '@/lib/hotelCategories';
 import { formatDate } from '@/utils/dateFormatters';
+import { useViewOnlyMode, clearViewOnlyCache } from '@/lib/viewOnlyMode';
 import {
   Select,
   SelectContent,
@@ -19,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export default function HotelList({ searchTerm: initialSearchTerm, eventId: initialEventId, isViewOnly = false }) {
+export default function HotelList({ searchTerm: initialSearchTerm, eventId: initialEventId, isViewOnly: parentIsViewOnly = false, onEventChange = null }) {
   const router = useRouter();
   const [hotels, setHotels] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -36,6 +37,9 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
     }
     return initialEventId || null;
   });
+  const { isViewOnly: selectedEventIsViewOnly } = useViewOnlyMode(selectedEventId);
+  // Use the more restrictive view-only mode (if either parent or selected event is view-only)
+  const isViewOnly = parentIsViewOnly || selectedEventIsViewOnly;
   const [events, setEvents] = useState([]);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
@@ -57,16 +61,22 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
         
         // If no event is selected and we have events, select the first one or working event
         setSelectedEventId(current => {
-          if (current) return current; // Keep current selection
+          if (current) {
+            return current; // Keep current selection
+          }
           
           if (data.length > 0) {
+            let eventToSelect = null;
             if (typeof window !== 'undefined') {
               const workingEventId = localStorage.getItem('workingEventId');
               if (workingEventId && data.find(e => e.event_id.toString() === workingEventId)) {
-                return workingEventId;
+                eventToSelect = workingEventId;
               }
             }
-            return data[0].event_id.toString();
+            if (!eventToSelect) {
+              eventToSelect = data[0].event_id.toString();
+            }
+            return eventToSelect;
           }
           return current;
         });
@@ -79,6 +89,13 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
     fetchEvents();
   }, []);
 
+  // Notify parent when selectedEventId is set (after events are loaded)
+  useEffect(() => {
+    if (selectedEventId && onEventChange) {
+      onEventChange(selectedEventId);
+    }
+  }, [selectedEventId, onEventChange]);
+
   // Listen for working event changes
   useEffect(() => {
     const handleWorkingEventChange = () => {
@@ -87,6 +104,9 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
         if (workingEventId) {
           setSelectedEventId(workingEventId);
           setCurrentPage(1); // Reset to first page when event changes
+          if (onEventChange) {
+            onEventChange(workingEventId);
+          }
         }
       }
     };
@@ -95,7 +115,7 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
     return () => {
       window.removeEventListener('workingEventChanged', handleWorkingEventChange);
     };
-  }, []);
+  }, [onEventChange]);
 
   // Reset to page 1 when event filter changes
   useEffect(() => {
@@ -281,7 +301,13 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
             </label>
             <Select
               value={selectedEventId || ''}
-              onValueChange={setSelectedEventId}
+              onValueChange={(value) => {
+                clearViewOnlyCache();
+                setSelectedEventId(value);
+                if (onEventChange) {
+                  onEventChange(value);
+                }
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select event" />
@@ -446,4 +472,4 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
       />
     </div>
   );
-} 
+}
