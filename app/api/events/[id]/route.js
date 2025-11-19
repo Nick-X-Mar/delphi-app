@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
 
 // GET single event
@@ -21,7 +23,12 @@ export async function GET(request, { params }) {
 export async function PUT(request, { params }) {
   const { id } = await params;
   try {
-    const { name, start_date, end_date, is_active } = await request.json();
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized - Only admin users can update events' }, { status: 401 });
+    }
+
+    const { name, start_date, end_date, is_active, tag } = await request.json();
     
     // Validate required fields
     if (!name || !start_date || !end_date) {
@@ -49,8 +56,9 @@ export async function PUT(request, { params }) {
         start_date = $2,
         end_date = $3,
         is_active = $4,
+        tag = $5,
         updated_at = CURRENT_TIMESTAMP
-      WHERE event_id = $5 
+      WHERE event_id = $6 
       RETURNING *
     `;
     
@@ -59,6 +67,7 @@ export async function PUT(request, { params }) {
       startDate.toISOString(),
       endDate.toISOString(),
       is_active !== undefined ? is_active : true,
+      tag !== undefined ? tag : null,
       id
     ]);
     
@@ -77,6 +86,11 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   const { id } = await params;
   try {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized - Only admin users can delete events' }, { status: 401 });
+    }
+
     const { rows } = await pool.query(
       'DELETE FROM events WHERE event_id = $1 RETURNING *',
       [id]

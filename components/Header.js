@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Navigation from "./Navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -9,6 +10,42 @@ import { Button } from "@/components/ui/button";
 
 export default function Header() {
   const { data: session } = useSession();
+  const [eventTag, setEventTag] = useState(null);
+
+  useEffect(() => {
+    const fetchWorkingEventTag = async () => {
+      const workingEventId = localStorage.getItem('workingEventId');
+      if (workingEventId) {
+        try {
+          const response = await fetch(`/api/events/${workingEventId}`);
+          const data = await response.json();
+          if (!data.error && data.tag) {
+            setEventTag(data.tag);
+          } else {
+            setEventTag(null);
+          }
+        } catch (error) {
+          console.error('Error fetching working event:', error);
+          setEventTag(null);
+        }
+      } else {
+        setEventTag(null);
+      }
+    };
+
+    // Fetch on mount
+    fetchWorkingEventTag();
+
+    // Listen for working event changes
+    const handleWorkingEventChange = () => {
+      fetchWorkingEventTag();
+    };
+
+    window.addEventListener('workingEventChanged', handleWorkingEventChange);
+    return () => {
+      window.removeEventListener('workingEventChanged', handleWorkingEventChange);
+    };
+  }, []);
 
   return (
     <header className="bg-slate-200 text-slate-950 py-1">
@@ -35,6 +72,11 @@ export default function Header() {
         <div className="pr-4 flex items-center gap-4">
           {session?.user && (
             <>
+              {eventTag && (
+                <span className="text-sm font-semibold text-gray-700">
+                  [{eventTag}]
+                </span>
+              )}
               <span className="text-sm">
                 {session.user.name || session.user.email}
               </span>

@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import pool from '@/lib/db';
 
 // GET all events
@@ -21,7 +23,12 @@ export async function GET() {
 // POST create new event
 export async function POST(request) {
   try {
-    const { name, start_date, end_date } = await request.json();
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized - Only admin users can create events' }, { status: 401 });
+    }
+
+    const { name, start_date, end_date, tag } = await request.json();
     
     // Validate required fields
     if (!name || !start_date || !end_date) {
@@ -46,16 +53,18 @@ export async function POST(request) {
       INSERT INTO events (
         name,
         start_date,
-        end_date
+        end_date,
+        tag
       ) 
-      VALUES ($1, $2, $3)
+      VALUES ($1, $2, $3, $4)
       RETURNING *
     `;
 
     const { rows } = await pool.query(query, [
       name,
       startDate.toISOString(),
-      endDate.toISOString()
+      endDate.toISOString(),
+      tag || null
     ]);
 
     return NextResponse.json(rows[0], { status: 201 });

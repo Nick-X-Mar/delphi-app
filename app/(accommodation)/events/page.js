@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { useSession } from 'next-auth/react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,14 +12,33 @@ import EventList from '@/components/EventList';
 import EventForm from '@/components/EventForm';
 
 export default function EventsPage() {
+  const { data: session } = useSession();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [events, setEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  
+  const isAdmin = session?.user?.role === 'admin';
 
   useEffect(() => {
     fetchEvents();
   }, []);
+
+  useEffect(() => {
+    // Set default working event to most recent if not set
+    if (events.length > 0) {
+      const currentWorkingEventId = localStorage.getItem('workingEventId');
+      if (!currentWorkingEventId) {
+        // Set most recent event (first in list, sorted by created_at DESC) as default
+        const mostRecentEvent = events[0];
+        if (mostRecentEvent) {
+          localStorage.setItem('workingEventId', mostRecentEvent.event_id.toString());
+          // Dispatch custom event to notify header
+          window.dispatchEvent(new CustomEvent('workingEventChanged'));
+        }
+      }
+    }
+  }, [events]);
 
   const fetchEvents = async () => {
     try {
@@ -41,6 +61,8 @@ export default function EventsPage() {
   const handleEventCreated = (newEvent) => {
     setEvents(prev => [newEvent, ...prev]);
     setShowCreateModal(false);
+    // Dispatch custom event to notify header if working event changed
+    window.dispatchEvent(new CustomEvent('workingEventChanged'));
   };
 
   const handleEventUpdated = (updatedEvent) => {
@@ -105,7 +127,7 @@ export default function EventsPage() {
           <Button
             onClick={() => setShowCreateModal(true)}
             className="inline-flex items-center"
-            disabled={true}
+            disabled={!isAdmin}
           >
             <PlusIcon className="h-5 w-5 mr-2" />
             Add Event

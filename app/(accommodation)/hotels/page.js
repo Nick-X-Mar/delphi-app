@@ -15,6 +15,28 @@ import {
 
 export default function HotelsPage() {
   const router = useRouter();
+  const [workingEventId, setWorkingEventId] = useState(null);
+
+  useEffect(() => {
+    // Get working event from localStorage
+    if (typeof window !== 'undefined') {
+      const eventId = localStorage.getItem('workingEventId');
+      setWorkingEventId(eventId);
+    }
+
+    // Listen for working event changes
+    const handleWorkingEventChange = () => {
+      if (typeof window !== 'undefined') {
+        const eventId = localStorage.getItem('workingEventId');
+        setWorkingEventId(eventId);
+      }
+    };
+
+    window.addEventListener('workingEventChanged', handleWorkingEventChange);
+    return () => {
+      window.removeEventListener('workingEventChanged', handleWorkingEventChange);
+    };
+  }, []);
 
   const handleAddHotel = () => {
     router.push('/hotels/new');
@@ -29,7 +51,7 @@ export default function HotelsPage() {
         </Button>
       </div>
 
-      <HotelList />
+      <HotelList initialEventId={workingEventId} />
     </div>
   );
 }
