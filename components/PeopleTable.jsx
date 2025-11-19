@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useDebounce } from 'use-debounce';
 import { toast } from 'sonner';
-import { formatDate, formatDateTime } from '@/utils/dateFormatters';
+import { formatDate, formatDateTime, calculateNights } from '@/utils/dateFormatters';
 import { format, parseISO } from 'date-fns';
 import Pagination from '@/components/Pagination';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -33,7 +33,8 @@ export default function PeopleTable({ isViewOnly = false }) {
     lastName: '',
     email: '',
     guestType: 'all',
-    allocationStatus: 'all'
+    allocationStatus: 'all',
+    minNights: ''
   });
   const [selectedPeople, setSelectedPeople] = useState(new Set());
   const [debouncedFilters] = useDebounce(filters, 500);
@@ -111,7 +112,21 @@ export default function PeopleTable({ isViewOnly = false }) {
         throw new Error(data.error);
       }
       
-      setPeople(data.data || []); // Ensure we always set an array
+      let filteredPeople = data.data || [];
+      
+      // Client-side filtering by nights
+      if (debouncedFilters.minNights && debouncedFilters.minNights !== '') {
+        const minNights = parseInt(debouncedFilters.minNights);
+        if (!isNaN(minNights)) {
+          filteredPeople = filteredPeople.filter(person => {
+            const nights = calculateNights(person.checkin_date, person.checkout_date);
+            return nights !== null && nights >= minNights;
+          });
+        }
+      }
+      
+      setPeople(filteredPeople); // Ensure we always set an array
+      // Note: totalItems keeps the original total for pagination, filtering applies to current page only
       setTotalItems(data.pagination.total);
       setSelectedPeople(new Set()); // Clear selection when data changes
     } catch (error) {
@@ -288,7 +303,7 @@ export default function PeopleTable({ isViewOnly = false }) {
       <div className="bg-white p-6 rounded-lg shadow-sm border">
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Filter People</h2>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Event
@@ -344,7 +359,8 @@ export default function PeopleTable({ isViewOnly = false }) {
                 onChange={(e) => handleFilterChange('email', e.target.value)}
               />
             </div>
-
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Guest Type
@@ -385,6 +401,19 @@ export default function PeopleTable({ isViewOnly = false }) {
                   <SelectItem value="will_not_attend">Will Not Attend</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Min Nights
+              </label>
+              <Input
+                type="number"
+                placeholder="Minimum nights..."
+                value={filters.minNights}
+                onChange={(e) => handleFilterChange('minNights', e.target.value)}
+                min="0"
+              />
             </div>
           </div>
         </div>
@@ -444,6 +473,7 @@ export default function PeopleTable({ isViewOnly = false }) {
             <TableHead>Stay Together</TableHead>
             <TableHead>Checkin</TableHead>
             <TableHead>Checkout</TableHead>
+            <TableHead>Nights</TableHead>
             <TableHead>Mobile Phone</TableHead>
             <TableHead>Guest Type</TableHead>
             <TableHead>Notes</TableHead>
@@ -485,6 +515,12 @@ export default function PeopleTable({ isViewOnly = false }) {
               </TableCell>
               <TableCell>
                 {person.checkout_date && new Date(person.checkout_date).toLocaleDateString()}
+              </TableCell>
+              <TableCell>
+                {(() => {
+                  const nights = calculateNights(person.checkin_date, person.checkout_date);
+                  return nights !== null ? nights : '-';
+                })()}
               </TableCell>
               <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 {person.mobile_phone}
