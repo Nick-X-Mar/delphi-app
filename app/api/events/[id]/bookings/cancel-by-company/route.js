@@ -1,15 +1,24 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { checkEventViewOnly } from '@/lib/apiViewOnlyCheck';
 
 export async function POST(request, { params }) {
   const client = await pool.connect();
   
   try {
-    const eventId = params.id;
+    const eventId = await params.id;
     const { company } = await request.json();
 
     if (!company) {
       return NextResponse.json({ error: 'Company is required' }, { status: 400 });
+    }
+
+    // Check if event has passed (view-only mode)
+    const { isViewOnly } = await checkEventViewOnly(eventId);
+    if (isViewOnly) {
+      return NextResponse.json({
+        error: 'Event has passed. Modifications are not allowed.'
+      }, { status: 403 });
     }
 
     await client.query('BEGIN');

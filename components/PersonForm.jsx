@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { formatDateTime } from "@/utils/dateFormatters";
 
-export default function PersonForm({ person, formData, setFormData, onSubmit, onCancel }) {
+export default function PersonForm({ person, formData, setFormData, onSubmit, onCancel, isViewOnly = false }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [open, setOpen] = useState(false);
   const [existingGroups, setExistingGroups] = useState([]);
@@ -359,9 +359,11 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
               value={formData.room_size || ''}
               onChange={handleChange}
               min="1"
+              disabled={isViewOnly}
               className={cn(
                 "w-full px-3 py-2 bg-white border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
-                errors.room_size ? "border-red-500" : "border-gray-200"
+                errors.room_size ? "border-red-500" : "border-gray-200",
+                isViewOnly ? "disabled:bg-gray-50 disabled:cursor-not-allowed" : ""
               )}
             />
             {errors.room_size && (
@@ -391,6 +393,7 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
                     role="combobox"
                     aria-expanded={open}
                     className="flex-1"
+                    disabled={isViewOnly}
                   >
                     {formData.group_id || "Select existing group"}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -442,6 +445,7 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
                   onClick={handleRemoveGroup}
                   className="bg-red-600 hover:bg-red-700"
                   title="Remove group"
+                  disabled={isViewOnly}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -451,6 +455,7 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
                   onClick={() => handleGroupSelect('new')}
                   className="bg-green-600 hover:bg-green-700"
                   title="Add new group"
+                  disabled={isViewOnly}
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -464,12 +469,13 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
                   value={newGroupName}
                   onChange={(e) => setNewGroupName(e.target.value)}
                   placeholder="Enter new group name..."
-                  className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={isViewOnly}
+                  className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
                 />
                 <Button
                   type="button"
                   onClick={handleNewGroupSubmit}
-                  disabled={!newGroupName.trim()}
+                  disabled={!newGroupName.trim() || isViewOnly}
                 >
                   Add Group
                 </Button>
@@ -495,6 +501,7 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
                 onCheckedChange={(checked) => 
                   setFormData(prev => ({ ...prev, will_not_attend: checked }))
                 }
+                disabled={isViewOnly}
                 className="h-5 w-5 border-2 border-gray-300 rounded data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600"
               />
               <div className="grid gap-1.5 leading-none">
@@ -521,7 +528,8 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
             value={formData.notes || ''}
             onChange={handleChange}
             rows={3}
-            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            disabled={isViewOnly}
+            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
           />
         </div>
       </div>
@@ -543,7 +551,8 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium transition-colors"
+            disabled={isViewOnly}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Save Changes
           </button>

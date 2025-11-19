@@ -1,11 +1,29 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { checkEventViewOnly } from '@/lib/apiViewOnlyCheck';
 
 // PUT update booking
 export async function PUT(request, { params }) {
   try {
     const bookingId = await params.id;
     const body = await request.json();
+
+    // Get event ID from booking
+    const bookingResult = await pool.query(
+      'SELECT event_id FROM bookings WHERE booking_id = $1',
+      [bookingId]
+    );
+    
+    if (bookingResult.rows.length > 0) {
+      const eventId = bookingResult.rows[0].event_id;
+      // Check if event has passed (view-only mode)
+      const { isViewOnly } = await checkEventViewOnly(eventId);
+      if (isViewOnly) {
+        return NextResponse.json({
+          error: 'Event has passed. Modifications are not allowed.'
+        }, { status: 403 });
+      }
+    }
 
     // If only status is being updated (e.g., cancellation)
     if (Object.keys(body).length === 1 && body.status !== undefined) {
@@ -187,6 +205,23 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     const bookingId = await params.id;
+    
+    // Get event ID from booking before deleting
+    const bookingResult = await pool.query(
+      'SELECT event_id FROM bookings WHERE booking_id = $1',
+      [bookingId]
+    );
+    
+    if (bookingResult.rows.length > 0) {
+      const eventId = bookingResult.rows[0].event_id;
+      // Check if event has passed (view-only mode)
+      const { isViewOnly } = await checkEventViewOnly(eventId);
+      if (isViewOnly) {
+        return NextResponse.json({
+          error: 'Event has passed. Modifications are not allowed.'
+        }, { status: 403 });
+      }
+    }
     
     const query = `
       DELETE FROM bookings

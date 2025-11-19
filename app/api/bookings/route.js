@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { checkEventViewOnly } from '@/lib/apiViewOnlyCheck';
 
 export async function POST(request) {
   try {
@@ -11,6 +12,14 @@ export async function POST(request) {
         { error: 'Missing required fields' },
         { status: 400 }
       );
+    }
+
+    // Check if event has passed (view-only mode)
+    const { isViewOnly } = await checkEventViewOnly(eventId);
+    if (isViewOnly) {
+      return NextResponse.json({
+        error: 'Event has passed. Modifications are not allowed.'
+      }, { status: 403 });
     }
 
     // Create the booking

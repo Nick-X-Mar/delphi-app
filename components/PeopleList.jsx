@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { formatDate, formatDateTime } from '@/utils/dateFormatters';
 import Pagination from '@/components/Pagination';
 
-export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) {
+export default function PeopleList({ eventId, onPersonSelect, selectedPerson, isViewOnly = false }) {
   const [people, setPeople] = useState([]);
   const [filters, setFilters] = useState({
     firstName: '',
@@ -97,6 +97,9 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
   };
 
   const handlePersonClick = (person) => {
+    if (isViewOnly) {
+      return;
+    }
     if (person.booking_id) {
       // Don't do anything if the person already has a booking
       return;

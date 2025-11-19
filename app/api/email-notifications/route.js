@@ -1,9 +1,20 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { checkEventViewOnly } from '@/lib/apiViewOnlyCheck';
 
 export async function POST(request) {
   try {
     const { guestId, eventId, bookingId, notificationType, sentAt, to, subject, status, statusId, errorMessage } = await request.json();
+
+    // Check if event has passed (view-only mode) - only block if not a failed status (failed emails are just logging)
+    if (eventId && status !== 'failed') {
+      const { isViewOnly } = await checkEventViewOnly(eventId);
+      if (isViewOnly) {
+        return NextResponse.json({
+          error: 'Event has passed. Email sending is not allowed.'
+        }, { status: 403 });
+      }
+    }
 
     const result = await pool.query(
       `INSERT INTO email_notifications (

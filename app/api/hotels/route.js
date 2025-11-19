@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { isValidHotelCategory } from '@/lib/hotelCategories';
+import { checkEventViewOnly } from '@/lib/apiViewOnlyCheck';
 
 // GET all hotels with filtering and pagination
 export async function GET(request) {
@@ -203,6 +204,14 @@ export async function POST(request) {
       return NextResponse.json({
         error: 'Name, area, category, address, and event are required'
       }, { status: 400 });
+    }
+
+    // Check if event has passed (view-only mode)
+    const { isViewOnly } = await checkEventViewOnly(eventId);
+    if (isViewOnly) {
+      return NextResponse.json({
+        error: 'Event has passed. Modifications are not allowed.'
+      }, { status: 403 });
     }
 
     // Convert stars to numeric and validate range if provided

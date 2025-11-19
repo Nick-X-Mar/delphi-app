@@ -9,8 +9,10 @@ import AccommodationHotelList from '@/components/AccommodationHotelList';
 import AccommodationConfirmation from '@/components/AccommodationConfirmation';
 import EventSelector from '@/components/EventSelector';
 import { toast } from 'sonner';
+import { useViewOnlyMode } from '@/lib/viewOnlyMode';
 
 export default function Allocation() {
+  const { isViewOnly } = useViewOnlyMode();
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [roomSelection, setRoomSelection] = useState(null);
@@ -119,12 +121,20 @@ export default function Allocation() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {isViewOnly && (
+        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+          <p className="text-sm text-yellow-800">
+            <strong>View-Only Mode:</strong> This event has passed. All modifications are disabled.
+          </p>
+        </div>
+      )}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Accommodation Allocation</h1>
         <div className="w-[300px]">
           <EventSelector
             value={selectedEvent}
             onChange={handleEventChange}
+            disabled={isViewOnly}
           />
         </div>
       </div>
@@ -167,10 +177,13 @@ export default function Allocation() {
               <PeopleList 
                 eventId={selectedEvent}
                 onPersonSelect={(person) => {
-                  setSelectedPerson(person);
-                  setExpandedStep(2);
+                  if (!isViewOnly) {
+                    setSelectedPerson(person);
+                    setExpandedStep(2);
+                  }
                 }}
                 selectedPerson={selectedPerson}
+                isViewOnly={isViewOnly}
               />
             </CardContent>
           )}
@@ -214,6 +227,7 @@ export default function Allocation() {
                 eventId={selectedEvent}
                 personId={selectedPerson.person_id}
                 onRoomSelection={handleRoomSelection}
+                isViewOnly={isViewOnly}
               />
             </CardContent>
           )}
@@ -245,6 +259,7 @@ export default function Allocation() {
                 onConfirm={handleConfirm}
                 onCancel={handleCancel}
                 isLoading={isLoading}
+                isViewOnly={isViewOnly}
               />
             </CardContent>
           )}

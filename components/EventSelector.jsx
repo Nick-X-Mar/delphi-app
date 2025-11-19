@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export default function EventSelector({ value, onChange, className }) {
+export default function EventSelector({ value, onChange, className, disabled = false }) {
   const [events, setEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -57,7 +57,7 @@ export default function EventSelector({ value, onChange, className }) {
   }
 
   return (
-    <Select value={value} onValueChange={onChange}>
+    <Select value={value} onValueChange={onChange} disabled={disabled}>
       <SelectTrigger className={className}>
         <SelectValue placeholder="Select event" />
       </SelectTrigger>

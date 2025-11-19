@@ -7,10 +7,12 @@ import Image from "next/image";
 import Logo from "@/public/logo.svg";
 import { useSession, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
+import { useViewOnlyMode } from '@/lib/viewOnlyMode';
 
 export default function Header() {
   const { data: session } = useSession();
   const [eventTag, setEventTag] = useState(null);
+  const { isViewOnly } = useViewOnlyMode();
 
   useEffect(() => {
     const fetchWorkingEventTag = async () => {
@@ -72,6 +74,11 @@ export default function Header() {
         <div className="pr-4 flex items-center gap-4">
           {session?.user && (
             <>
+              {isViewOnly && (
+                <span className="text-xs font-semibold bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                  VIEW-ONLY MODE
+                </span>
+              )}
               {eventTag && (
                 <span className="text-sm font-semibold text-gray-700">
                   [{eventTag}]

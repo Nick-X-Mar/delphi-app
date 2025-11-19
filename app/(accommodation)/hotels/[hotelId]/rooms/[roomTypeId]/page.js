@@ -7,10 +7,12 @@ import RoomTypeForm from '@/components/RoomTypeForm';
 import RoomAvailabilityCalendar from '@/components/RoomAvailabilityCalendar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useViewOnlyMode } from '@/lib/viewOnlyMode';
 
 export default function EditRoomTypePage() {
   const params = useParams();
   const router = useRouter();
+  const { isViewOnly } = useViewOnlyMode();
   const hotelId = params.hotelId;
   const roomTypeId = params.roomTypeId;
   const [roomType, setRoomType] = useState(null);
@@ -100,6 +102,13 @@ export default function EditRoomTypePage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {isViewOnly && (
+        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+          <p className="text-sm text-yellow-800">
+            <strong>View-Only Mode:</strong> This event has passed. All modifications are disabled.
+          </p>
+        </div>
+      )}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Edit Room Type</h1>
         <div className="space-x-4">
@@ -112,7 +121,7 @@ export default function EditRoomTypePage() {
           <Button
             variant="destructive"
             onClick={handleDelete}
-            disabled={isDeleting}
+            disabled={isDeleting || isViewOnly}
           >
             {isDeleting ? 'Deleting...' : 'Delete Room Type'}
           </Button>
@@ -129,6 +138,7 @@ export default function EditRoomTypePage() {
               hotelId={hotelId}
               roomType={roomType}
               onSuccess={handleSuccess}
+              isViewOnly={isViewOnly}
             />
           </CardContent>
         </Card>
@@ -152,6 +162,7 @@ export default function EditRoomTypePage() {
                 totalRooms={roomType.total_rooms}
                 eventStartDate={eventDates.accommodation_start_date}
                 eventEndDate={eventDates.accommodation_end_date}
+                isViewOnly={isViewOnly}
               />
             ) : (
               <p className="text-center text-gray-600">Loading event dates...</p>

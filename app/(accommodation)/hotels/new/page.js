@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { useViewOnlyMode } from '@/lib/viewOnlyMode';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +22,7 @@ import { formatDate } from '@/utils/dateFormatters';
 
 export default function NewHotelPage() {
   const router = useRouter();
+  const { isViewOnly, isLoading: isLoadingViewOnly } = useViewOnlyMode();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [tempFile, setTempFile] = useState(null);
@@ -50,6 +52,14 @@ export default function NewHotelPage() {
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  // Redirect if in view-only mode
+  useEffect(() => {
+    if (!isLoadingViewOnly && isViewOnly) {
+      toast.error('Cannot create hotel: Event has passed. All modifications are disabled.');
+      router.push('/hotels');
+    }
+  }, [isViewOnly, isLoadingViewOnly, router]);
 
   // Fetch events when component mounts
   useEffect(() => {

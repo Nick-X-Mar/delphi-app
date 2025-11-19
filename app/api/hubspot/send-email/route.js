@@ -1,7 +1,19 @@
 import { NextResponse } from 'next/server';
+import { getWorkingEventIdFromRequest, checkEventViewOnly } from '@/lib/apiViewOnlyCheck';
 
 export async function POST(request) {
   try {
+    // Check if event has passed (view-only mode)
+    const eventId = await getWorkingEventIdFromRequest(request);
+    if (eventId) {
+      const { isViewOnly } = await checkEventViewOnly(eventId);
+      if (isViewOnly) {
+        return NextResponse.json({
+          error: 'Event has passed. Email sending is not allowed.'
+        }, { status: 403 });
+      }
+    }
+
     // Get the request body
     const { 
       to, 

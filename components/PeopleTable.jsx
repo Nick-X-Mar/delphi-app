@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@radix-ui/react-label";
 
-export default function PeopleTable() {
+export default function PeopleTable({ isViewOnly = false }) {
   const [people, setPeople] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [events, setEvents] = useState([]);
@@ -457,13 +457,13 @@ export default function PeopleTable() {
               className={`${
                 person.will_not_attend ? 'line-through text-gray-500' : ''
               } hover:bg-gray-50 cursor-pointer`}
-              onClick={() => handleEdit(person)}
+              onClick={isViewOnly ? undefined : () => handleEdit(person)}
             >
               <TableCell>
                 <Checkbox
                   checked={selectedPeople.has(person.person_id)}
                   onCheckedChange={() => handleSelectPerson(person.person_id)}
-                  disabled={true}
+                  disabled={true || isViewOnly}
                 />
               </TableCell>
               <TableCell>{formatDateTime(person.synced_at)}</TableCell>
@@ -500,6 +500,7 @@ export default function PeopleTable() {
                   variant="ghost"
                   size="icon"
                   onClick={() => handleEdit(person)}
+                  disabled={isViewOnly}
                 >
                   <Edit className="h-4 w-4" />
                 </Button>
@@ -529,6 +530,7 @@ export default function PeopleTable() {
                 setFormData={setFormData}
                 onSubmit={handleSubmit}
                 onCancel={() => setShowModal(false)}
+                isViewOnly={isViewOnly}
               />
             </div>
           </div>
