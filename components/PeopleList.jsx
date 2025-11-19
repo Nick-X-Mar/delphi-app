@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useDebounce } from 'use-debounce';
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatDate, formatDateTime } from '@/utils/dateFormatters';
+import Pagination from '@/components/Pagination';
 
 export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) {
   const [people, setPeople] = useState([]);
@@ -84,6 +85,14 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
     setPagination(prev => ({
       ...prev,
       currentPage: newPage
+    }));
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setPagination(prev => ({
+      ...prev,
+      itemsPerPage: newItemsPerPage,
+      currentPage: 1 // Reset to first page when page size changes
     }));
   };
 
@@ -262,30 +271,14 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson }) 
         </Table>
       </div>
 
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">
-          Showing {people.length > 0 ? ((pagination.currentPage - 1) * pagination.itemsPerPage) + 1 : 0} to {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} of {pagination.totalItems} people
-        </p>
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => handlePageChange(pagination.currentPage - 1)}
-            disabled={pagination.currentPage === 1}
-            className="h-8 w-8 flex items-center justify-center rounded-md border border-gray-200 bg-white text-gray-900 hover:bg-gray-100 hover:text-gray-900 disabled:pointer-events-none disabled:opacity-50"
-          >
-            ←
-          </button>
-          <div className="flex items-center justify-center h-8 w-8 rounded-md bg-primary text-primary-foreground">
-            {pagination.currentPage}
-          </div>
-          <button
-            onClick={() => handlePageChange(pagination.currentPage + 1)}
-            disabled={pagination.currentPage === pagination.totalPages}
-            className="h-8 w-8 flex items-center justify-center rounded-md border border-gray-200 bg-white text-gray-900 hover:bg-gray-100 hover:text-gray-900 disabled:pointer-events-none disabled:opacity-50"
-          >
-            →
-          </button>
-        </div>
-      </div>
+      <Pagination
+        currentPage={pagination.currentPage}
+        totalPages={pagination.totalPages}
+        onPageChange={handlePageChange}
+        totalItems={pagination.totalItems}
+        itemsPerPage={pagination.itemsPerPage}
+        onItemsPerPageChange={handleItemsPerPageChange}
+      />
     </div>
   );
 } 

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatDateTime } from '@/utils/dateFormatters';
 import { AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import Pagination from '@/components/Pagination';
 
 export default function EmailLogsPage() {
   const [logs, setLogs] = useState([]);
@@ -11,7 +12,7 @@ export default function EmailLogsPage() {
   const [expandedErrors, setExpandedErrors] = useState({});
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 50,
+    itemsPerPage: 10,
     total: 0,
     totalPages: 0
   });
@@ -35,7 +36,7 @@ export default function EmailLogsPage() {
   useEffect(() => {
     fetchEvents();
     fetchLogs();
-  }, [pagination.page, filters]);
+  }, [pagination.page, pagination.itemsPerPage, filters]);
 
   const fetchEvents = async () => {
     try {
@@ -53,7 +54,7 @@ export default function EmailLogsPage() {
     try {
       const queryParams = new URLSearchParams({
         page: pagination.page,
-        limit: pagination.limit,
+        limit: pagination.itemsPerPage,
         ...Object.fromEntries(Object.entries(filters).filter(([_, v]) => v))
       });
       
@@ -92,6 +93,14 @@ export default function EmailLogsPage() {
     setPagination(prev => ({
       ...prev,
       page: newPage
+    }));
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setPagination(prev => ({
+      ...prev,
+      itemsPerPage: newItemsPerPage,
+      page: 1 // Reset to first page when page size changes
     }));
   };
 
@@ -138,42 +147,6 @@ export default function EmailLogsPage() {
     }
   };
 
-  // Function to render pagination buttons
-  const renderPaginationButtons = () => {
-    const buttons = [];
-    const maxButtons = 5;
-    
-    let startPage = 1;
-    if (pagination.totalPages > maxButtons) {
-      if (pagination.page <= 3) {
-        startPage = 1;
-      } else if (pagination.page >= pagination.totalPages - 2) {
-        startPage = pagination.totalPages - 4;
-      } else {
-        startPage = pagination.page - 2;
-      }
-    }
-    
-    const endPage = Math.min(startPage + maxButtons - 1, pagination.totalPages);
-    
-    for (let i = startPage; i <= endPage; i++) {
-      buttons.push(
-        <button
-          key={i}
-          onClick={() => handlePageChange(i)}
-          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-            pagination.page === i
-              ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-          }`}
-        >
-          {i}
-        </button>
-      );
-    }
-    
-    return buttons;
-  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -387,73 +360,15 @@ export default function EmailLogsPage() {
             </div>
             
             {/* Pagination */}
-            <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200">
-              <div className="flex-1 flex justify-between sm:hidden">
-                <button
-                  onClick={() => handlePageChange(pagination.page - 1)}
-                  disabled={pagination.page === 1}
-                  className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${
-                    pagination.page === 1
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'bg-white text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() => handlePageChange(pagination.page + 1)}
-                  disabled={pagination.page === pagination.totalPages}
-                  className={`ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${
-                    pagination.page === pagination.totalPages
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'bg-white text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  Next
-                </button>
-              </div>
-              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm text-gray-700">
-                    Showing <span className="font-medium">{logs.length > 0 ? (pagination.page - 1) * pagination.limit + 1 : 0}</span> to{' '}
-                    <span className="font-medium">
-                      {Math.min(pagination.page * pagination.limit, pagination.total)}
-                    </span>{' '}
-                    of <span className="font-medium">{pagination.total}</span> results
-                  </p>
-                </div>
-                <div>
-                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                    <button
-                      onClick={() => handlePageChange(pagination.page - 1)}
-                      disabled={pagination.page === 1}
-                      className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
-                        pagination.page === 1
-                          ? 'text-gray-300 cursor-not-allowed'
-                          : 'text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className="sr-only">Previous</span>
-                      <ChevronDown className="h-5 w-5 transform rotate-90" />
-                    </button>
-                    
-                    {renderPaginationButtons()}
-                    
-                    <button
-                      onClick={() => handlePageChange(pagination.page + 1)}
-                      disabled={pagination.page === pagination.totalPages}
-                      className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
-                        pagination.page === pagination.totalPages
-                          ? 'text-gray-300 cursor-not-allowed'
-                          : 'text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className="sr-only">Next</span>
-                      <ChevronDown className="h-5 w-5 transform -rotate-90" />
-                    </button>
-                  </nav>
-                </div>
-              </div>
+            <div className="px-6 py-4 border-t border-gray-200">
+              <Pagination
+                currentPage={pagination.page}
+                totalPages={pagination.totalPages}
+                onPageChange={handlePageChange}
+                totalItems={pagination.total}
+                itemsPerPage={pagination.itemsPerPage}
+                onItemsPerPageChange={handleItemsPerPageChange}
+              />
             </div>
           </>
         )}

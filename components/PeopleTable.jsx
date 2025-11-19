@@ -49,7 +49,7 @@ export default function PeopleTable() {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -125,7 +125,12 @@ export default function PeopleTable() {
 
   useEffect(() => {
     fetchPeople();
-  }, [currentPage, debouncedFilters]);
+  }, [currentPage, itemsPerPage, debouncedFilters]);
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when page size changes
+  };
 
   const handleEdit = (person) => {
     setEditPerson(person);
@@ -510,6 +515,7 @@ export default function PeopleTable() {
         onPageChange={handlePageChange}
         totalItems={totalItems}
         itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={handleItemsPerPageChange}
       />
 
       {showModal && (

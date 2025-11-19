@@ -5,7 +5,7 @@ import { ChevronDown, ChevronRight, Pencil, Trash2, X, Minimize2, Maximize2, Fil
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import AccommodationHotelList from './AccommodationHotelList';
-import Pagination from './Pagination';
+import Pagination from '@/components/Pagination';
 import { formatDate, formatDateTime } from '@/utils/dateFormatters';
 import { sendEmail, getGuestsWithChanges, getLastEmailNotification, recordEmailNotification } from '@/lib/emailService';
 import { emailQueue } from '@/lib/emailQueue';
@@ -108,7 +108,7 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
   useEffect(() => {
     setIsLoading(true);
     fetchData();
-  }, [eventId, pagination.currentPage, filters]);
+  }, [eventId, pagination.currentPage, pagination.itemsPerPage, filters]);
 
   useEffect(() => {
     const fetchLastBulkEmailTime = async () => {
@@ -356,6 +356,14 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
     setPagination(prev => ({
       ...prev,
       currentPage: newPage
+    }));
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setPagination(prev => ({
+      ...prev,
+      itemsPerPage: newItemsPerPage,
+      currentPage: 1 // Reset to first page when page size changes
     }));
   };
 
@@ -914,6 +922,7 @@ const AccommodationTable = React.forwardRef(({ eventId, filters }, ref) => {
         onPageChange={handlePageChange}
         totalItems={pagination.totalItems}
         itemsPerPage={pagination.itemsPerPage}
+        onItemsPerPageChange={handleItemsPerPageChange}
       />
     </div>
   );

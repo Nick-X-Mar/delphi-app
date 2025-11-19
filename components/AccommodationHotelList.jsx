@@ -39,7 +39,7 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
     category: 'all'
   });
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -299,6 +299,11 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
     setCurrentPage(1); // Reset to first page when filters change
   };
 
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when page size changes
+  };
+
   // Get paginated hotels
   const paginatedHotels = filteredHotels.slice(
     (currentPage - 1) * itemsPerPage,
@@ -499,6 +504,7 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
         onPageChange={setCurrentPage}
         totalItems={filteredHotels.length}
         itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={handleItemsPerPageChange}
       />
     </div>
   );

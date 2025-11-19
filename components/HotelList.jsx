@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { StarIcon, MapPinIcon, PhoneIcon, EnvelopeIcon, ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 import { StarIcon as StarOutline } from '@heroicons/react/24/outline';
-import Pagination from './Pagination';
+import Pagination from '@/components/Pagination';
 import { StarRating } from '@/components/ui/star-rating';
 import { Input } from '@/components/ui/input';
 import { getHotelCategories, getHotelCategoryColor } from '@/lib/hotelCategories';
