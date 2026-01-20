@@ -44,6 +44,26 @@ export default function EmailLogsPage() {
     fetchEvents();
   }, []);
 
+  // Set default event filter to working event from localStorage
+  useEffect(() => {
+    if (events.length > 0 && !filters.eventId) {
+      const workingEventId = typeof window !== 'undefined' 
+        ? localStorage.getItem('workingEventId') 
+        : null;
+      
+      // Check if working event exists in the events list
+      if (workingEventId) {
+        const workingEvent = events.find(e => e.event_id.toString() === workingEventId);
+        if (workingEvent) {
+          setFilters(prev => ({
+            ...prev,
+            eventId: workingEventId
+          }));
+        }
+      }
+    }
+  }, [events]);
+
   useEffect(() => {
     fetchLogs();
   }, [pagination.page, pagination.itemsPerPage, debouncedFilters]);
