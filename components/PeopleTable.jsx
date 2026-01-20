@@ -350,7 +350,6 @@ export default function PeopleTable({ isViewOnly = false, selectedEvent = null, 
                     onEventChange(value);
                   }
                 }}
-                disabled={isViewOnly}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="All Events" />

@@ -158,7 +158,6 @@ export default function Allocation() {
           <EventSelector
             value={selectedEvent}
             onChange={handleEventChange}
-            disabled={isViewOnly}
           />
         </div>
       </div>

@@ -118,7 +118,7 @@ export default function EventList({ events, onEventUpdated, onEventDeleted }) {
                       variant="outline"
                       size="sm"
                       onClick={() => setEditingEvent(event)}
-                      disabled={!isAdmin}
+                      disabled
                     >
                       <PencilIcon className="h-4 w-4" />
                     </Button>
@@ -126,7 +126,7 @@ export default function EventList({ events, onEventUpdated, onEventDeleted }) {
                       variant="outline"
                       size="sm"
                       onClick={() => handleDelete(event)}
-                      disabled={!isAdmin}
+                      disabled
                     >
                       <TrashIcon className="h-4 w-4" />
                     </Button>
