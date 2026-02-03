@@ -203,13 +203,19 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
     // If all dates are available, notify success
     toast.success('Room is available for selected dates!');
     if (onRoomSelection) {
-      // Get the price for the first selected date (or base price if not found)
+      // Sum actual price per night for each night (prices can vary by date)
+      const totalCost = dates.reduce((sum, date) => {
+        const av = getAvailabilityForDate(roomType, date);
+        const price = parseFloat(av.price_per_night ?? roomType.base_price_per_night) || 0;
+        return sum + price;
+      }, 0);
       const firstDateAvailability = getAvailabilityForDate(roomType, checkIn);
-      
+
       onRoomSelection({
         roomTypeId: selection.roomTypeId,
         checkIn,
         checkOut,
+        totalCost,
         roomType: {
           ...roomType,
           price_per_night: firstDateAvailability.price_per_night || roomType.base_price_per_night,

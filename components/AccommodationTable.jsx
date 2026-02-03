@@ -223,9 +223,11 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
         return `${year}-${month}-${day}`;
       };
 
-      // Calculate total cost based on selected dates and room price
-      const totalCost = selection.roomType.price_per_night * 
-        Math.ceil((selection.checkOut - selection.checkIn) / (1000 * 60 * 60 * 24));
+      // Use pre-calculated total when available (sum of each night's price); otherwise nights × single rate
+      const nights = Math.ceil((selection.checkOut - selection.checkIn) / (1000 * 60 * 60 * 24));
+      const totalCost = selection.totalCost != null
+        ? selection.totalCost
+        : selection.roomType.price_per_night * nights;
 
       // Format original booking dates
       const originalCheckInDate = formatDate(new Date(editingBooking.check_in_date));

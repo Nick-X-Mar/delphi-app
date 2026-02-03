@@ -23,7 +23,9 @@ export default function AccommodationConfirmation({
   const checkOut = selection.checkOut;
   const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
   const pricePerNight = selection.roomType.price_per_night;
-  const totalCost = nights * pricePerNight;
+  // Use pre-calculated total (sum of each night's price) when available; otherwise fallback to nights × single rate
+  const totalCost = selection.totalCost != null ? selection.totalCost : nights * pricePerNight;
+  const displayPricePerNight = nights > 0 && totalCost != null ? totalCost / nights : pricePerNight;
 
   const handleConfirm = () => {
     onConfirm({ isPayable });
@@ -56,7 +58,7 @@ export default function AccommodationConfirmation({
           <h3 className="font-semibold mb-2">Cost Summary</h3>
           <div className="grid grid-cols-2 gap-4">
             <p>Number of nights: {nights}</p>
-            <p>Price per night: €{pricePerNight.toFixed(2)}</p>
+            <p>Price per night: €{displayPricePerNight.toFixed(2)} {selection.totalCost != null && nights > 1 ? '(avg)' : ''}</p>
             <p className="font-medium">Total cost: €{totalCost.toFixed(2)}</p>
             <div className="flex items-center space-x-2">
               <Checkbox

@@ -135,6 +135,14 @@ export default function HotelPdfView({ params }) {
               <p className="text-gray-600">Total Days Booked</p>
               <p className="font-medium">{calculateTotalDays()}</p>
             </div>
+            <div>
+              <p className="text-gray-600">DEF amount</p>
+              <p className="font-medium">€{Number(hotelData.def_amount ?? 0).toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-gray-600">Guest amount</p>
+              <p className="font-medium">€{Number(hotelData.guest_amount ?? 0).toFixed(2)}</p>
+            </div>
           </div>
         </Card>
 
@@ -149,10 +157,14 @@ export default function HotelPdfView({ params }) {
                   <TableRow>
                     <TableHead>Full Name</TableHead>
                     <TableHead>Companion Full Name</TableHead>
-                    <TableHead>Notes</TableHead>
+                    <TableHead>Number of pax</TableHead>
                     <TableHead>Check In</TableHead>
                     <TableHead>Check Out</TableHead>
+                    <TableHead>Room type</TableHead>
+                    <TableHead>Booking cost</TableHead>
+                    <TableHead>Payed by guest</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Notes</TableHead>
                     <TableHead>Updated At</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -163,19 +175,27 @@ export default function HotelPdfView({ params }) {
                         {booking.first_name} {booking.last_name}
                       </TableCell>
                       <TableCell>{booking.companion_full_name || '-'}</TableCell>
-                      <TableCell className="whitespace-pre-wrap">
-                        {booking.notes || '-'}
-                      </TableCell>
+                      <TableCell>{booking.num_pax ?? '-'}</TableCell>
                       <TableCell>
                         {format(new Date(booking.check_in_date), 'PP')}
                       </TableCell>
                       <TableCell>
                         {format(new Date(booking.check_out_date), 'PP')}
                       </TableCell>
+                      <TableCell>{booking.room_type_name ?? '-'}</TableCell>
+                      <TableCell>
+                        {booking.total_cost != null ? `€${Number(booking.total_cost).toFixed(2)}` : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {booking.payed_by_guest ? 'Yes' : 'No'}
+                      </TableCell>
                       <TableCell>
                         <span className={`capitalize ${getStatusColor(booking)}`}>
                           {getStatusText(booking)}
                         </span>
+                      </TableCell>
+                      <TableCell className="whitespace-pre-wrap">
+                        {booking.notes || '-'}
                       </TableCell>
                       <TableCell>
                         {getModificationText(booking)}

@@ -15,7 +15,15 @@ export async function GET(request, { params }) {
         COUNT(DISTINCT CASE 
           WHEN b.status NOT IN ('cancelled', 'invalidated') 
           THEN b.booking_id 
-        END) as total_bookings
+        END) as total_bookings,
+        COALESCE(SUM(CASE 
+          WHEN b.status NOT IN ('cancelled', 'invalidated') AND b.payable = false 
+          THEN b.total_cost ELSE 0 
+        END), 0)::numeric as def_amount,
+        COALESCE(SUM(CASE 
+          WHEN b.status NOT IN ('cancelled', 'invalidated') AND b.payable = true 
+          THEN b.total_cost ELSE 0 
+        END), 0)::numeric as guest_amount
       FROM hotels h
       LEFT JOIN event_hotels eh ON h.hotel_id = eh.hotel_id
       LEFT JOIN events e ON eh.event_id = e.event_id
@@ -41,12 +49,15 @@ export async function GET(request, { params }) {
         b.check_in_date,
         b.check_out_date,
         b.total_cost,
+        b.payable,
         b.status,
         b.modification_type,
         b.modification_date,
         p.companion_email,
         p.companion_full_name,
+        p.room_type as person_room_type,
         pd.notes,
+        pd.room_size,
         p.first_name,
         p.last_name,
         p.email,
@@ -73,11 +84,17 @@ export async function GET(request, { params }) {
       }
 
       if (row.booking_id) {
+        const numPax = row.room_size != null
+          ? row.room_size
+          : (row.person_room_type === 'double' ? 2 : row.person_room_type === 'single' ? 1 : null);
         acc[row.room_type_id].bookings.push({
           booking_id: row.booking_id,
           check_in_date: row.check_in_date,
           check_out_date: row.check_out_date,
           total_cost: row.total_cost,
+          payed_by_guest: row.payable,
+          room_type_name: row.name,
+          num_pax: numPax,
           status: row.status,
           modification_type: row.modification_type,
           modification_date: row.modification_date,

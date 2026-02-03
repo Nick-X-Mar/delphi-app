@@ -73,12 +73,12 @@ export default function Allocation() {
         return `${year}-${month}-${day}`;
       };
 
-      // Calculate total cost
+      // Use pre-calculated total (sum of each night's price) when available; otherwise nights × single rate
       const checkIn = roomSelection.checkIn;
       const checkOut = roomSelection.checkOut;
       const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
       const pricePerNight = roomSelection.roomType.price_per_night;
-      const totalCost = nights * pricePerNight;
+      const totalCost = roomSelection.totalCost != null ? roomSelection.totalCost : nights * pricePerNight;
 
       const response = await fetch('/api/bookings', {
         method: 'POST',
