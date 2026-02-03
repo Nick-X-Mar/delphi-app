@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { checkEventViewOnly } from '@/lib/apiViewOnlyCheck';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request) {
   try {
     const { guestId, eventId, bookingId, notificationType, sentAt, to, subject, status, statusId, errorMessage } = await request.json();

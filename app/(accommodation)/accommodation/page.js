@@ -190,7 +190,6 @@ export default function Accommodation() {
           <EventSelector
             value={selectedEvent}
             onChange={handleEventChange}
-            disabled={isViewOnly}
           />
         </div>
       </div>
