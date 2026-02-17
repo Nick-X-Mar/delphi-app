@@ -5,8 +5,26 @@ import pool from '@/lib/db';
 export async function POST(request) {
   const client = await pool.connect();
   try {
+    // Get event_id from environment variable
+    const eventId = process.env.EVENT_ID;
+    
+    if (!eventId) {
+      console.error('[Sync] Error: event_id environment variable is not set');
+      return NextResponse.json({ 
+        error: 'event_id environment variable is not configured' 
+      }, { status: 500 });
+    }
+
+    const eventIdNum = parseInt(eventId, 10);
+    if (isNaN(eventIdNum)) {
+      console.error(`[Sync] Error: event_id environment variable is not a valid number: ${eventId}`);
+      return NextResponse.json({ 
+        error: 'event_id environment variable must be a valid number' 
+      }, { status: 500 });
+    }
+
     const people = await request.json();
-    console.log(`[Sync] Starting sync process for ${people.length} people`);
+    console.log(`[Sync] Starting sync process for ${people.length} people for event ${eventIdNum}`);
 
     if (!Array.isArray(people)) {
       console.error('[Sync] Error: Request body is not an array');
@@ -57,8 +75,7 @@ export async function POST(request) {
             companion_email = $7,
             job_title = $8,
             room_type = $9,
-            synced_at = $11,
-            updated_at = $11
+            synced_at = $11
           WHERE person_id = $10
           RETURNING *
         `;
@@ -147,13 +164,14 @@ export async function POST(request) {
           
           await individualClient.query(detailsQuery, [person.person_id, roomSize, currentTimestamp]);
           
-          // Assign newly created person to event 1
+          // Assign newly created person to the event specified in environment variable
           const assignToEventQuery = `
             INSERT INTO event_people (event_id, person_id)
-            VALUES (1, $1)
+            VALUES ($1, $2)
+            ON CONFLICT (event_id, person_id) DO NOTHING
           `;
-          await individualClient.query(assignToEventQuery, [person.person_id]);
-          console.log(`[Sync] Successfully assigned person_id: ${person.person_id} to event 1`);
+          await individualClient.query(assignToEventQuery, [eventIdNum, person.person_id]);
+          console.log(`[Sync] Successfully assigned person_id: ${person.person_id} to event ${eventIdNum}`);
 
           results.inserted++;
         } else {
