@@ -549,10 +549,10 @@ export default function PeopleTable({ isViewOnly = false, selectedEvent = null, 
                 ) : '-'}
               </TableCell>
               <TableCell>
-                {person.checkin_date && new Date(person.checkin_date).toLocaleDateString()}
+                {person.checkin_date && formatDate(person.checkin_date)}
               </TableCell>
               <TableCell>
-                {person.checkout_date && new Date(person.checkout_date).toLocaleDateString()}
+                {person.checkout_date && formatDate(person.checkout_date)}
               </TableCell>
               <TableCell>
                 {(() => {

@@ -12,19 +12,19 @@ import { toast } from 'sonner';
 import { useViewOnlyMode, clearViewOnlyCache } from '@/lib/viewOnlyMode';
 
 export default function Allocation() {
-  const [selectedEvent, setSelectedEvent] = useState(() => {
-    // Initialize with working event from localStorage
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('workingEventId');
-    }
-    return null;
-  });
+  const [selectedEvent, setSelectedEvent] = useState(null);
   const { isViewOnly } = useViewOnlyMode(selectedEvent);
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [roomSelection, setRoomSelection] = useState(null);
   const [expandedStep, setExpandedStep] = useState(1);
   const [bookingResult, setBookingResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Sync initial event from localStorage after mount (avoids hydration mismatch)
+  useEffect(() => {
+    const stored = localStorage.getItem('workingEventId');
+    if (stored) setSelectedEvent(stored);
+  }, []);
 
   const handleEventChange = (eventId) => {
     clearViewOnlyCache();

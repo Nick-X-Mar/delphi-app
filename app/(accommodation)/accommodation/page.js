@@ -20,14 +20,14 @@ import React from 'react';
 import { useViewOnlyMode, clearViewOnlyCache } from '@/lib/viewOnlyMode';
 
 export default function Accommodation() {
-  const [selectedEvent, setSelectedEvent] = useState(() => {
-    // Initialize with working event from localStorage
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('workingEventId');
-    }
-    return null;
-  });
+  const [selectedEvent, setSelectedEvent] = useState(null);
   const { isViewOnly } = useViewOnlyMode(selectedEvent);
+
+  // Sync initial event from localStorage after mount (avoids hydration mismatch)
+  useEffect(() => {
+    const stored = localStorage.getItem('workingEventId');
+    if (stored) setSelectedEvent(stored);
+  }, []);
   const [filters, setFilters] = useState({
     // People filters
     firstName: '',

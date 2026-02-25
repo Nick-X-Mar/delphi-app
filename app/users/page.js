@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { formatDate } from '@/utils/dateFormatters';
 
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
@@ -141,7 +142,7 @@ export default function UsersPage() {
                   </span>
                 </TableCell>
                 <TableCell>
-                  {new Date(user.created_at).toLocaleDateString()}
+                  {formatDate(user.created_at)}
                 </TableCell>
                 <TableCell>
                   <Button

@@ -14,7 +14,8 @@ import { Star, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { getHotelCategories, getHotelCategoryColor } from '@/lib/hotelCategories';
 import { Input } from '@/components/ui/input';
-import { formatDateForAPI } from '@/utils/dateFormatters';
+import { formatDate, formatDateForAPI } from '@/utils/dateFormatters';
+import { format } from 'date-fns';
 import {
   Select,
   SelectContent,
@@ -345,7 +346,7 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
       <div className="bg-blue-50 p-4 rounded-lg">
         <h3 className="font-medium">Event: {event.name}</h3>
         <p className="text-sm text-gray-600">
-          Accommodation Period: {new Date(event.accommodation_start_date).toLocaleDateString()} - {new Date(event.accommodation_end_date).toLocaleDateString()}
+          Accommodation Period: {formatDate(event.accommodation_start_date)} - {formatDate(event.accommodation_end_date)}
         </p>
         {selection.roomTypeId && (
           <p className="text-sm text-blue-600 mt-2">
@@ -353,7 +354,7 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
               ? 'Select check-out date' 
               : selection.dates.length === 0 
                 ? 'Select check-in date'
-                : `Selected: ${selection.dates[0].toLocaleDateString()} - ${selection.dates[1].toLocaleDateString()}`
+                : `Selected: ${format(selection.dates[0], 'dd/MM/yyyy')} - ${format(selection.dates[1], 'dd/MM/yyyy')}`
             }
           </p>
         )}
@@ -420,7 +421,7 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
                     className="sticky top-0 bg-white z-20 p-4 text-center font-medium text-sm"
                     style={{ width: '120px', minWidth: '120px' }}
                   >
-                    {date.toLocaleDateString()}
+                    {format(date, 'dd/MM/yyyy')}
                   </th>
                 ))}
               </tr>

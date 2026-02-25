@@ -32,17 +32,17 @@ export default function HotelDetailPage() {
   const [tempFile, setTempFile] = useState(null);
   const [originalFileUrl, setOriginalFileUrl] = useState(null);
   const [events, setEvents] = useState([]);
-  const [selectedEventId, setSelectedEventId] = useState(() => {
-    // Initialize with working event from localStorage
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('workingEventId') || '';
-    }
-    return '';
-  });
+  const [selectedEventId, setSelectedEventId] = useState('');
   const { isViewOnly } = useViewOnlyMode(selectedEventId || null);
   const [errors, setErrors] = useState({});
   const [s3Debug, setS3Debug] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Sync initial event from localStorage after mount (avoids hydration mismatch)
+  useEffect(() => {
+    const stored = localStorage.getItem('workingEventId');
+    if (stored) setSelectedEventId(stored);
+  }, []);
 
   useEffect(() => {
     fetchHotel();

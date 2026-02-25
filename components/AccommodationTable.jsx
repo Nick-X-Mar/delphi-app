@@ -26,9 +26,7 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
   const [lastBulkEmailTime, setLastBulkEmailTime] = useState(null);
 
   const formatDisplayDate = (dateString) => {
-    const date = new Date(dateString);
-    return new Date(date.getTime() + date.getTimezoneOffset() * 60000)
-      .toLocaleDateString();
+    return formatDate(dateString);
   };
 
   // Fetch hotels data with room types and bookings
@@ -322,8 +320,7 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
       text = `${text} (${modText}`;
       
       if (booking.modification_date) {
-        const date = new Date(booking.modification_date);
-        text += ` on ${date.toLocaleDateString()}`;
+        text += ` on ${formatDate(booking.modification_date)}`;
       }
       
       text += ')';

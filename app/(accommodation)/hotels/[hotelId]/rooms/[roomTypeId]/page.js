@@ -8,6 +8,7 @@ import RoomAvailabilityCalendar from '@/components/RoomAvailabilityCalendar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useViewOnlyMode } from '@/lib/viewOnlyMode';
+import { formatDate } from '@/utils/dateFormatters';
 
 export default function EditRoomTypePage() {
   const params = useParams();
@@ -148,7 +149,7 @@ export default function EditRoomTypePage() {
             <CardTitle>Availability & Pricing</CardTitle>
             {eventDates && (
               <p className="text-sm text-gray-600">
-                Event Period: {new Date(eventDates.accommodation_start_date).toLocaleDateString()} - {new Date(eventDates.accommodation_end_date).toLocaleDateString()}
+                Event Period: {formatDate(eventDates.accommodation_start_date)} - {formatDate(eventDates.accommodation_end_date)}
               </p>
             )}
           </CardHeader>
