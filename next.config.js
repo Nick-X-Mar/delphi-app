@@ -14,7 +14,8 @@ const nextConfig = {
     HUBSPOT_EMAIL_TEMPLATE_ID: process.env.HUBSPOT_EMAIL_TEMPLATE_ID,
     EMAIL_FROM_ADDRESS: process.env.EMAIL_FROM_ADDRESS,
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
-    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET
+    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+    EVENT_ID: process.env.EVENT_ID
   }
 }
 
