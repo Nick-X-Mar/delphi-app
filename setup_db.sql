@@ -185,6 +185,13 @@ CREATE TABLE public.event_people (
     created_at timestamp with time zone DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'::text)
 );
 --
+-- Name: event_preparation_hotels; Type: TABLE; Schema: public; Owner: -
+--
+CREATE TABLE public.event_preparation_hotels (
+    event_id integer NOT NULL,
+    hotel_id integer NOT NULL
+);
+--
 -- Name: event_room_types; Type: TABLE; Schema: public; Owner: -
 --
 CREATE TABLE public.event_room_types (
@@ -244,6 +251,7 @@ CREATE TABLE public.hotels (
     contact_mobile character varying(50),
     contact_email character varying(255),
     agreement_file_link text,
+    overnight_stay_tax numeric(10,2) NOT NULL DEFAULT 0.00,
     created_at timestamp with time zone DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'::text),
     updated_at timestamp with time zone DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'::text),
     CONSTRAINT hotels_category_check CHECK (((category)::text = ANY ((ARRAY['VVIP'::character varying, 'VIP'::character varying, 'Decent'::character varying, 'NEB'::character varying])::text[]))),
@@ -411,6 +419,11 @@ ALTER TABLE ONLY public.event_hotels
 ALTER TABLE ONLY public.event_people
     ADD CONSTRAINT event_people_pkey PRIMARY KEY (event_id, person_id);
 --
+-- Name: event_preparation_hotels event_preparation_hotels_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+ALTER TABLE ONLY public.event_preparation_hotels
+    ADD CONSTRAINT event_preparation_hotels_pkey PRIMARY KEY (event_id, hotel_id);
+--
 -- Name: event_room_types event_room_types_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 ALTER TABLE ONLY public.event_room_types
@@ -545,6 +558,16 @@ ALTER TABLE ONLY public.event_people
 --
 ALTER TABLE ONLY public.event_people
     ADD CONSTRAINT event_people_person_id_fkey FOREIGN KEY (person_id) REFERENCES public.people(person_id) ON DELETE CASCADE;
+--
+-- Name: event_preparation_hotels event_preparation_hotels_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+ALTER TABLE ONLY public.event_preparation_hotels
+    ADD CONSTRAINT event_preparation_hotels_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(event_id) ON DELETE CASCADE;
+--
+-- Name: event_preparation_hotels event_preparation_hotels_hotel_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+ALTER TABLE ONLY public.event_preparation_hotels
+    ADD CONSTRAINT event_preparation_hotels_hotel_id_fkey FOREIGN KEY (hotel_id) REFERENCES public.hotels(hotel_id) ON DELETE CASCADE;
 --
 -- Name: event_room_types event_room_types_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --

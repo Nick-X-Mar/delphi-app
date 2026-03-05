@@ -41,6 +41,7 @@ export default function NewHotelPage() {
     website_link: '',
     map_link: '',
     category: '',
+    overnight_stay_tax: '0.00',
     contact_name: '',
     contact_phone: '',
     contact_mobile: '',
@@ -432,6 +433,20 @@ export default function NewHotelPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Overnight Stay Tax (EUR)
+                </label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  name="overnight_stay_tax"
+                  value={formData.overnight_stay_tax}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
