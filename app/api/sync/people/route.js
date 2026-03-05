@@ -51,11 +51,14 @@ export async function POST(request) {
           continue;
         }
 
+        // Synthetic person_id: event_id + external person_id so same external id across events is unique
+        const syntheticPersonId = parseInt(String(eventIdNum) + String(person.person_id), 10);
+
         // Generate a single timestamp in UTC+0
         const timestampResult = await individualClient.query("SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AS current_time");
         const currentTimestamp = timestampResult.rows[0].current_time;
 
-        console.log(`[Sync] Attempting to update person_id: ${person.person_id}`);
+        console.log(`[Sync] Attempting to update person_id: ${syntheticPersonId} (external: ${person.person_id})`);
         // Try to update first
         const updateQuery = `
           UPDATE people
@@ -84,16 +87,16 @@ export async function POST(request) {
           person.companion_email,
           person.job_title,
           person.room_type,
-          person.person_id,
+          syntheticPersonId,
           currentTimestamp
         ];
 
-        console.log(`[Sync] Update values for person_id ${person.person_id}:`, values);
+        console.log(`[Sync] Update values for person_id ${syntheticPersonId}:`, values);
         
         const updateResult = await individualClient.query(updateQuery, values);
 
         if (updateResult.rows.length === 0) {
-          console.log(`[Sync] No existing record found for person_id: ${person.person_id}, attempting insert`);
+          console.log(`[Sync] No existing record found for person_id: ${syntheticPersonId}, attempting insert`);
           // If update didn't find the record, insert it
           const insertQuery = `
             INSERT INTO people (
@@ -114,7 +117,7 @@ export async function POST(request) {
           `;
 
           const insertValues = [
-            person.person_id,
+            syntheticPersonId,
             person.first_name,
             person.last_name,
             person.email,
@@ -127,10 +130,10 @@ export async function POST(request) {
             currentTimestamp
           ];
 
-          console.log(`[Sync] Insert values for person_id ${person.person_id}:`, insertValues);
+          console.log(`[Sync] Insert values for person_id ${syntheticPersonId}:`, insertValues);
           
           const insertResult = await individualClient.query(insertQuery, insertValues);
-          console.log(`[Sync] Successfully inserted person_id: ${person.person_id}`);
+          console.log(`[Sync] Successfully inserted person_id: ${syntheticPersonId}`);
           
           // Determine room_size based on room_type
           let roomSize = null;
@@ -156,7 +159,7 @@ export async function POST(request) {
               updated_at = $3
           `;
           
-          await individualClient.query(detailsQuery, [person.person_id, roomSize, currentTimestamp]);
+          await individualClient.query(detailsQuery, [syntheticPersonId, roomSize, currentTimestamp]);
           
           // Assign newly created person to the event specified in environment variable
           const assignToEventQuery = `
@@ -164,21 +167,21 @@ export async function POST(request) {
             VALUES ($1, $2)
             ON CONFLICT (event_id, person_id) DO NOTHING
           `;
-          await individualClient.query(assignToEventQuery, [eventIdNum, person.person_id]);
-          console.log(`[Sync] Successfully assigned person_id: ${person.person_id} to event ${eventIdNum}`);
+          await individualClient.query(assignToEventQuery, [eventIdNum, syntheticPersonId]);
+          console.log(`[Sync] Successfully assigned person_id: ${syntheticPersonId} to event ${eventIdNum}`);
 
           results.inserted++;
         } else {
-          console.log(`[Sync] Successfully updated person_id: ${person.person_id}`);
+          console.log(`[Sync] Successfully updated person_id: ${syntheticPersonId}`);
           results.updated++;
         }
         
         await individualClient.query('COMMIT');
-        console.log(`[Sync] Transaction committed for person_id: ${person.person_id}`);
+        console.log(`[Sync] Transaction committed for person_id: ${syntheticPersonId}`);
         
       } catch (error) {
         await individualClient.query('ROLLBACK');
-        console.error(`[Sync] Error processing person_id ${person.person_id}:`, error);
+        console.error(`[Sync] Error processing person_id ${syntheticPersonId}:`, error);
         results.errors.push({
           person_id: person.person_id,
           error: error.message,

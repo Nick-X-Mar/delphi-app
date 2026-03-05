@@ -23,6 +23,30 @@ Content-Type: application/json
     }
 ]
 
+
+### Sync people (Amplify)
+POST https://main.d2nen9gnvvgqeo.amplifyapp.com/api/sync/people
+Content-Type: application/json
+
+{
+  "email": "g.markantonatos@tsomokos.gr",
+  "company": "Tsomokos Communications",
+  "comments": "Test comment 3",
+  "job_title": "Digital Operations Manager",
+  "last_name": "Markantonatos",
+  "person_id": 403546085605,
+  "room_type": "double",
+  "first_name": "George",
+  "guest_type": "guest",
+  "salutation": "Mr.",
+  "nationality": "Greece",
+  "checkin_date": "2026-04-23",
+  "mobile_phone": 2107289000,
+  "checkout_date": "2026-04-24",
+  "companion_email": "m.pylarinos@tsomokos.gr",
+  "companion_full_name": "Michalis Pylarinos"
+}
+
 ### Sync people (local)
 POST http://localhost:3000/api/sync/people
 Content-Type: application/json
@@ -47,3 +71,27 @@ Content-Type: application/json
         "job_title": " Dev"
     }
 ]
+
+
+### Sync people (local)
+POST http://localhost:3000/api/sync/people
+Content-Type: application/json
+
+{
+  "email": "g.markantonatos@tsomokos.gr",
+  "company": "Tsomokos Communications",
+  "comments": "Test comment 3",
+  "job_title": "Digital Operations Manager",
+  "last_name": "Markantonatos",
+  "person_id": 403546085605,
+  "room_type": "double",
+  "first_name": "George",
+  "guest_type": "guest",
+  "salutation": "Mr.",
+  "nationality": "Greece",
+  "checkin_date": "2026-04-23",
+  "mobile_phone": 2107289000,
+  "checkout_date": "2026-04-24",
+  "companion_email": "m.pylarinos@tsomokos.gr",
+  "companion_full_name": "Michalis Pylarinos"
+}
