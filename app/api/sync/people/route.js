@@ -23,15 +23,9 @@ export async function POST(request) {
       }, { status: 500 });
     }
 
-    const people = await request.json();
+    const body = await request.json();
+    const people = Array.isArray(body) ? body : [body];
     console.log(`[Sync] Starting sync process for ${people.length} people for event ${eventIdNum}`);
-
-    if (!Array.isArray(people)) {
-      console.error('[Sync] Error: Request body is not an array');
-      return NextResponse.json({ 
-        error: 'Request body must be an array of people' 
-      }, { status: 400 });
-    }
 
     const results = {
       updated: 0,

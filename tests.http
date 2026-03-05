@@ -1,0 +1,49 @@
+### Sync people (Amplify)
+POST https://main.d2nen9gnvvgqeo.amplifyapp.com/api/sync/people
+Content-Type: application/json
+
+[
+    {
+        "person_id": 402848525526,
+        "salutation": "Mr.",
+        "first_name": "MILOS",
+        "last_name": "MILJKOVIC",
+        "nationality": "Greece",
+        "mobile_phone": "6971582629",
+        "email": "miljkovicmisa@gmail.com",
+        "room_type": "double",
+        "companion_full_name": "Maria Perdikaki",
+        "companion_email": "perdikakimary@gmail.com",
+        "checkin_date": "2026-04-22",
+        "checkout_date": "2026-04-24",
+        "comments": "test comment",
+        "guest_type": "guest",
+        "company": "Whitehat - Μακρής Αλκιβιάδης",
+        "job_title": " Dev"
+    }
+]
+
+### Sync people (local)
+POST http://localhost:3000/api/sync/people
+Content-Type: application/json
+
+[
+    {
+        "person_id": 402848525526,
+        "salutation": "Mr.",
+        "first_name": "MILOS",
+        "last_name": "MILJKOVIC",
+        "nationality": "Greece",
+        "mobile_phone": "6971582629",
+        "email": "miljkovicmisa@gmail.com",
+        "room_type": "double",
+        "companion_full_name": "Maria Perdikaki",
+        "companion_email": "perdikakimary@gmail.com",
+        "checkin_date": "2026-04-22",
+        "checkout_date": "2026-04-24",
+        "comments": "test comment",
+        "guest_type": "guest",
+        "company": "Whitehat - Μακρής Αλκιβιάδης",
+        "job_title": " Dev"
+    }
+]
