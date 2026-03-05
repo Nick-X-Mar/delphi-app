@@ -44,6 +44,12 @@ export async function POST(request, { params }) {
     const { rows: roomTypeData } = await client.query(getRoomTypeQuery, [roomTypeId]);
     const basePrice = parseFloat(roomTypeData[0].base_price_per_night);
 
+    const { rows: hotelData } = await client.query(
+      'SELECT overnight_stay_tax FROM hotels WHERE hotel_id = $1',
+      [hotelId]
+    );
+    const overnightStayTax = parseFloat(hotelData[0]?.overnight_stay_tax) || 0;
+
     // Create a map of date to price for quick lookup
     const priceMap = new Map();
     availability.forEach(a => {
@@ -58,9 +64,8 @@ export async function POST(request, { params }) {
 
       while (currentDate < checkOutDate) {
         const dateStr = currentDate.toISOString().split('T')[0];
-        // Use daily price if available, otherwise use base price
         const dailyPrice = priceMap.get(dateStr) || basePrice;
-        totalCost += dailyPrice;
+        totalCost += dailyPrice + overnightStayTax;
         currentDate.setDate(currentDate.getDate() + 1);
       }
 

@@ -204,11 +204,11 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
     // If all dates are available, notify success
     toast.success('Room is available for selected dates!');
     if (onRoomSelection) {
-      // Sum actual price per night for each night (prices can vary by date)
+      const tax = parseFloat(selectedHotel.overnight_stay_tax) || 0;
       const totalCost = dates.reduce((sum, date) => {
         const av = getAvailabilityForDate(roomType, date);
         const price = parseFloat(av.price_per_night ?? roomType.base_price_per_night) || 0;
-        return sum + price;
+        return sum + price + tax;
       }, 0);
       const firstDateAvailability = getAvailabilityForDate(roomType, checkIn);
 
@@ -224,7 +224,8 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
             name: selectedHotel.name,
             stars: selectedHotel.stars,
             area: selectedHotel.area,
-            category: selectedHotel.category
+            category: selectedHotel.category,
+            overnight_stay_tax: selectedHotel.overnight_stay_tax
           }
         }
       });
@@ -494,7 +495,7 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
                               {availability.available_rooms} rooms
                             </div>
                             <div className="text-sm text-gray-600">
-                              €{availability.price_per_night}
+                              €{(parseFloat(availability.price_per_night) + (parseFloat(hotel.overnight_stay_tax) || 0)).toFixed(2)}
                             </div>
                           </td>
                         );
