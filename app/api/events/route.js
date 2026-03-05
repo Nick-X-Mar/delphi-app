@@ -28,7 +28,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Unauthorized - Only admin users can create events' }, { status: 401 });
     }
 
-    const { name, start_date, end_date, tag } = await request.json();
+    const { name, start_date, end_date, tag, preparation_start_date, preparation_end_date } = await request.json();
     
     // Validate required fields
     if (!name || !start_date || !end_date) {
@@ -49,14 +49,27 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
+    let prepStartDate = null;
+    let prepEndDate = null;
+    if (preparation_start_date) {
+      prepStartDate = new Date(preparation_start_date);
+      prepStartDate.setUTCHours(12, 0, 0, 0);
+    }
+    if (preparation_end_date) {
+      prepEndDate = new Date(preparation_end_date);
+      prepEndDate.setUTCHours(12, 0, 0, 0);
+    }
+
     const query = `
       INSERT INTO events (
         name,
         start_date,
         end_date,
-        tag
+        tag,
+        preparation_start_date,
+        preparation_end_date
       ) 
-      VALUES ($1, $2, $3, $4)
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *
     `;
 
@@ -64,7 +77,9 @@ export async function POST(request) {
       name,
       startDate.toISOString(),
       endDate.toISOString(),
-      tag || null
+      tag || null,
+      prepStartDate ? prepStartDate.toISOString() : null,
+      prepEndDate ? prepEndDate.toISOString() : null
     ]);
 
     return NextResponse.json(rows[0], { status: 201 });

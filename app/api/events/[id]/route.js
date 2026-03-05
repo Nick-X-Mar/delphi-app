@@ -28,7 +28,7 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized - Only admin users can update events' }, { status: 401 });
     }
 
-    const { name, start_date, end_date, is_active, tag } = await request.json();
+    const { name, start_date, end_date, is_active, tag, preparation_start_date, preparation_end_date } = await request.json();
     
     // Validate required fields
     if (!name || !start_date || !end_date) {
@@ -49,6 +49,17 @@ export async function PUT(request, { params }) {
       }, { status: 400 });
     }
 
+    let prepStartDate = null;
+    let prepEndDate = null;
+    if (preparation_start_date) {
+      prepStartDate = new Date(preparation_start_date);
+      prepStartDate.setUTCHours(12, 0, 0, 0);
+    }
+    if (preparation_end_date) {
+      prepEndDate = new Date(preparation_end_date);
+      prepEndDate.setUTCHours(12, 0, 0, 0);
+    }
+
     const query = `
       UPDATE events 
       SET 
@@ -57,8 +68,10 @@ export async function PUT(request, { params }) {
         end_date = $3,
         is_active = $4,
         tag = $5,
+        preparation_start_date = $6,
+        preparation_end_date = $7,
         updated_at = CURRENT_TIMESTAMP
-      WHERE event_id = $6 
+      WHERE event_id = $8 
       RETURNING *
     `;
     
@@ -68,6 +81,8 @@ export async function PUT(request, { params }) {
       endDate.toISOString(),
       is_active !== undefined ? is_active : true,
       tag !== undefined ? tag : null,
+      prepStartDate ? prepStartDate.toISOString() : null,
+      prepEndDate ? prepEndDate.toISOString() : null,
       id
     ]);
     

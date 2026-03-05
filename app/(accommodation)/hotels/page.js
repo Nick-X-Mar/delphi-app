@@ -63,9 +63,17 @@ export default function HotelsPage() {
       )}
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Hotels</h1>
-        <Button onClick={handleAddHotel} disabled={isViewOnly}>
-          Add New Hotel
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => router.push('/hotels/preparation-config')}
+          >
+            Configure Hotels
+          </Button>
+          <Button onClick={handleAddHotel} disabled={isViewOnly}>
+            Add New Hotel
+          </Button>
+        </div>
       </div>
 
       <HotelList 

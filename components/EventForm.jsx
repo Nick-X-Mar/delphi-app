@@ -17,6 +17,8 @@ export default function EventForm({ event, onSuccess, onCancel }) {
     start_date: event?.start_date ? format(parseISO(event.start_date), 'yyyy-MM-dd') : '',
     end_date: event?.end_date ? format(parseISO(event.end_date), 'yyyy-MM-dd') : '',
     tag: event?.tag || '',
+    preparation_start_date: event?.preparation_start_date ? format(parseISO(event.preparation_start_date), 'yyyy-MM-dd') : '',
+    preparation_end_date: event?.preparation_end_date ? format(parseISO(event.preparation_end_date), 'yyyy-MM-dd') : '',
     migrateFromEventId: '',
     isWorkingEvent: false
   });
@@ -61,6 +63,19 @@ export default function EventForm({ event, onSuccess, onCancel }) {
         return;
       }
 
+      let prepStartDate = null;
+      let prepEndDate = null;
+      if (formData.preparation_start_date) {
+        prepStartDate = new Date(formData.preparation_start_date + 'T12:00:00Z');
+      }
+      if (formData.preparation_end_date) {
+        prepEndDate = new Date(formData.preparation_end_date + 'T12:00:00Z');
+      }
+      if (prepStartDate && prepEndDate && prepEndDate < prepStartDate) {
+        toast.error('Preparation end date must be after preparation start date');
+        return;
+      }
+
       const url = event
         ? `/api/events/${event.event_id}`
         : '/api/events';
@@ -74,7 +89,9 @@ export default function EventForm({ event, onSuccess, onCancel }) {
           name: formData.name,
           start_date: startDate.toISOString(),
           end_date: endDate.toISOString(),
-          tag: formData.tag || null
+          tag: formData.tag || null,
+          preparation_start_date: prepStartDate ? prepStartDate.toISOString() : null,
+          preparation_end_date: prepEndDate ? prepEndDate.toISOString() : null
         }),
       });
 
@@ -213,6 +230,35 @@ export default function EventForm({ event, onSuccess, onCancel }) {
             value={formData.tag}
             onChange={handleChange}
             placeholder="e.g., CONF2024"
+            className="mt-1"
+            disabled={isSubmitting}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Preparation Start Date
+          </label>
+          <Input
+            type="date"
+            name="preparation_start_date"
+            value={formData.preparation_start_date}
+            onChange={handleChange}
+            className="mt-1"
+            disabled={isSubmitting}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Preparation End Date
+          </label>
+          <Input
+            type="date"
+            name="preparation_end_date"
+            value={formData.preparation_end_date}
+            onChange={handleChange}
+            min={formData.preparation_start_date}
             className="mt-1"
             disabled={isSubmitting}
           />

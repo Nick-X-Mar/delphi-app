@@ -118,7 +118,7 @@ export default function EventList({ events, onEventUpdated, onEventDeleted }) {
                       variant="outline"
                       size="sm"
                       onClick={() => setEditingEvent(event)}
-                      disabled
+                      disabled={!isAdmin}
                     >
                       <PencilIcon className="h-4 w-4" />
                     </Button>
@@ -126,7 +126,7 @@ export default function EventList({ events, onEventUpdated, onEventDeleted }) {
                       variant="outline"
                       size="sm"
                       onClick={() => handleDelete(event)}
-                      disabled
+                      disabled={!isAdmin}
                     >
                       <TrashIcon className="h-4 w-4" />
                     </Button>
@@ -151,6 +151,16 @@ export default function EventList({ events, onEventUpdated, onEventDeleted }) {
                           {format(new Date(event.accommodation_start_date), 'dd/MM/yyyy')} - {format(new Date(event.accommodation_end_date), 'dd/MM/yyyy')}
                         </p>
                       </div>
+                      {event.preparation_start_date && event.preparation_end_date && (
+                        <div>
+                          <h3 className="text-sm font-medium text-gray-500">
+                            Preparation Period
+                          </h3>
+                          <p className="mt-1">
+                            {format(new Date(event.preparation_start_date), 'dd/MM/yyyy')} - {format(new Date(event.preparation_end_date), 'dd/MM/yyyy')}
+                          </p>
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="text-sm text-gray-500">
