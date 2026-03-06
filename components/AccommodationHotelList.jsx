@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select";
 import Pagination from '@/components/Pagination';
 
-export default function AccommodationHotelList({ eventId, personId, onRoomSelection, isViewOnly = false }) {
+export default function AccommodationHotelList({ eventId, personId, numberOfPax, onRoomSelection, isViewOnly = false }) {
   const [hotels, setHotels] = useState([]);
   const [filteredHotels, setFilteredHotels] = useState([]);
   const [event, setEvent] = useState(null);
@@ -205,9 +205,18 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
     toast.success('Room is available for selected dates!');
     if (onRoomSelection) {
       const tax = parseFloat(selectedHotel.overnight_stay_tax) || 0;
+      const isSinglePax = numberOfPax === 1 || numberOfPax === '1';
       const totalCost = dates.reduce((sum, date) => {
         const av = getAvailabilityForDate(roomType, date);
-        const price = parseFloat(av.price_per_night ?? roomType.base_price_per_night) || 0;
+        let price;
+        if (isSinglePax) {
+          const singlePrice = parseFloat(av.single_price_per_night ?? roomType.single_price_per_night);
+          price = (!isNaN(singlePrice) && singlePrice != null)
+            ? singlePrice
+            : (parseFloat(av.price_per_night ?? roomType.base_price_per_night) || 0);
+        } else {
+          price = parseFloat(av.price_per_night ?? roomType.base_price_per_night) || 0;
+        }
         return sum + price + tax;
       }, 0);
       const firstDateAvailability = getAvailabilityForDate(roomType, checkIn);
@@ -227,7 +236,8 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
             category: selectedHotel.category,
             overnight_stay_tax: selectedHotel.overnight_stay_tax
           }
-        }
+        },
+        isSinglePricing: isSinglePax && (roomType.single_price_per_night != null || dates.some(date => getAvailabilityForDate(roomType, date).single_price_per_night != null))
       });
     }
   };

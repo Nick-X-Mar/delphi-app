@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { X } from 'lucide-react';
 
 export default function RoomTypeForm({ hotelId, roomType, onSuccess, isViewOnly = false }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -12,7 +13,8 @@ export default function RoomTypeForm({ hotelId, roomType, onSuccess, isViewOnly 
     name: roomType?.name || '',
     description: roomType?.description || '',
     total_rooms: roomType?.total_rooms || '',
-    base_price_per_night: roomType?.base_price_per_night || '0.00'
+    base_price_per_night: roomType?.base_price_per_night || '0.00',
+    single_price_per_night: roomType?.single_price_per_night ?? ''
   });
 
   const handleChange = (e) => {
@@ -37,6 +39,13 @@ export default function RoomTypeForm({ hotelId, roomType, onSuccess, isViewOnly 
     const price = parseFloat(formData.base_price_per_night);
     if (isNaN(price) || price < 0) {
       errors.push('Base price per night must be a valid number (0 or greater)');
+    }
+
+    if (formData.single_price_per_night !== '' && formData.single_price_per_night !== null) {
+      const singlePrice = parseFloat(formData.single_price_per_night);
+      if (isNaN(singlePrice) || singlePrice < 0) {
+        errors.push('Single price per night must be a valid number (0 or greater)');
+      }
     }
 
     return errors;
@@ -67,7 +76,10 @@ export default function RoomTypeForm({ hotelId, roomType, onSuccess, isViewOnly 
       const formattedData = {
         ...formData,
         total_rooms: parseInt(formData.total_rooms),
-        base_price_per_night: parseFloat(formData.base_price_per_night).toFixed(2)
+        base_price_per_night: parseFloat(formData.base_price_per_night).toFixed(2),
+        single_price_per_night: formData.single_price_per_night !== '' && formData.single_price_per_night !== null
+          ? parseFloat(formData.single_price_per_night).toFixed(2)
+          : null
       };
 
       console.log('Formatted data:', formattedData);
@@ -156,6 +168,37 @@ export default function RoomTypeForm({ hotelId, roomType, onSuccess, isViewOnly 
             disabled={isSubmitting}
             required
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Single Price per Night (€)
+          </label>
+          <div className="flex items-center gap-2 mt-1">
+            <Input
+              type="number"
+              name="single_price_per_night"
+              value={formData.single_price_per_night}
+              onChange={handleChange}
+              min="0"
+              step="0.01"
+              placeholder="Leave empty if not applicable"
+              disabled={isSubmitting}
+            />
+            {formData.single_price_per_night !== '' && formData.single_price_per_night !== null && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 shrink-0 text-gray-400 hover:text-red-500"
+                onClick={() => setFormData(prev => ({ ...prev, single_price_per_night: '' }))}
+                disabled={isSubmitting}
+                title="Clear single price"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
 
         <div>

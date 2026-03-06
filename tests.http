@@ -31,10 +31,10 @@ Content-Type: application/json
 {
   "email": "g.markantonatos@tsomokos.gr",
   "company": "Tsomokos Communications",
-  "comments": "Test comment 3",
+  "comments": "Test comment 1",
   "job_title": "Digital Operations Manager",
   "last_name": "Markantonatos",
-  "person_id": 403546085605,
+  "person_id": 2402999758033,
   "room_type": "double",
   "first_name": "George",
   "guest_type": "guest",

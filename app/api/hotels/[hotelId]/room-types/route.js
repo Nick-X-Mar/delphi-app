@@ -26,7 +26,7 @@ export async function POST(request, { params }) {
     const { hotelId } = await params;
 
     try {
-        const { name, description, total_rooms, base_price_per_night } = await request.json();
+        const { name, description, total_rooms, base_price_per_night, single_price_per_night } = await request.json();
 
         // Validate required fields
         if (!name || !total_rooms || !base_price_per_night) {
@@ -52,13 +52,17 @@ export async function POST(request, { params }) {
             }, { status: 400 });
         }
 
+        const formattedSinglePrice = single_price_per_night != null && single_price_per_night !== ''
+            ? Number(single_price_per_night).toFixed(2)
+            : null;
+
         // 1. Create the room type
         const createRoomTypeQuery = `
-            INSERT INTO room_types (hotel_id, name, description, total_rooms, base_price_per_night)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO room_types (hotel_id, name, description, total_rooms, base_price_per_night, single_price_per_night)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
         `;
-        const roomTypeValues = [hotelId, name, description, parseInt(total_rooms), formattedBasePrice];
+        const roomTypeValues = [hotelId, name, description, parseInt(total_rooms), formattedBasePrice, formattedSinglePrice];
         const roomTypeResult = await pool.query(createRoomTypeQuery, roomTypeValues);
         const newRoomType = roomTypeResult.rows[0];
 

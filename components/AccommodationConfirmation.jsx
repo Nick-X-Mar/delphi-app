@@ -58,7 +58,7 @@ export default function AccommodationConfirmation({
           <h3 className="font-semibold mb-2">Cost Summary</h3>
           <div className="grid grid-cols-2 gap-4">
             <p>Number of nights: {nights}</p>
-            <p>Price per night: €{displayPricePerNight.toFixed(2)} {selection.totalCost != null && nights > 1 ? '(avg)' : ''}</p>
+            <p>Price per night: €{displayPricePerNight.toFixed(2)} {selection.totalCost != null && nights > 1 ? '(avg)' : ''}{selection.isSinglePricing ? ' (single occupancy rate)' : ''}</p>
             {overnightStayTax > 0 && (
               <p className="text-sm text-gray-600">Includes overnight stay tax: €{overnightStayTax.toFixed(2)} / night</p>
             )}

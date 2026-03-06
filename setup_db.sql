@@ -316,7 +316,8 @@ CREATE TABLE public.room_availability (
     room_type_id integer NOT NULL,
     date date NOT NULL,
     available_rooms integer NOT NULL,
-    price_per_night numeric(10,2) NOT NULL
+    price_per_night numeric(10,2) NOT NULL,
+    single_price_per_night numeric(10,2) DEFAULT NULL
 );
 --
 -- Name: room_types; Type: TABLE; Schema: public; Owner: -
@@ -328,6 +329,7 @@ CREATE TABLE public.room_types (
     description text,
     total_rooms integer NOT NULL,
     base_price_per_night numeric(10,2) DEFAULT 0.00 NOT NULL,
+    single_price_per_night numeric(10,2) DEFAULT NULL,
     created_at timestamp with time zone DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'::text),
     updated_at timestamp with time zone DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'::text),
     CONSTRAINT non_negative_base_price CHECK ((base_price_per_night >= (0)::numeric))

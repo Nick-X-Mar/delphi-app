@@ -250,6 +250,7 @@ export default function Allocation() {
               <AccommodationHotelList 
                 eventId={selectedEvent}
                 personId={selectedPerson.person_id}
+                numberOfPax={selectedPerson.room_size || (selectedPerson.room_type === 'single' ? 1 : selectedPerson.room_type === 'double' ? 2 : null)}
                 onRoomSelection={handleRoomSelection}
                 isViewOnly={isViewOnly}
               />
