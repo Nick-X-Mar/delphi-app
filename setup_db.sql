@@ -1,13 +1,13 @@
 -- Create people table (managed by external system)
 CREATE TABLE IF NOT EXISTS people (
-    person_id INTEGER PRIMARY KEY,
+    person_id BIGINT PRIMARY KEY,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL,
     salutation VARCHAR(10) CHECK (salutation IN ('Mr.', 'Ms.', 'Mx.', 'Prof.', 'Doc.', 'Amb.')),
-    first_name VARCHAR(100),
-    last_name VARCHAR(100),
     nationality VARCHAR(50),
     mobile_phone VARCHAR(30),
-    email VARCHAR(100),
-    room_type VARCHAR(10) CHECK (room_type IN ('single', 'double')),
+    room_type VARCHAR(50) CHECK (room_type IN ('single', 'double')),
     companion_full_name VARCHAR(200),
     companion_email VARCHAR(100),
     checkin_date DATE,
@@ -17,8 +17,8 @@ CREATE TABLE IF NOT EXISTS people (
     app_synced_date DATE,
     guest_type VARCHAR(10) CHECK (guest_type IN ('speaker', 'press', 'guest')),
     synced_at TIMESTAMP WITH TIME ZONE DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    company VARCHAR(300),
+    job_title VARCHAR(500)
 );
 
 -- Create the people_details table (managed by our system)

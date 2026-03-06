@@ -72,7 +72,13 @@ export async function POST(request) {
             companion_email = $7,
             job_title = $8,
             room_type = $9,
-            synced_at = $11
+            salutation = $11,
+            nationality = $12,
+            checkin_date = $13,
+            checkout_date = $14,
+            comments = $15,
+            guest_type = $16,
+            synced_at = $17
           WHERE person_id = $10
           RETURNING *
         `;
@@ -88,6 +94,12 @@ export async function POST(request) {
           person.job_title,
           person.room_type,
           syntheticPersonId,
+          person.salutation || null,
+          person.nationality || null,
+          person.checkin_date || null,
+          person.checkout_date || null,
+          person.comments || null,
+          person.guest_type || null,
           currentTimestamp
         ];
 
@@ -110,9 +122,15 @@ export async function POST(request) {
               companion_email,
               job_title,
               room_type,
+              salutation,
+              nationality,
+              checkin_date,
+              checkout_date,
+              comments,
+              guest_type,
               synced_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
             RETURNING *
           `;
 
@@ -127,6 +145,12 @@ export async function POST(request) {
             person.companion_email,
             person.job_title,
             person.room_type,
+            person.salutation || null,
+            person.nationality || null,
+            person.checkin_date || null,
+            person.checkout_date || null,
+            person.comments || null,
+            person.guest_type || null,
             currentTimestamp
           ];
 
