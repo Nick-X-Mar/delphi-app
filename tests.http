@@ -78,20 +78,20 @@ POST http://localhost:3000/api/sync/people
 Content-Type: application/json
 
 {
-  "email": "g.markantonatos@tsomokos.gr",
+  "email": "n.marianos@tsomokos.gr",
   "company": "Tsomokos Communications",
-  "comments": "Test comment 3",
+  "comments": "Test comment 1",
   "job_title": "Digital Operations Manager",
-  "last_name": "Markantonatos",
-  "person_id": 403546085605,
+  "last_name": "Marianos",
+  "person_id": 403546085999,
   "room_type": "double",
-  "first_name": "George",
+  "first_name": "Nikos",
   "guest_type": "guest",
   "salutation": "Mr.",
   "nationality": "Greece",
-  "checkin_date": "2026-04-23",
+  "checkin_date": "2026-04-20",
   "mobile_phone": 2107289000,
-  "checkout_date": "2026-04-24",
-  "companion_email": "m.pylarinos@tsomokos.gr",
-  "companion_full_name": "Michalis Pylarinos"
+  "checkout_date": "2026-04-26",
+  "companion_email": "mmmmmm@tsomokos.gr",
+  "companion_full_name": "o deuteros"
 }

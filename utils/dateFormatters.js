@@ -1,9 +1,18 @@
-import { format, parseISO } from 'date-fns';
+const isPlainDateString = (str) => typeof str === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(str);
 
 export const formatDate = (date) => {
   if (!date) return '-';
   try {
-    return format(parseISO(date), 'dd/MM/yyyy');
+    if (isPlainDateString(date)) {
+      const [year, month, day] = date.split('-');
+      return `${day}/${month}/${year}`;
+    }
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '-';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
   } catch (error) {
     console.error('Date parsing error:', error);
     return '-';
@@ -32,6 +41,19 @@ export const formatDateTime = (datetime) => {
   }
 };
 
+export const toDateInputValue = (date) => {
+  if (!date) return '';
+  if (isPlainDateString(date)) {
+    return date;
+  }
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '';
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // Format a Date object to YYYY-MM-DD for API calls
 export const formatDateForAPI = (date) => {
   if (!date || !(date instanceof Date)) return null;
@@ -41,24 +63,28 @@ export const formatDateForAPI = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-// Calculate number of nights between checkin_date and checkout_date
+const parseDateToUTCMs = (date) => {
+  if (isPlainDateString(date)) {
+    const [year, month, day] = date.split('-').map(Number);
+    return Date.UTC(year, month - 1, day);
+  }
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return NaN;
+  return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+};
+
 export const calculateNights = (checkinDate, checkoutDate) => {
   if (!checkinDate || !checkoutDate) return null;
   try {
-    const checkin = new Date(checkinDate);
-    const checkout = new Date(checkoutDate);
+    const checkinMs = parseDateToUTCMs(checkinDate);
+    const checkoutMs = parseDateToUTCMs(checkoutDate);
     
-    if (isNaN(checkin.getTime()) || isNaN(checkout.getTime())) {
+    if (isNaN(checkinMs) || isNaN(checkoutMs)) {
       return null;
     }
     
-    // Calculate difference in milliseconds
-    const diffTime = checkout - checkin;
+    const nights = Math.round((checkoutMs - checkinMs) / (1000 * 60 * 60 * 24));
     
-    // Convert to days and round up
-    const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    // Return null if the result is negative or invalid
     return nights >= 0 ? nights : null;
   } catch (error) {
     console.error('Error calculating nights:', error);

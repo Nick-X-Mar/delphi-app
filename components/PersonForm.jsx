@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { formatDateTime } from "@/utils/dateFormatters";
+import { formatDateTime, toDateInputValue } from "@/utils/dateFormatters";
 
 export default function PersonForm({ person, formData, setFormData, onSubmit, onCancel, isViewOnly = false }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -303,7 +303,7 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
               <Label className="text-sm font-medium text-gray-700">Check In</Label>
               <input 
                 type="date"
-                value={person?.checkin_date ? person.checkin_date.split('T')[0] : ''} 
+                value={toDateInputValue(person?.checkin_date)} 
                 disabled
                 className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
               />
@@ -313,7 +313,7 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
               <Label className="text-sm font-medium text-gray-700">Check Out</Label>
               <input 
                 type="date"
-                value={person?.checkout_date ? person.checkout_date.split('T')[0] : ''} 
+                value={toDateInputValue(person?.checkout_date)} 
                 disabled
                 className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
               />
