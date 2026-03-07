@@ -19,6 +19,7 @@ export async function GET(request, { params }) {
     const email = searchParams.get('email') || '';
     const onlyAvailable = searchParams.get('onlyAvailable') === 'true';
     const hideNotAttending = searchParams.get('hideNotAttending') === 'true';
+    const guestType = searchParams.get('guestType') || '';
     
     // Build the base query
     let query = `
@@ -89,6 +90,12 @@ export async function GET(request, { params }) {
 
     if (hideNotAttending) {
       query += ` AND (pd.will_not_attend IS NULL OR pd.will_not_attend = false)`;
+    }
+
+    if (guestType && guestType !== 'all') {
+      query += ` AND p.guest_type = $${paramCount}`;
+      queryParams.push(guestType);
+      paramCount++;
     }
 
     // Get total count for pagination

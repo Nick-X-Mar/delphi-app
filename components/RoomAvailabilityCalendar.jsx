@@ -274,8 +274,8 @@ export default function RoomAvailabilityCalendar({
                   <Input
                     type="number"
                     min="0"
-                    step="1.00"
-                    value={dayAvailability.price_per_night}
+                    step="1"
+                    value={Number(dayAvailability.price_per_night).toFixed(2)}
                     onChange={(e) => handleInputChange(date, 'price_per_night', e.target.value)}
                     className="h-8 text-sm"
                     disabled={isPast || isViewOnly}
@@ -286,8 +286,8 @@ export default function RoomAvailabilityCalendar({
                   <Input
                     type="number"
                     min="0"
-                    step="1.00"
-                    value={dayAvailability.single_price_per_night ?? ''}
+                    step="1"
+                    value={dayAvailability.single_price_per_night != null ? Number(dayAvailability.single_price_per_night).toFixed(2) : ''}
                     onChange={(e) => handleInputChange(date, 'single_price_per_night', e.target.value === '' ? null : e.target.value)}
                     className="h-8 text-sm"
                     placeholder="-"

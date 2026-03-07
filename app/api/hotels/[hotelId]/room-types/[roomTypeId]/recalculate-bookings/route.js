@@ -16,6 +16,7 @@ export async function POST(request, { params }) {
         b.check_in_date,
         b.check_out_date,
         b.person_id,
+        b.days_paid_by_guest,
         pd.room_size,
         p.room_type as person_room_type
       FROM bookings b
@@ -62,27 +63,41 @@ export async function POST(request, { params }) {
     // Create maps for quick lookup
     const priceMap = new Map();
     const singlePriceMap = new Map();
+    const isPlainDateString = (str) => typeof str === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(str);
+    const toDateString = (date) => {
+      if (isPlainDateString(date)) return date;
+      const d = new Date(date);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
     availability.forEach(a => {
-      const dateStr = a.date.toISOString().split('T')[0];
+      const dateStr = toDateString(a.date);
       priceMap.set(dateStr, parseFloat(a.price_per_night));
       if (a.single_price_per_night != null) {
         singlePriceMap.set(dateStr, parseFloat(a.single_price_per_night));
       }
     });
 
-    // Update each booking with new total cost
+    // Update each booking with new total cost and guest/def cost breakdown
     for (const booking of bookings) {
       const roomSize = booking.room_size != null
         ? booking.room_size
         : (booking.person_room_type === 'single' ? 1 : booking.person_room_type === 'double' ? 2 : null);
       const isSinglePax = roomSize === 1;
 
-      let totalCost = 0;
-      let currentDate = new Date(booking.check_in_date);
-      const checkOutDate = new Date(booking.check_out_date);
+      // Build array of daily prices for the booking
+      const dailyPrices = [];
+      const checkInStr = toDateString(booking.check_in_date);
+      const checkOutStr = toDateString(booking.check_out_date);
+      const [inY, inM, inD] = checkInStr.split('-').map(Number);
+      const [outY, outM, outD] = checkOutStr.split('-').map(Number);
+      let currentDate = new Date(inY, inM - 1, inD);
+      const checkOutDate = new Date(outY, outM - 1, outD);
 
       while (currentDate < checkOutDate) {
-        const dateStr = currentDate.toISOString().split('T')[0];
+        const dateStr = toDateString(currentDate);
         let dailyPrice;
 
         if (isSinglePax) {
@@ -99,19 +114,35 @@ export async function POST(request, { params }) {
           dailyPrice = priceMap.get(dateStr) || basePrice;
         }
 
-        totalCost += dailyPrice + overnightStayTax;
+        dailyPrices.push(dailyPrice + overnightStayTax);
         currentDate.setDate(currentDate.getDate() + 1);
       }
+
+      const totalCost = dailyPrices.reduce((sum, p) => sum + p, 0);
+      const nights = dailyPrices.length;
+      
+      // Calculate guest cost from the last N nights (where N = days_paid_by_guest)
+      const daysPaidByGuest = Math.min(Math.max(0, booking.days_paid_by_guest || 0), nights);
+      const guestStartIndex = nights - daysPaidByGuest;
+      const guestCost = dailyPrices.slice(guestStartIndex).reduce((sum, p) => sum + p, 0);
+      const defCost = totalCost - guestCost;
 
       const updateBookingQuery = `
         UPDATE bookings
         SET 
           total_cost = $1,
+          guest_cost = $2,
+          def_cost = $3,
           updated_at = CURRENT_TIMESTAMP
-        WHERE booking_id = $2
+        WHERE booking_id = $4
       `;
 
-      await client.query(updateBookingQuery, [totalCost.toFixed(2), booking.booking_id]);
+      await client.query(updateBookingQuery, [
+        totalCost.toFixed(2),
+        guestCost.toFixed(2),
+        defCost.toFixed(2),
+        booking.booking_id
+      ]);
     }
 
     await client.query('COMMIT');

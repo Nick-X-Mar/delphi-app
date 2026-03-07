@@ -161,8 +161,10 @@ export default function HotelPdfView({ params }) {
                     <TableHead>Check In</TableHead>
                     <TableHead>Check Out</TableHead>
                     <TableHead>Room type</TableHead>
-                    <TableHead>Booking cost</TableHead>
-                    <TableHead>Payed by guest</TableHead>
+                    <TableHead>Total Cost</TableHead>
+                    <TableHead>DEF Cost</TableHead>
+                    <TableHead>Guest Cost</TableHead>
+                    <TableHead>Days paid by guest</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Notes</TableHead>
                     <TableHead>Updated At</TableHead>
@@ -187,7 +189,13 @@ export default function HotelPdfView({ params }) {
                         {booking.total_cost != null ? `€${Number(booking.total_cost).toFixed(2)}` : '-'}
                       </TableCell>
                       <TableCell>
-                        {booking.payed_by_guest ? 'Yes' : 'No'}
+                        {booking.def_cost != null ? `€${Number(booking.def_cost).toFixed(2)}` : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {booking.guest_cost != null ? `€${Number(booking.guest_cost).toFixed(2)}` : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {booking.days_paid_by_guest ?? 0}
                       </TableCell>
                       <TableCell>
                         <span className={`capitalize ${getStatusColor(booking)}`}>

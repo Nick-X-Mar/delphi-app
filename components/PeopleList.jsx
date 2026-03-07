@@ -5,6 +5,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { useDebounce } from 'use-debounce';
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formatDate, formatDateTime, calculateNights } from '@/utils/dateFormatters';
 import Pagination from '@/components/Pagination';
 
@@ -14,18 +21,35 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson, is
     firstName: '',
     lastName: '',
     email: '',
+    guestType: 'all',
     onlyAvailable: true,
     hideNotAttending: true,
     minNights: ''
   });
   const [debouncedFilters] = useDebounce(filters, 500);
   const [isLoading, setIsLoading] = useState(false);
+  const [guestTypeCategories, setGuestTypeCategories] = useState([]);
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
     totalItems: 0,
     itemsPerPage: 10
   });
+
+  useEffect(() => {
+    const fetchGuestTypeCategories = async () => {
+      try {
+        const response = await fetch('/api/people/categories');
+        if (response.ok) {
+          const data = await response.json();
+          setGuestTypeCategories(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch guest type categories:', error);
+      }
+    };
+    fetchGuestTypeCategories();
+  }, []);
 
   // Fetch people data when debounced filters or pagination changes
   useEffect(() => {
@@ -40,6 +64,7 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson, is
           firstName: debouncedFilters.firstName,
           lastName: debouncedFilters.lastName,
           email: debouncedFilters.email,
+          guestType: debouncedFilters.guestType,
           onlyAvailable: debouncedFilters.onlyAvailable,
           hideNotAttending: debouncedFilters.hideNotAttending
         });
@@ -162,7 +187,7 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson, is
             onChange={(e) => handleFilterChange('email', e.target.value)}
           />
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 justify-end">
           <div className="flex items-center space-x-2">
             <Checkbox
               id="onlyAvailable"
@@ -192,6 +217,27 @@ export default function PeopleList({ eventId, onPersonSelect, selectedPerson, is
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+          <label className="text-sm font-medium mb-1 block">
+            Guest Type
+          </label>
+          <Select
+            value={filters.guestType}
+            onValueChange={(value) => handleFilterChange('guestType', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All Guest Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Guest Types</SelectItem>
+              {guestTypeCategories.map(guestType => (
+                <SelectItem key={guestType} value={guestType}>
+                  {guestType}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div>
           <label className="text-sm font-medium mb-1 block">
             Min Nights

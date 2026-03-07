@@ -60,7 +60,7 @@ export async function PUT(request, { params }) {
     }
 
     // For full booking updates
-    const { roomTypeId, checkInDate, checkOutDate, totalCost, originalBooking } = body;
+    const { roomTypeId, checkInDate, checkOutDate, totalCost, daysPaidByGuest, guestCost, defCost, originalBooking } = body;
 
     // Validate required fields for full update
     if (!roomTypeId || !checkInDate || !checkOutDate || totalCost === undefined || !originalBooking) {
@@ -112,13 +112,14 @@ export async function PUT(request, { params }) {
         const newBookingQuery = `
           INSERT INTO bookings (
             room_type_id, check_in_date, check_out_date, 
-            total_cost, status, person_id, event_id
+            total_cost, days_paid_by_guest, guest_cost, def_cost,
+            status, person_id, event_id
           )
           SELECT 
-            $1, $2, $3, $4, 'pending'::varchar,
+            $1, $2, $3, $4, $5, $6, $7, 'pending'::varchar,
             person_id, event_id
           FROM bookings
-          WHERE booking_id = $5
+          WHERE booking_id = $8
           RETURNING *
         `;
 
@@ -127,6 +128,9 @@ export async function PUT(request, { params }) {
           checkIn.toISOString(),
           checkOut.toISOString(),
           totalCost,
+          daysPaidByGuest ?? 0,
+          guestCost ?? 0,
+          defCost ?? totalCost,
           bookingId
         ]);
 
@@ -157,13 +161,16 @@ export async function PUT(request, { params }) {
           check_in_date = $2,
           check_out_date = $3,
           total_cost = $4,
-          modification_type = $5::varchar,
+          days_paid_by_guest = $5,
+          guest_cost = $6,
+          def_cost = $7,
+          modification_type = $8::varchar,
           modification_date = CASE 
-            WHEN $5 IS NOT NULL THEN CURRENT_TIMESTAMP
+            WHEN $8 IS NOT NULL THEN CURRENT_TIMESTAMP
             ELSE NULL
           END,
           updated_at = CURRENT_TIMESTAMP
-        WHERE booking_id = $6
+        WHERE booking_id = $9
         RETURNING *
       `;
 
@@ -172,6 +179,9 @@ export async function PUT(request, { params }) {
         checkIn.toISOString(),
         checkOut.toISOString(),
         totalCost,
+        daysPaidByGuest ?? 0,
+        guestCost ?? 0,
+        defCost ?? totalCost,
         modificationType,
         bookingId
       ]);

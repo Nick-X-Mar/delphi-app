@@ -132,6 +132,33 @@ export async function PUT(request, { params }) {
             return NextResponse.json({ error: 'Room type not found' }, { status: 404 });
         }
 
+        // Update room_availability records that use the default prices (not custom per-day prices)
+        // Only update base price where it matches the old default or is NULL
+        if (currentRoomType) {
+            const oldBasePrice = parseFloat(currentRoomType.base_price_per_night);
+            const oldSinglePrice = currentRoomType.single_price_per_night != null 
+                ? parseFloat(currentRoomType.single_price_per_night) 
+                : null;
+
+            // Update base price only for days using the old default
+            await client.query(`
+                UPDATE room_availability
+                SET price_per_night = $1
+                WHERE room_type_id = $2
+                AND (price_per_night = $3 OR price_per_night IS NULL)
+            `, [formattedBasePrice, roomTypeId, oldBasePrice]);
+
+            // Update single price only for days using the old default (or NULL)
+            if (formattedSinglePrice != null) {
+                await client.query(`
+                    UPDATE room_availability
+                    SET single_price_per_night = $1
+                    WHERE room_type_id = $2
+                    AND (single_price_per_night = $3 OR single_price_per_night IS NULL)
+                `, [formattedSinglePrice, roomTypeId, oldSinglePrice]);
+            }
+        }
+
         // If prices have changed, recalculate booking costs
         if (priceHasChanged) {
             const getBookingsQuery = `
@@ -164,8 +191,17 @@ export async function PUT(request, { params }) {
 
             const priceMap = new Map();
             const singlePriceMap = new Map();
+            const isPlainDateString = (str) => typeof str === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(str);
+            const toDateString = (date) => {
+                if (isPlainDateString(date)) return date;
+                const d = new Date(date);
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
             availability.forEach(a => {
-                const dateStr = a.date.toISOString().split('T')[0];
+                const dateStr = toDateString(a.date);
                 priceMap.set(dateStr, parseFloat(a.price_per_night));
                 if (a.single_price_per_night != null) {
                     singlePriceMap.set(dateStr, parseFloat(a.single_price_per_night));
@@ -181,11 +217,15 @@ export async function PUT(request, { params }) {
                 const isSinglePax = roomSize === 1;
 
                 let totalCost = 0;
-                let currentDate = new Date(booking.check_in_date);
-                const checkOutDate = new Date(booking.check_out_date);
+                const checkInStr = toDateString(booking.check_in_date);
+                const checkOutStr = toDateString(booking.check_out_date);
+                const [inY, inM, inD] = checkInStr.split('-').map(Number);
+                const [outY, outM, outD] = checkOutStr.split('-').map(Number);
+                let currentDate = new Date(inY, inM - 1, inD);
+                const checkOutDate = new Date(outY, outM - 1, outD);
 
                 while (currentDate < checkOutDate) {
-                    const dateStr = currentDate.toISOString().split('T')[0];
+                    const dateStr = toDateString(currentDate);
                     let dailyPrice;
 
                     if (isSinglePax) {

@@ -17,12 +17,12 @@ export async function GET(request, { params }) {
           THEN b.booking_id 
         END) as total_bookings,
         COALESCE(SUM(CASE 
-          WHEN b.status NOT IN ('cancelled', 'invalidated') AND b.payable = false 
-          THEN b.total_cost ELSE 0 
+          WHEN b.status NOT IN ('cancelled', 'invalidated') 
+          THEN b.def_cost ELSE 0 
         END), 0)::numeric as def_amount,
         COALESCE(SUM(CASE 
-          WHEN b.status NOT IN ('cancelled', 'invalidated') AND b.payable = true 
-          THEN b.total_cost ELSE 0 
+          WHEN b.status NOT IN ('cancelled', 'invalidated') 
+          THEN b.guest_cost ELSE 0 
         END), 0)::numeric as guest_amount
       FROM hotels h
       LEFT JOIN event_hotels eh ON h.hotel_id = eh.hotel_id
@@ -49,7 +49,9 @@ export async function GET(request, { params }) {
         b.check_in_date,
         b.check_out_date,
         b.total_cost,
-        b.payable,
+        b.days_paid_by_guest,
+        b.guest_cost,
+        b.def_cost,
         b.status,
         b.modification_type,
         b.modification_date,
@@ -92,7 +94,9 @@ export async function GET(request, { params }) {
           check_in_date: row.check_in_date,
           check_out_date: row.check_out_date,
           total_cost: row.total_cost,
-          payed_by_guest: row.payable,
+          days_paid_by_guest: row.days_paid_by_guest,
+          guest_cost: row.guest_cost,
+          def_cost: row.def_cost,
           room_type_name: row.name,
           num_pax: numPax,
           status: row.status,
