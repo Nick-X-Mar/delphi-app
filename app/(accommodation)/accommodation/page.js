@@ -41,6 +41,7 @@ export default function Accommodation() {
   });
 
   const [companies, setCompanies] = useState([]);
+  const [guestTypeCategories, setGuestTypeCategories] = useState([]);
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
   const [isCancellingBookings, setIsCancellingBookings] = useState(false);
   const accommodationTableRef = React.useRef();
@@ -68,7 +69,7 @@ export default function Accommodation() {
     };
   }, [selectedEvent]);
 
-  // Fetch companies on component mount
+  // Fetch companies and guest type categories on component mount
   useEffect(() => {
     const fetchCompanies = async () => {
       setIsLoadingCompanies(true);
@@ -83,7 +84,20 @@ export default function Accommodation() {
       }
     };
 
+    const fetchGuestTypeCategories = async () => {
+      try {
+        const response = await fetch('/api/people/categories');
+        if (response.ok) {
+          const data = await response.json();
+          setGuestTypeCategories(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch guest type categories:', error);
+      }
+    };
+
     fetchCompanies();
+    fetchGuestTypeCategories();
   }, []);
 
   const handleFilterChange = (field, value) => {
@@ -252,9 +266,11 @@ export default function Accommodation() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Guest Types</SelectItem>
-                      <SelectItem value="speaker">Speaker</SelectItem>
-                      <SelectItem value="press">Press</SelectItem>
-                      <SelectItem value="guest">Guest</SelectItem>
+                      {guestTypeCategories.map(guestType => (
+                        <SelectItem key={guestType} value={guestType}>
+                          {guestType}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

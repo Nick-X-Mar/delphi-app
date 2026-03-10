@@ -45,7 +45,7 @@ export async function PUT(request, { params }) {
     const client = await pool.connect();
     
     try {
-        const { name, description, total_rooms, base_price_per_night } = await request.json();
+        const { name, description, total_rooms, base_price_per_night, single_price_per_night } = await request.json();
 
         // Validate required fields
         if (!name || !total_rooms || !base_price_per_night) {
@@ -94,15 +94,21 @@ export async function PUT(request, { params }) {
 
         await client.query('BEGIN');
 
-        // First, get the current room type to check if base price has changed
+        const formattedSinglePrice = single_price_per_night != null && single_price_per_night !== ''
+            ? Number(single_price_per_night).toFixed(2)
+            : null;
+
+        // First, get the current room type to check if prices have changed
         const getCurrentRoomType = `
-            SELECT base_price_per_night
+            SELECT base_price_per_night, single_price_per_night
             FROM room_types
             WHERE room_type_id = $1
         `;
         const { rows: [currentRoomType] } = await client.query(getCurrentRoomType, [roomTypeId]);
         const priceHasChanged = !currentRoomType || 
-            parseFloat(currentRoomType.base_price_per_night) !== parseFloat(formattedBasePrice);
+            parseFloat(currentRoomType.base_price_per_night) !== parseFloat(formattedBasePrice) ||
+            (currentRoomType.single_price_per_night == null) !== (formattedSinglePrice == null) ||
+            (currentRoomType.single_price_per_night != null && formattedSinglePrice != null && parseFloat(currentRoomType.single_price_per_night) !== parseFloat(formattedSinglePrice));
 
         // Update the room type
         const updateQuery = `
@@ -112,12 +118,13 @@ export async function PUT(request, { params }) {
                 description = $2,
                 total_rooms = $3,
                 base_price_per_night = $4,
+                single_price_per_night = $5,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE hotel_id = $5 AND room_type_id = $6
+            WHERE hotel_id = $6 AND room_type_id = $7
             RETURNING *
         `;
 
-        const values = [name, description, parseInt(total_rooms), formattedBasePrice, hotelId, roomTypeId];
+        const values = [name, description, parseInt(total_rooms), formattedBasePrice, formattedSinglePrice, hotelId, roomTypeId];
         const { rows } = await client.query(updateQuery, values);
 
         if (rows.length === 0) {
@@ -125,53 +132,119 @@ export async function PUT(request, { params }) {
             return NextResponse.json({ error: 'Room type not found' }, { status: 404 });
         }
 
-        // If base price has changed, recalculate booking costs
+        // Update room_availability records that use the default prices (not custom per-day prices)
+        // Only update base price where it matches the old default or is NULL
+        if (currentRoomType) {
+            const oldBasePrice = parseFloat(currentRoomType.base_price_per_night);
+            const oldSinglePrice = currentRoomType.single_price_per_night != null 
+                ? parseFloat(currentRoomType.single_price_per_night) 
+                : null;
+
+            // Update base price only for days using the old default
+            await client.query(`
+                UPDATE room_availability
+                SET price_per_night = $1
+                WHERE room_type_id = $2
+                AND (price_per_night = $3 OR price_per_night IS NULL)
+            `, [formattedBasePrice, roomTypeId, oldBasePrice]);
+
+            // Update single price only for days using the old default (or NULL)
+            if (formattedSinglePrice != null) {
+                await client.query(`
+                    UPDATE room_availability
+                    SET single_price_per_night = $1
+                    WHERE room_type_id = $2
+                    AND (single_price_per_night = $3 OR single_price_per_night IS NULL)
+                `, [formattedSinglePrice, roomTypeId, oldSinglePrice]);
+            }
+        }
+
+        // If prices have changed, recalculate booking costs
         if (priceHasChanged) {
-            // Get all active bookings for this room type
             const getBookingsQuery = `
                 SELECT 
-                    booking_id,
-                    check_in_date,
-                    check_out_date
-                FROM bookings
-                WHERE room_type_id = $1
-                AND status NOT IN ('cancelled', 'invalidated')
+                    b.booking_id,
+                    b.check_in_date,
+                    b.check_out_date,
+                    b.person_id,
+                    pd.room_size,
+                    p.room_type as person_room_type
+                FROM bookings b
+                LEFT JOIN people_details pd ON b.person_id = pd.person_id
+                LEFT JOIN people p ON b.person_id = p.person_id
+                WHERE b.room_type_id = $1
+                AND b.status NOT IN ('cancelled', 'invalidated')
             `;
 
             const { rows: bookings } = await client.query(getBookingsQuery, [roomTypeId]);
 
-            // Get room type availability (for daily prices)
             const getAvailabilityQuery = `
                 SELECT 
                     date,
-                    price_per_night
+                    price_per_night,
+                    single_price_per_night
                 FROM room_availability
                 WHERE room_type_id = $1
             `;
 
             const { rows: availability } = await client.query(getAvailabilityQuery, [roomTypeId]);
 
-            // Create a map of date to price for quick lookup
             const priceMap = new Map();
+            const singlePriceMap = new Map();
+            const isPlainDateString = (str) => typeof str === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(str);
+            const toDateString = (date) => {
+                if (isPlainDateString(date)) return date;
+                const d = new Date(date);
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
             availability.forEach(a => {
-                priceMap.set(a.date.toISOString().split('T')[0], parseFloat(a.price_per_night));
+                const dateStr = toDateString(a.date);
+                priceMap.set(dateStr, parseFloat(a.price_per_night));
+                if (a.single_price_per_night != null) {
+                    singlePriceMap.set(dateStr, parseFloat(a.single_price_per_night));
+                }
             });
 
-            // Update each booking with new total cost
+            const newSinglePrice = formattedSinglePrice != null ? parseFloat(formattedSinglePrice) : null;
+
             for (const booking of bookings) {
+                const roomSize = booking.room_size != null
+                    ? booking.room_size
+                    : (booking.person_room_type === 'single' ? 1 : booking.person_room_type === 'double' ? 2 : null);
+                const isSinglePax = roomSize === 1;
+
                 let totalCost = 0;
-                let currentDate = new Date(booking.check_in_date);
-                const checkOutDate = new Date(booking.check_out_date);
+                const checkInStr = toDateString(booking.check_in_date);
+                const checkOutStr = toDateString(booking.check_out_date);
+                const [inY, inM, inD] = checkInStr.split('-').map(Number);
+                const [outY, outM, outD] = checkOutStr.split('-').map(Number);
+                let currentDate = new Date(inY, inM - 1, inD);
+                const checkOutDate = new Date(outY, outM - 1, outD);
 
                 while (currentDate < checkOutDate) {
-                    const dateStr = currentDate.toISOString().split('T')[0];
-                    // Use daily price if available, otherwise use base price
-                    const dailyPrice = priceMap.get(dateStr) || parseFloat(formattedBasePrice);
+                    const dateStr = toDateString(currentDate);
+                    let dailyPrice;
+
+                    if (isSinglePax) {
+                        const dailySingle = singlePriceMap.get(dateStr);
+                        if (dailySingle != null) {
+                            dailyPrice = dailySingle;
+                        } else if (newSinglePrice != null) {
+                            dailyPrice = newSinglePrice;
+                        } else {
+                            dailyPrice = priceMap.get(dateStr) || parseFloat(formattedBasePrice);
+                        }
+                    } else {
+                        dailyPrice = priceMap.get(dateStr) || parseFloat(formattedBasePrice);
+                    }
+
                     totalCost += dailyPrice;
                     currentDate.setDate(currentDate.getDate() + 1);
                 }
 
-                // Update booking with new total cost
                 const updateBookingQuery = `
                     UPDATE bookings
                     SET 

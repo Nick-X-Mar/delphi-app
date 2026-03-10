@@ -519,6 +519,20 @@ export default function HotelDetailPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
+                    Overnight Stay Tax (EUR)
+                  </label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    name="overnight_stay_tax"
+                    value={formData.overnight_stay_tax ?? '0.00'}
+                    onChange={handleInputChange}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
                     Event *
                     {errors.event && (
                       <span className="text-red-500 text-xs ml-1">{errors.event}</span>
@@ -743,6 +757,10 @@ export default function HotelDetailPage() {
                     <div>
                       <span className="text-gray-500">Category:</span>
                       <span className="ml-2">{hotel.category}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Overnight Stay Tax:</span>
+                      <span className="ml-2">&euro;{parseFloat(hotel.overnight_stay_tax || 0).toFixed(2)}</span>
                     </div>
                     {hotel.address && (
                       <div className="flex items-start">

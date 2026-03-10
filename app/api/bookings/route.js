@@ -4,7 +4,7 @@ import { checkEventViewOnly } from '@/lib/apiViewOnlyCheck';
 
 export async function POST(request) {
   try {
-    const { eventId, personId, roomTypeId, checkInDate, checkOutDate, pricePerNight, totalCost, payable } = await request.json();
+    const { eventId, personId, roomTypeId, checkInDate, checkOutDate, totalCost, daysPaidByGuest, guestCost, defCost } = await request.json();
 
     // Validate required fields
     if (!eventId || !personId || !roomTypeId || !checkInDate || !checkOutDate || totalCost === undefined) {
@@ -31,13 +31,17 @@ export async function POST(request) {
         check_in_date,
         check_out_date,
         total_cost,
-        payable
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        days_paid_by_guest,
+        guest_cost,
+        def_cost
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING 
         booking_id,
         status,
         total_cost,
-        payable,
+        days_paid_by_guest,
+        guest_cost,
+        def_cost,
         (
           SELECT h.name 
           FROM hotels h 
@@ -49,7 +53,7 @@ export async function POST(request) {
           FROM room_types rt
           WHERE rt.room_type_id = $3
         ) as room_type_name`,
-      [eventId, personId, roomTypeId, checkInDate, checkOutDate, totalCost, payable ?? true]
+      [eventId, personId, roomTypeId, checkInDate, checkOutDate, totalCost, daysPaidByGuest ?? 0, guestCost ?? 0, defCost ?? totalCost]
     );
 
     // Return the created booking with additional info

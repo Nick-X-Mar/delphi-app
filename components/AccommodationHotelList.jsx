@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select";
 import Pagination from '@/components/Pagination';
 
-export default function AccommodationHotelList({ eventId, personId, onRoomSelection, isViewOnly = false }) {
+export default function AccommodationHotelList({ eventId, personId, numberOfPax, onRoomSelection, isViewOnly = false }) {
   const [hotels, setHotels] = useState([]);
   const [filteredHotels, setFilteredHotels] = useState([]);
   const [event, setEvent] = useState(null);
@@ -204,12 +204,28 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
     // If all dates are available, notify success
     toast.success('Room is available for selected dates!');
     if (onRoomSelection) {
-      // Sum actual price per night for each night (prices can vary by date)
-      const totalCost = dates.reduce((sum, date) => {
+      const tax = parseFloat(selectedHotel.overnight_stay_tax) || 0;
+      const isSinglePax = numberOfPax === 1 || numberOfPax === '1';
+      
+      // Build dailyPrices array with price+tax for each night
+      const dailyPrices = dates.map(date => {
         const av = getAvailabilityForDate(roomType, date);
-        const price = parseFloat(av.price_per_night ?? roomType.base_price_per_night) || 0;
-        return sum + price;
-      }, 0);
+        let price;
+        if (isSinglePax) {
+          const singlePrice = parseFloat(av.single_price_per_night ?? roomType.single_price_per_night);
+          price = (!isNaN(singlePrice) && singlePrice != null)
+            ? singlePrice
+            : (parseFloat(av.price_per_night ?? roomType.base_price_per_night) || 0);
+        } else {
+          price = parseFloat(av.price_per_night ?? roomType.base_price_per_night) || 0;
+        }
+        return {
+          date: new Date(date),
+          price: price + tax
+        };
+      });
+      
+      const totalCost = dailyPrices.reduce((sum, dp) => sum + dp.price, 0);
       const firstDateAvailability = getAvailabilityForDate(roomType, checkIn);
 
       onRoomSelection({
@@ -217,6 +233,7 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
         checkIn,
         checkOut,
         totalCost,
+        dailyPrices,
         roomType: {
           ...roomType,
           price_per_night: firstDateAvailability.price_per_night || roomType.base_price_per_night,
@@ -224,9 +241,11 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
             name: selectedHotel.name,
             stars: selectedHotel.stars,
             area: selectedHotel.area,
-            category: selectedHotel.category
+            category: selectedHotel.category,
+            overnight_stay_tax: selectedHotel.overnight_stay_tax
           }
-        }
+        },
+        isSinglePricing: isSinglePax && (roomType.single_price_per_night != null || dates.some(date => getAvailabilityForDate(roomType, date).single_price_per_night != null))
       });
     }
   };
@@ -494,7 +513,7 @@ export default function AccommodationHotelList({ eventId, personId, onRoomSelect
                               {availability.available_rooms} rooms
                             </div>
                             <div className="text-sm text-gray-600">
-                              €{availability.price_per_night}
+                              €{(parseFloat(availability.price_per_night) + (parseFloat(hotel.overnight_stay_tax) || 0)).toFixed(2)}
                             </div>
                           </td>
                         );

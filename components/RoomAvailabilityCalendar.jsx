@@ -32,7 +32,7 @@ export default function RoomAvailabilityCalendar({
   const [availability, setAvailability] = useState({});
   const [pendingChanges, setPendingChanges] = useState({});
   const [dates, setDates] = useState([]);
-  const [roomData, setRoomData] = useState({ totalRooms, basePrice });
+  const [roomData, setRoomData] = useState({ totalRooms, basePrice, baseSinglePrice: null });
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -72,7 +72,8 @@ export default function RoomAvailabilityCalendar({
       // Update room data from room type response
       setRoomData({
         totalRooms: roomTypeData.total_rooms,
-        basePrice: parseFloat(roomTypeData.base_price_per_night)
+        basePrice: parseFloat(roomTypeData.base_price_per_night),
+        baseSinglePrice: roomTypeData.single_price_per_night != null ? parseFloat(roomTypeData.single_price_per_night) : null
       });
 
       // Map the availability array to an object with dates as keys
@@ -82,7 +83,8 @@ export default function RoomAvailabilityCalendar({
         roomTypeData.availability.forEach(item => {
           availabilityMap[item.date] = {
             available_rooms: item.available_rooms,
-            price_per_night: parseFloat(item.price_per_night)
+            price_per_night: parseFloat(item.price_per_night),
+            single_price_per_night: item.single_price_per_night != null ? parseFloat(item.single_price_per_night) : null
           };
         });
       }
@@ -101,7 +103,14 @@ export default function RoomAvailabilityCalendar({
     }
 
     const formattedDate = formatDate(date);
-    let newValue = field === 'available_rooms' ? parseInt(value) : parseFloat(value);
+    let newValue;
+    if (field === 'available_rooms') {
+      newValue = parseInt(value);
+    } else if (field === 'single_price_per_night' && (value === '' || value === null)) {
+      newValue = null;
+    } else {
+      newValue = parseFloat(value);
+    }
     
     // Validate available rooms
     if (field === 'available_rooms') {
@@ -130,10 +139,14 @@ export default function RoomAvailabilityCalendar({
       // Convert pending changes to array of updates
       const updates = Object.entries(pendingChanges).map(([date, values]) => {
         const currentAvailability = getAvailabilityForDate(new Date(date));
+        const singlePrice = values.single_price_per_night !== undefined
+          ? values.single_price_per_night
+          : currentAvailability.single_price_per_night;
         return {
           date,
           available_rooms: parseInt(values.available_rooms ?? currentAvailability.available_rooms),
-          price_per_night: parseFloat(values.price_per_night ?? currentAvailability.price_per_night)
+          price_per_night: parseFloat(values.price_per_night ?? currentAvailability.price_per_night),
+          single_price_per_night: singlePrice != null ? parseFloat(singlePrice) : null
         };
       });
 
@@ -185,14 +198,19 @@ export default function RoomAvailabilityCalendar({
     if (!availabilityForDate && !pendingForDate) {
       return {
         available_rooms: roomData.totalRooms,
-        price_per_night: roomData.basePrice
+        price_per_night: roomData.basePrice,
+        single_price_per_night: roomData.baseSinglePrice
       };
     }
     
-    // First check pending changes, then fall back to availability, then defaults
+    const pendingSingle = pendingForDate?.single_price_per_night;
+    const availSingle = availabilityForDate?.single_price_per_night;
+    const singlePrice = pendingSingle !== undefined ? pendingSingle : (availSingle !== undefined ? availSingle : roomData.baseSinglePrice);
+
     return {
       available_rooms: pendingForDate?.available_rooms ?? availabilityForDate?.available_rooms ?? roomData.totalRooms,
-      price_per_night: pendingForDate?.price_per_night ?? availabilityForDate?.price_per_night ?? roomData.basePrice
+      price_per_night: pendingForDate?.price_per_night ?? availabilityForDate?.price_per_night ?? roomData.basePrice,
+      single_price_per_night: singlePrice
     };
   };
 
@@ -256,10 +274,23 @@ export default function RoomAvailabilityCalendar({
                   <Input
                     type="number"
                     min="0"
-                    step="1.00"
-                    value={dayAvailability.price_per_night}
+                    step="1"
+                    value={Number(dayAvailability.price_per_night).toFixed(2)}
                     onChange={(e) => handleInputChange(date, 'price_per_night', e.target.value)}
                     className="h-8 text-sm"
+                    disabled={isPast || isViewOnly}
+                  />
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500">Single:</div>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={dayAvailability.single_price_per_night != null ? Number(dayAvailability.single_price_per_night).toFixed(2) : ''}
+                    onChange={(e) => handleInputChange(date, 'single_price_per_night', e.target.value === '' ? null : e.target.value)}
+                    className="h-8 text-sm"
+                    placeholder="-"
                     disabled={isPast || isViewOnly}
                   />
                 </div>

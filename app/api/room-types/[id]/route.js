@@ -84,22 +84,25 @@ export async function PUT(request, { params }) {
           room_type_id,
           date,
           available_rooms,
-          price_per_night
+          price_per_night,
+          single_price_per_night
         )
-        VALUES ($1, $2, $3, $4)
+        VALUES ($1, $2, $3, $4, $5)
         ON CONFLICT (room_type_id, date) 
         DO UPDATE SET
           available_rooms = $3,
           price_per_night = $4,
-          updated_at = CURRENT_TIMESTAMP
+          single_price_per_night = $5
       `;
 
       for (const avail of availability) {
+        const singlePrice = avail.single_price_per_night != null ? avail.single_price_per_night : null;
         await client.query(upsertAvailabilityQuery, [
           id,
           avail.date,
           Math.min(avail.available_rooms || total_rooms, total_rooms),
-          avail.price_per_night
+          avail.price_per_night,
+          singlePrice
         ]);
       }
 

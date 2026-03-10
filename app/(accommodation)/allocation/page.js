@@ -57,7 +57,7 @@ export default function Allocation() {
     setExpandedStep(3);
   };
 
-  const handleConfirm = async ({ isPayable }) => {
+  const handleConfirm = async ({ daysPaidByGuest, guestCost, defCost }) => {
     if (!selectedEvent) {
       toast.error('Please select an event first');
       return;
@@ -92,7 +92,9 @@ export default function Allocation() {
           checkInDate: formatDate(checkIn),
           checkOutDate: formatDate(checkOut),
           totalCost,
-          payable: isPayable,
+          daysPaidByGuest,
+          guestCost,
+          defCost,
         }),
       });
 
@@ -250,6 +252,7 @@ export default function Allocation() {
               <AccommodationHotelList 
                 eventId={selectedEvent}
                 personId={selectedPerson.person_id}
+                numberOfPax={selectedPerson.room_size || (selectedPerson.room_type === 'single' ? 1 : selectedPerson.room_type === 'double' ? 2 : null)}
                 onRoomSelection={handleRoomSelection}
                 isViewOnly={isViewOnly}
               />

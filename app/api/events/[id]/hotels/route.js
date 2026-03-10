@@ -37,7 +37,8 @@ export async function GET(request, { params }) {
                   SELECT 
                     dr.date,
                     COALESCE(ra.available_rooms, rt.total_rooms) - COALESCE(bpd.booked_rooms, 0) as available_rooms,
-                    COALESCE(ra.price_per_night, rt.base_price_per_night) as price_per_night
+                    COALESCE(ra.price_per_night, rt.base_price_per_night) as price_per_night,
+                    COALESCE(ra.single_price_per_night, rt.single_price_per_night) as single_price_per_night
                   FROM date_range dr
                   LEFT JOIN room_availability ra ON ra.room_type_id = rt.room_type_id 
                     AND ra.date = dr.date

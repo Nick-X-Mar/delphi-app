@@ -196,7 +196,7 @@ export async function POST(request) {
     const { 
       name, area, stars, category, address, phone_number, email, 
       website_link, map_link, contact_name, contact_phone, 
-      contact_mobile, contact_email, eventId 
+      contact_mobile, contact_email, overnight_stay_tax, eventId 
     } = await request.json();
 
     // Validate required fields
@@ -239,16 +239,16 @@ export async function POST(request) {
       INSERT INTO hotels (
         name, area, stars, category, address, phone_number, 
         email, website_link, map_link, contact_name, 
-        contact_phone, contact_mobile, contact_email
+        contact_phone, contact_mobile, contact_email, overnight_stay_tax
       ) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *
     `;
 
     const values = [
       name, 
       area, 
-      starsNumeric,  // Use the validated stars value
+      starsNumeric,
       category, 
       address, 
       phone_number || null, 
@@ -258,7 +258,8 @@ export async function POST(request) {
       contact_name || null, 
       contact_phone || null, 
       contact_mobile || null, 
-      contact_email || null
+      contact_email || null,
+      overnight_stay_tax != null ? parseFloat(overnight_stay_tax) : 0.00
     ];
 
     const { rows: [hotel] } = await client.query(insertHotelQuery, values);

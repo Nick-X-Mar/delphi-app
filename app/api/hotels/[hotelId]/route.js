@@ -66,6 +66,7 @@ export async function PUT(request, { params }) {
             contact_phone,
             contact_mobile,
             contact_email,
+            overnight_stay_tax,
             eventId
         } = await request.json();
 
@@ -121,8 +122,9 @@ export async function PUT(request, { params }) {
             contact_phone = $11,
             contact_mobile = $12,
             contact_email = $13,
+            overnight_stay_tax = $14,
             updated_at = CURRENT_TIMESTAMP
-          WHERE hotel_id = $14
+          WHERE hotel_id = $15
           RETURNING *
         `;
 
@@ -140,6 +142,7 @@ export async function PUT(request, { params }) {
             contact_phone || null,
             contact_mobile || null,
             contact_email || null,
+            overnight_stay_tax != null ? parseFloat(overnight_stay_tax) : 0.00,
             hotelId
         ];
 
