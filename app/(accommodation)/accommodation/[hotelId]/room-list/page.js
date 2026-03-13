@@ -1,15 +1,45 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { FileDown } from 'lucide-react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
-// Helper functions
+const loadFont = async (pdf) => {
+  const toBase64 = async (url) => {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Failed to fetch font: ${url}`);
+    const buffer = await response.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  };
+
+  try {
+    const [normalFont, boldFont] = await Promise.all([
+      toBase64('/fonts/Roboto-Regular.ttf'),
+      toBase64('/fonts/Roboto-Bold.ttf')
+    ]);
+    
+    pdf.addFileToVFS('Roboto-Regular.ttf', normalFont);
+    pdf.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
+    pdf.addFileToVFS('Roboto-Bold.ttf', boldFont);
+    pdf.addFont('Roboto-Bold.ttf', 'Roboto', 'bold');
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to load Greek font:', error);
+    return false;
+  }
+};
+
 const getStatusText = (booking) => {
   if (!booking.modification_type) {
     return 'Confirmed';
@@ -31,7 +61,20 @@ const getStatusColor = (booking) => {
     case 'cancelled':
       return 'text-red-600';
     default:
-      return 'text-green-600'; // for Confirmed
+      return 'text-green-600';
+  }
+};
+
+const getStatusPdfColor = (booking) => {
+  switch (booking.modification_type) {
+    case 'date_change':
+      return [37, 99, 235]; // blue-600
+    case 'room_change':
+      return [147, 51, 234]; // purple-600
+    case 'cancelled':
+      return [220, 38, 38]; // red-600
+    default:
+      return [22, 163, 74]; // green-600
   }
 };
 
@@ -71,31 +114,178 @@ export default function HotelPdfView({ params }) {
   };
 
   const generatePDF = async () => {
-    if (!contentRef.current) return;
+    if (!hotelData) return;
     
     setIsGeneratingPdf(true);
     try {
-      // Create canvas from the content
-      const canvas = await html2canvas(contentRef.current, {
-        scale: 2, // Higher scale for better quality
-        useCORS: true,
-        logging: false,
-        windowWidth: contentRef.current.scrollWidth,
-        windowHeight: contentRef.current.scrollHeight
+      const pdf = new jsPDF('l', 'mm', 'a4');
+      
+      // Load Greek-supporting font
+      const fontLoaded = await loadFont(pdf);
+      const fontFamily = fontLoaded ? 'Roboto' : 'helvetica';
+      
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const margin = 14;
+      let yPosition = margin;
+
+      pdf.setFontSize(18);
+      pdf.setFont(fontFamily, 'bold');
+      pdf.text('Hotel Room List', margin, yPosition);
+      yPosition += 10;
+
+      pdf.setFontSize(10);
+      pdf.setFont(fontFamily, 'normal');
+      pdf.setTextColor(100);
+      pdf.text(`Generated: ${format(new Date(), 'PPpp')}`, margin, yPosition);
+      yPosition += 12;
+
+      pdf.setFontSize(14);
+      pdf.setFont(fontFamily, 'bold');
+      pdf.setTextColor(0);
+      pdf.text('Hotel Details', margin, yPosition);
+      yPosition += 8;
+
+      const totalDays = calculateTotalDays();
+      const detailsData = [
+        ['Name', hotelData.name, 'Event', hotelData.event_name],
+        ['Total Active Bookings', String(hotelData.total_bookings), 'Total Days Booked', String(totalDays)],
+        ['DEF Amount', `€${Number(hotelData.def_amount ?? 0).toFixed(2)}`, 'Guest Amount', `€${Number(hotelData.guest_amount ?? 0).toFixed(2)}`],
+      ];
+
+      autoTable(pdf, {
+        startY: yPosition,
+        body: detailsData,
+        theme: 'plain',
+        styles: {
+          fontSize: 9,
+          cellPadding: 3,
+          font: fontFamily,
+        },
+        columnStyles: {
+          0: { fontStyle: 'bold', cellWidth: 40, textColor: [100, 100, 100] },
+          1: { cellWidth: 80 },
+          2: { fontStyle: 'bold', cellWidth: 40, textColor: [100, 100, 100] },
+          3: { cellWidth: 80 },
+        },
+        margin: { left: margin, right: margin },
       });
 
-      // Calculate dimensions
-      const imgWidth = 297; // A4 width in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
-      // Create PDF
-      const pdf = new jsPDF('l', 'mm', 'a4');
-      const imgData = canvas.toDataURL('image/png');
+      yPosition = (pdf).lastAutoTable.finalY + 12;
 
-      // Add image to PDF
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      const tableHeaders = [
+        'Full Name',
+        'Companion',
+        'Pax',
+        'Check In',
+        'Check Out',
+        'Room Type',
+        'Total',
+        'DEF',
+        'Guest',
+        'Guest Days',
+        'Status',
+        'Notes',
+        'Updated'
+      ];
 
-      // Save the PDF
+      for (const roomType of hotelData.room_types) {
+        if (roomType.bookings.length === 0) continue;
+
+        if (yPosition > pdf.internal.pageSize.getHeight() - 40) {
+          pdf.addPage();
+          yPosition = margin;
+        }
+
+        pdf.setFontSize(12);
+        pdf.setFont(fontFamily, 'bold');
+        pdf.setTextColor(0);
+        pdf.text(roomType.name, margin, yPosition);
+        yPosition += 6;
+
+        const tableData = roomType.bookings.map((booking) => [
+          `${booking.first_name} ${booking.last_name}`,
+          booking.companion_full_name || '-',
+          booking.num_pax ?? '-',
+          format(new Date(booking.check_in_date), 'dd/MM/yy'),
+          format(new Date(booking.check_out_date), 'dd/MM/yy'),
+          booking.room_type_name ?? '-',
+          booking.total_cost != null ? `€${Number(booking.total_cost).toFixed(2)}` : '-',
+          booking.def_cost != null ? `€${Number(booking.def_cost).toFixed(2)}` : '-',
+          booking.guest_cost != null ? `€${Number(booking.guest_cost).toFixed(2)}` : '-',
+          booking.days_paid_by_guest ?? 0,
+          getStatusText(booking),
+          booking.notes || '-',
+          getModificationText(booking),
+        ]);
+
+        autoTable(pdf, {
+          startY: yPosition,
+          head: [tableHeaders],
+          body: tableData,
+          theme: 'striped',
+          styles: {
+            font: fontFamily,
+          },
+          headStyles: {
+            fillColor: [59, 130, 246],
+            textColor: 255,
+            fontSize: 7,
+            fontStyle: 'bold',
+            cellPadding: 2,
+          },
+          bodyStyles: {
+            fontSize: 7,
+            cellPadding: 2,
+          },
+          columnStyles: {
+            0: { cellWidth: 28 },
+            1: { cellWidth: 25 },
+            2: { cellWidth: 10, halign: 'center' },
+            3: { cellWidth: 18 },
+            4: { cellWidth: 18 },
+            5: { cellWidth: 22 },
+            6: { cellWidth: 18, halign: 'right' },
+            7: { cellWidth: 18, halign: 'right' },
+            8: { cellWidth: 18, halign: 'right' },
+            9: { cellWidth: 15, halign: 'center' },
+            10: { cellWidth: 20 },
+            11: { cellWidth: 35 },
+            12: { cellWidth: 22 },
+          },
+          margin: { left: margin, right: margin },
+          didParseCell: function(data) {
+            if (data.section === 'body' && data.column.index === 10) {
+              const booking = roomType.bookings[data.row.index];
+              if (booking) {
+                data.cell.styles.textColor = getStatusPdfColor(booking);
+                data.cell.styles.fontStyle = 'bold';
+              }
+            }
+          },
+        });
+
+        yPosition = (pdf).lastAutoTable.finalY + 10;
+      }
+
+      const pageCount = pdf.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        pdf.setPage(i);
+        pdf.setFont(fontFamily, 'normal');
+        pdf.setFontSize(8);
+        pdf.setTextColor(150);
+        pdf.text(
+          `Page ${i} of ${pageCount}`,
+          pageWidth - margin,
+          pdf.internal.pageSize.getHeight() - 10,
+          { align: 'right' }
+        );
+        pdf.text(
+          hotelData.name,
+          margin,
+          pdf.internal.pageSize.getHeight() - 10
+        );
+      }
+
       pdf.save(`${hotelData.name}-room-list.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -115,7 +305,6 @@ export default function HotelPdfView({ params }) {
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
       <div ref={contentRef}>
-        {/* Hotel Details Section */}
         <Card className="p-6">
           <h2 className="text-2xl font-bold mb-4">Hotel Details</h2>
           <div className="grid grid-cols-2 gap-4">
@@ -146,7 +335,6 @@ export default function HotelPdfView({ params }) {
           </div>
         </Card>
 
-        {/* Bookings Section */}
         <Card className="p-6">
           <h2 className="text-2xl font-bold mb-4">Bookings</h2>
           {hotelData.room_types.map((roomType) => (
@@ -217,7 +405,6 @@ export default function HotelPdfView({ params }) {
         </Card>
       </div>
 
-      {/* Download PDF Button */}
       <div className="flex justify-end mt-6">
         <Button 
           onClick={generatePDF}
@@ -230,4 +417,4 @@ export default function HotelPdfView({ params }) {
       </div>
     </div>
   );
-} 
+}
