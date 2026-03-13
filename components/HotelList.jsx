@@ -42,7 +42,7 @@ export default function HotelList({ searchTerm: initialSearchTerm, eventId: init
   const isViewOnly = parentIsViewOnly || selectedEventIsViewOnly;
   const [events, setEvents] = useState([]);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 2000);
   const searchInputRef = useRef(null);
   const wasSearchFocusedRef = useRef(false);
 
