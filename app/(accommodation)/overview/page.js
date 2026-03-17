@@ -275,7 +275,7 @@ export default function OverviewPage() {
 
       <div className="border rounded-lg">
         <div className="max-h-[70vh] overflow-auto relative">
-          <table className="w-full border-collapse">
+          <table className="w-full border-separate border-spacing-0">
             <thead>
               <tr>
                 <th
