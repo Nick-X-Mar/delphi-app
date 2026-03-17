@@ -2,14 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  CalendarIcon, 
-  HomeIcon, 
+import {
+  CalendarIcon,
+  HomeIcon,
   UserGroupIcon,
   ChartBarIcon,
   BuildingOffice2Icon,
   UsersIcon,
-  EnvelopeIcon
+  EnvelopeIcon,
+  EyeIcon
 } from '@heroicons/react/24/outline';
 
 export default function Navigation() {
@@ -20,6 +21,7 @@ export default function Navigation() {
     { name: 'Events', href: '/events', icon: CalendarIcon },
     { name: 'Hotels', href: '/hotels', icon: HomeIcon },
     { name: 'People', href: '/people', icon: UserGroupIcon },
+    { name: 'Overview', href: '/overview', icon: EyeIcon },
     { name: 'Allocation', href: '/allocation', icon: ChartBarIcon },
   ];
 
