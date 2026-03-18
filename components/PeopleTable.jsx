@@ -494,13 +494,7 @@ export default function PeopleTable({ isViewOnly = false, selectedEvent = null, 
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[50px]">
-              <Checkbox
-                checked={selectedPeople.size === people.length && people.length > 0}
-                onCheckedChange={handleSelectAll}
-                disabled={true}
-              />
-            </TableHead>
+            <TableHead className="w-[80px]">Allocated</TableHead>
             <TableHead>Synced at</TableHead>
             <TableHead>First Name</TableHead>
             <TableHead>Last Name</TableHead>
@@ -529,9 +523,9 @@ export default function PeopleTable({ isViewOnly = false, selectedEvent = null, 
             >
               <TableCell>
                 <Checkbox
-                  checked={selectedPeople.has(person.person_id)}
-                  onCheckedChange={() => handleSelectPerson(person.person_id)}
-                  disabled={true || isViewOnly}
+                  checked={!!person.booking_id}
+                  disabled={true}
+                  className={person.will_not_attend ? 'opacity-30' : ''}
                 />
               </TableCell>
               <TableCell>{formatDateTime(person.synced_at)}</TableCell>

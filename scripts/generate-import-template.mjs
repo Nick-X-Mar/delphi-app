@@ -25,6 +25,7 @@ const headers = [
   'comments',
   'notes',
   'group_id',
+  'accommodation_funding_type',
 ];
 
 const exampleRows = [
@@ -48,6 +49,7 @@ const exampleRows = [
     comments: 'VIP guest - early check-in requested',
     notes: 'Needs ground floor room',
     group_id: 'Smith Family',
+    accommodation_funding_type: 'forum_covered',
   },
   {
     person_id: 'EXT-002',
@@ -69,6 +71,7 @@ const exampleRows = [
     comments: '',
     notes: 'Vegetarian meals',
     group_id: '',
+    accommodation_funding_type: 'self_funded',
   },
   // Row with errors: missing email, invalid phone
   {
@@ -91,6 +94,7 @@ const exampleRows = [
     comments: 'ERROR EXAMPLE: missing last_name, email, and invalid phone',
     notes: '',
     group_id: '',
+    accommodation_funding_type: '',
   },
   // Row with errors: missing person_id, invalid salutation
   {
@@ -113,6 +117,7 @@ const exampleRows = [
     comments: 'ERROR EXAMPLE: missing person_id, invalid salutation, invalid email, invalid room_type, checkout before checkin',
     notes: '',
     group_id: '',
+    accommodation_funding_type: '',
   },
 ];
 
@@ -146,6 +151,7 @@ const instructions = [
   ['comments', 'No', 'Internal comments (not shared with hotels)', 'Any text'],
   ['notes', 'No', 'Notes sent to hotels', 'Any text'],
   ['group_id', 'No', 'Stay Together group name', 'Any text'],
+  ['accommodation_funding_type', 'No', 'Who funds the accommodation', 'self_funded or forum_covered'],
   [],
   ['NOTES:'],
   ['- Rows 3 and 4 in the People sheet contain intentional errors as examples.'],

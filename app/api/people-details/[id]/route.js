@@ -78,7 +78,8 @@ export async function PUT(request, { params }) {
           companion_email = $13,
           checkin_date = $14,
           checkout_date = $15,
-          comments = $16
+          comments = $16,
+          accommodation_funding_type = $17
         WHERE person_id = $1 AND source = 'App'
       `;
       await client.query(updatePeopleQuery, [
@@ -98,6 +99,7 @@ export async function PUT(request, { params }) {
         data.source_fields.checkin_date || null,
         data.source_fields.checkout_date || null,
         data.source_fields.comments || null,
+        data.source_fields.accommodation_funding_type || null,
       ]);
     }
 

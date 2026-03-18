@@ -66,9 +66,10 @@ export async function POST(request) {
           person_id, salutation, first_name, last_name, email,
           mobile_phone, nationality, company, job_title, guest_type,
           room_type, companion_full_name, companion_email,
-          checkin_date, checkout_date, comments, app_synced, synced_at, source
+          checkin_date, checkout_date, comments, app_synced, synced_at, source,
+          accommodation_funding_type
         )
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,'App')
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,'App',$19)
         ON CONFLICT (person_id) DO UPDATE SET
           salutation = EXCLUDED.salutation,
           first_name = EXCLUDED.first_name,
@@ -85,7 +86,8 @@ export async function POST(request) {
           checkin_date = EXCLUDED.checkin_date,
           checkout_date = EXCLUDED.checkout_date,
           comments = EXCLUDED.comments,
-          synced_at = EXCLUDED.synced_at
+          synced_at = EXCLUDED.synced_at,
+          accommodation_funding_type = EXCLUDED.accommodation_funding_type
       `, [
         personId,
         person.salutation || null,
@@ -105,6 +107,7 @@ export async function POST(request) {
         person.comments || null,
         false,
         currentTimestamp,
+        person.accommodation_funding_type || null,
       ]);
 
       // UPSERT into people_details

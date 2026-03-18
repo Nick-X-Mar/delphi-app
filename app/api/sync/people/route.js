@@ -78,7 +78,8 @@ export async function POST(request) {
             checkout_date = $14,
             comments = $15,
             guest_type = $16,
-            synced_at = $17
+            synced_at = $17,
+            accommodation_funding_type = $18
           WHERE person_id = $10
           RETURNING *
         `;
@@ -100,7 +101,8 @@ export async function POST(request) {
           person.checkout_date || null,
           person.comments || null,
           person.guest_type || null,
-          currentTimestamp
+          currentTimestamp,
+          person.accommodation_funding_type || null
         ];
 
         console.log(`[Sync] Update values for person_id ${syntheticPersonId}:`, values);
@@ -129,9 +131,10 @@ export async function POST(request) {
               comments,
               guest_type,
               synced_at,
-              source
+              source,
+              accommodation_funding_type
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 'HubSpot')
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 'HubSpot', $18)
             RETURNING *
           `;
 
@@ -152,7 +155,8 @@ export async function POST(request) {
             person.checkout_date || null,
             person.comments || null,
             person.guest_type || null,
-            currentTimestamp
+            currentTimestamp,
+            person.accommodation_funding_type || null
           ];
 
           console.log(`[Sync] Insert values for person_id ${syntheticPersonId}:`, insertValues);

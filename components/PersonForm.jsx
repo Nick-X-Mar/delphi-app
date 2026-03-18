@@ -62,6 +62,7 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
           checkin_date: person.checkin_date || '',
           checkout_date: person.checkout_date || '',
           comments: person.comments || '',
+          accommodation_funding_type: person.accommodation_funding_type || '',
         });
       }
     }
@@ -431,6 +432,22 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
                 value={isAppSource ? (sourceFields.guest_type || '') : (person?.guest_type || '')}
                 onChange={isAppSource ? handleSourceFieldChange : undefined}
                 disabled={!isAppSource || isViewOnly}
+                className={cn(
+                  "w-full px-3 py-2 bg-white border border-gray-200 rounded-lg",
+                  !isAppSource || isViewOnly ? "text-gray-500 disabled:bg-gray-50" : "focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                )}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Accommodation Funding</Label>
+              <input
+                type="text"
+                name="accommodation_funding_type"
+                value={isAppSource ? (sourceFields.accommodation_funding_type || '') : (person?.accommodation_funding_type || '')}
+                onChange={isAppSource ? handleSourceFieldChange : undefined}
+                disabled={!isAppSource || isViewOnly}
+                placeholder="self_funded or forum_covered"
                 className={cn(
                   "w-full px-3 py-2 bg-white border border-gray-200 rounded-lg",
                   !isAppSource || isViewOnly ? "text-gray-500 disabled:bg-gray-50" : "focus:ring-2 focus:ring-blue-500 focus:border-blue-500"

@@ -37,6 +37,7 @@ export async function GET(request) {
         p.company,
         p.job_title,
         p.source,
+        p.accommodation_funding_type,
         pd.room_size,
         pd.group_id,
         pd.notes,
@@ -227,9 +228,10 @@ export async function POST(request) {
         company,
         job_title,
         synced_at,
-        source
+        source,
+        accommodation_funding_type
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
       RETURNING person_id, room_type
     `;
 
@@ -252,7 +254,8 @@ export async function POST(request) {
       person.company,
       person.job_title,
       currentTimestamp,
-      'App'
+      'App',
+      person.accommodation_funding_type || null
     ];
 
     const { rows } = await client.query(insertQuery, values);

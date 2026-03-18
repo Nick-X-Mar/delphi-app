@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast, Toaster } from 'sonner';
 import * as XLSX from 'xlsx';
@@ -22,6 +22,7 @@ const FIELD_COLUMNS = [
   'mobile_phone', 'nationality', 'company', 'job_title', 'guest_type',
   'room_type', 'room_size', 'companion_full_name', 'companion_email',
   'checkin_date', 'checkout_date', 'comments', 'notes', 'group_id',
+  'accommodation_funding_type',
 ];
 
 function normalizeDate(value) {
@@ -64,6 +65,7 @@ export default function ImportPeoplePage() {
   const [selectedEventId, setSelectedEventId] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [fileLoaded, setFileLoaded] = useState(false);
+  const fileInputRef = useRef(null);
 
   // Fetch events
   useEffect(() => {
@@ -193,6 +195,9 @@ export default function ImportPeoplePage() {
           if (col === 'room_type' && val) {
             val = String(val).toLowerCase();
           }
+          if (col === 'accommodation_funding_type' && val) {
+            val = String(val).toLowerCase();
+          }
           clean[col] = val !== undefined && val !== null ? val : '';
         }
         return clean;
@@ -209,8 +214,8 @@ export default function ImportPeoplePage() {
       toast.error('Failed to parse file. Make sure it is a valid Excel or CSV file.');
     }
 
-    // Reset file input
-    e.target.value = '';
+    // Reset file input so the same file can be re-selected
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleSelectAll = (checked) => {
@@ -312,6 +317,7 @@ export default function ImportPeoplePage() {
             <ArrowUpTrayIcon className="h-4 w-4" />
             Choose File
             <input
+              ref={fileInputRef}
               type="file"
               accept=".xlsx,.xls,.csv"
               onChange={handleFileUpload}
@@ -460,8 +466,8 @@ export default function ImportPeoplePage() {
 
           {/* Import button */}
           <div className="flex justify-end mt-6 gap-3">
-            <Button variant="outline" onClick={() => router.push('/people')}>
-              Cancel
+            <Button variant="outline" onClick={() => { setRows([]); setSelectedRows(new Set()); setFileLoaded(false); setExistingIds(new Set()); }}>
+              Clear
             </Button>
             <Button
               onClick={handleImport}

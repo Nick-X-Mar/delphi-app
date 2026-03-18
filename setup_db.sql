@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS people (
     synced_at TIMESTAMP WITH TIME ZONE DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
     company VARCHAR(300),
     job_title VARCHAR(500),
-    source VARCHAR(20) DEFAULT 'HubSpot' CHECK (source IN ('HubSpot', 'App'))
+    source VARCHAR(20) DEFAULT 'HubSpot' CHECK (source IN ('HubSpot', 'App')),
+    accommodation_funding_type VARCHAR(20) DEFAULT 'forum_covered' CHECK (accommodation_funding_type IN ('self_funded', 'forum_covered'))
 );
 
 -- Create the people_details table (managed by our system)
@@ -349,3 +350,4 @@ CREATE TABLE email_notifications (
 
 -- Add source column to people table (for existing databases)
 ALTER TABLE people ADD COLUMN IF NOT EXISTS source VARCHAR(20) DEFAULT 'HubSpot' CHECK (source IN ('HubSpot', 'App'));
+ALTER TABLE people ADD COLUMN IF NOT EXISTS accommodation_funding_type VARCHAR(20) DEFAULT 'forum_covered' CHECK (accommodation_funding_type IN ('self_funded', 'forum_covered'));

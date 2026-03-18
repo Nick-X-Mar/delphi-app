@@ -39,6 +39,7 @@ export async function GET(request, { params }) {
         p.checkout_date,
         p.comments,
         p.companion_full_name,
+        p.accommodation_funding_type,
         pd.will_not_attend,
         pd.room_size,
         pd.notes,
