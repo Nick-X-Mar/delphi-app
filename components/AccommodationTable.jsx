@@ -215,6 +215,34 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
     }
   };
 
+  const handlePermanentDelete = async (booking, hotelName, roomTypeName) => {
+    const confirmMessage = `Are you sure you want to permanently delete this cancelled booking?\n\n` +
+      `Guest: ${booking.first_name} ${booking.last_name}\n` +
+      `Hotel: ${hotelName}\n` +
+      `Room: ${roomTypeName}\n\n` +
+      `This action cannot be undone.`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/bookings/${booking.booking_id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete booking');
+      }
+
+      toast.success('Booking deleted successfully');
+      fetchData();
+    } catch (error) {
+      console.error('Error deleting booking:', error);
+      toast.error('Failed to delete booking');
+    }
+  };
+
   const handleRoomSelection = async (selection) => {
     if (!editingBooking) return;
 
@@ -856,7 +884,16 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
-                                {booking.status !== 'cancelled' && (
+                                {booking.status === 'cancelled' ? (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handlePermanentDelete(booking, hotel.name, roomType.name)}
+                                    disabled={isViewOnly}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                  </Button>
+                                ) : (
                                   <>
                                     <Button
                                       variant="ghost"

@@ -1,24 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getWorkingEventIdFromRequest, checkEventViewOnly } from '@/lib/apiViewOnlyCheck';
+import { checkEventViewOnly } from '@/lib/apiViewOnlyCheck';
 
 export async function POST(request) {
   try {
-    // Check if event has passed (view-only mode)
-    const eventId = await getWorkingEventIdFromRequest(request);
-    if (eventId) {
-      const { isViewOnly } = await checkEventViewOnly(eventId);
-      if (isViewOnly) {
-        return NextResponse.json({
-          error: 'Event has passed. Email sending is not allowed.'
-        }, { status: 403 });
-      }
-    }
-
-    // Get the request body
-    const { 
-      to, 
-      subject, 
-      lastName, 
+    // Parse body first (can only be consumed once)
+    const body = await request.json();
+    const {
+      to,
+      subject,
+      lastName,
       salutation,
       hotel_name,
       hotel_address,
@@ -27,8 +17,22 @@ export async function POST(request) {
       checkin_date,
       checkout_date,
       company,
-      guest_amount
-    } = await request.json();
+      guest_amount,
+      eventId: bodyEventId
+    } = body;
+
+    // Check if event has passed (view-only mode)
+    const url = new URL(request.url);
+    const eventId = url.searchParams.get('eventId') || url.searchParams.get('event_id')
+      || bodyEventId || request.headers.get('x-working-event-id');
+    if (eventId) {
+      const { isViewOnly } = await checkEventViewOnly(eventId);
+      if (isViewOnly) {
+        return NextResponse.json({
+          error: 'Event has passed. Email sending is not allowed.'
+        }, { status: 403 });
+      }
+    }
     
     // Check if HubSpot API key exists
     const hubspotApiKey = process.env.HUBSPOT_API_KEY;

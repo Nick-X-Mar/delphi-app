@@ -99,3 +99,9 @@ Content-Type: application/json
   "job_title": "Senior Editor",
   "accommodation_funding_type": "self_funded"
 }
+
+### Confirm booking
+@BOOKING_ID=47
+curl -X PUT 'http://localhost:3000/api/bookings/{{BOOKING_ID}}' \
+  -H 'Content-Type: application/json' \
+  -d '{"status": "confirmed"}'
