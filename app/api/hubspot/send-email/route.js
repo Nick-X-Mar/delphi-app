@@ -25,7 +25,9 @@ export async function POST(request) {
       contact_information,
       hotel_website,
       checkin_date,
-      checkout_date
+      checkout_date,
+      company,
+      guest_amount
     } = await request.json();
     
     // Check if HubSpot API key exists
@@ -55,7 +57,9 @@ export async function POST(request) {
         contact_information: contact_information || '',
         hotel_website: hotel_website || '',
         checkin_date: checkin_date || '',
-        checkout_date: checkout_date || ''
+        checkout_date: checkout_date || '',
+        company: company || '',
+        guest_amount: guest_amount || ''
       }
     };
 

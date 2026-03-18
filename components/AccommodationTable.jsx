@@ -10,6 +10,12 @@ import { formatDate, formatDateTime } from '@/utils/dateFormatters';
 import { sendEmail, getGuestsWithChanges, getLastEmailNotification, recordEmailNotification } from '@/lib/emailService';
 import { emailQueue } from '@/lib/emailQueue';
 
+const formatGuestAmount = (guestCost) => {
+  const cost = parseFloat(guestCost);
+  if (!cost || cost === 0) return 'Complimentary';
+  return `€${cost.toFixed(2)}`;
+};
+
 const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = false }, ref) => {
   const [expandedHotels, setExpandedHotels] = useState(new Set());
   const [expandedRoomTypes, setExpandedRoomTypes] = useState(new Set());
@@ -398,7 +404,9 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
         contact_information: hotel?.phone_number || hotel?.phone || '',
         hotel_website: hotel?.website_link || hotel?.website || '',
         checkin_date: formattedCheckinDate,
-        checkout_date: formattedCheckoutDate
+        checkout_date: formattedCheckoutDate,
+        company: booking.company || '',
+        guest_amount: formatGuestAmount(booking.guest_cost)
       });
 
       if (result.success) {
@@ -456,9 +464,11 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
             contact_information: booking.contact_information || '',
             hotel_website: booking.hotel_website || '',
             checkin_date: formattedCheckinDate,
-            checkout_date: formattedCheckoutDate
+            checkout_date: formattedCheckoutDate,
+            company: booking.company || '',
+            guest_amount: formatGuestAmount(booking.guest_cost)
           });
-          
+
           // Track pending bookings to update later
           if (booking.status === 'pending') {
             pendingBookings.push(booking);
@@ -613,7 +623,9 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
           contact_information: hotel.phone_number || hotel.phone || '',
           hotel_website: hotel.website_link || hotel.website || '',
           checkin_date: formattedCheckinDate,
-          checkout_date: formattedCheckoutDate
+          checkout_date: formattedCheckoutDate,
+          company: guest.company || '',
+          guest_amount: formatGuestAmount(guest.guest_cost)
         });
       }
 
