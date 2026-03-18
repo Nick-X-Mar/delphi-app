@@ -49,15 +49,67 @@ export async function PUT(request, { params }) {
     
     await client.query('BEGIN');
 
+    // If source is 'App', also update the people table (source information fields)
+    if (data.source_fields) {
+      // Validate email format
+      if (data.source_fields.email && !data.source_fields.email.includes('@')) {
+        client.release();
+        return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
+      }
+      // Validate mobile phone
+      if (data.source_fields.mobile_phone && !/^[\d\s+\-()]+$/.test(data.source_fields.mobile_phone)) {
+        client.release();
+        return NextResponse.json({ error: 'Mobile phone must contain only digits, spaces, +, -, or parentheses' }, { status: 400 });
+      }
+
+      const updatePeopleQuery = `
+        UPDATE people SET
+          salutation = $2,
+          first_name = $3,
+          last_name = $4,
+          email = $5,
+          mobile_phone = $6,
+          company = $7,
+          job_title = $8,
+          room_type = $9,
+          guest_type = $10,
+          nationality = $11,
+          companion_full_name = $12,
+          companion_email = $13,
+          checkin_date = $14,
+          checkout_date = $15,
+          comments = $16
+        WHERE person_id = $1 AND source = 'App'
+      `;
+      await client.query(updatePeopleQuery, [
+        personId,
+        data.source_fields.salutation || null,
+        data.source_fields.first_name,
+        data.source_fields.last_name,
+        data.source_fields.email,
+        data.source_fields.mobile_phone || null,
+        data.source_fields.company || null,
+        data.source_fields.job_title || null,
+        data.source_fields.room_type || null,
+        data.source_fields.guest_type || null,
+        data.source_fields.nationality || null,
+        data.source_fields.companion_full_name || null,
+        data.source_fields.companion_email || null,
+        data.source_fields.checkin_date || null,
+        data.source_fields.checkout_date || null,
+        data.source_fields.comments || null,
+      ]);
+    }
+
     // Update people_details
     const updateQuery = `
       INSERT INTO people_details (
-        person_id, room_size, 
+        person_id, room_size,
         group_id, notes, will_not_attend, updated_at
       )
       VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
-      ON CONFLICT (person_id) 
-      DO UPDATE SET 
+      ON CONFLICT (person_id)
+      DO UPDATE SET
         room_size = EXCLUDED.room_size,
         group_id = EXCLUDED.group_id,
         notes = EXCLUDED.notes,

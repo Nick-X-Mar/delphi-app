@@ -1,6 +1,6 @@
 -- Create people table (managed by external system)
 CREATE TABLE IF NOT EXISTS people (
-    person_id BIGINT PRIMARY KEY,
+    person_id VARCHAR(100) PRIMARY KEY,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     email VARCHAR(100) NOT NULL,
@@ -15,15 +15,16 @@ CREATE TABLE IF NOT EXISTS people (
     comments TEXT,
     app_synced BOOLEAN,
     app_synced_date DATE,
-    guest_type VARCHAR(10) CHECK (guest_type IN ('speaker', 'press', 'guest')),
+    guest_type VARCHAR(50),
     synced_at TIMESTAMP WITH TIME ZONE DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
     company VARCHAR(300),
-    job_title VARCHAR(500)
+    job_title VARCHAR(500),
+    source VARCHAR(20) DEFAULT 'HubSpot' CHECK (source IN ('HubSpot', 'App'))
 );
 
 -- Create the people_details table (managed by our system)
 CREATE TABLE IF NOT EXISTS people_details (
-    person_id INTEGER PRIMARY KEY,
+    person_id VARCHAR(100) PRIMARY KEY,
     company VARCHAR(100),
     job_title VARCHAR(100),
     room_size INTEGER CHECK (room_size > 0),
@@ -107,7 +108,7 @@ CREATE TABLE IF NOT EXISTS bookings
 (
     booking_id integer NOT NULL DEFAULT nextval('bookings_booking_id_seq'::regclass),
     event_id integer NOT NULL,
-    person_id integer NOT NULL,
+    person_id VARCHAR(100) NOT NULL,
     room_type_id integer NOT NULL,
     check_in_date date NOT NULL,
     check_out_date date NOT NULL,
@@ -172,7 +173,7 @@ CREATE TABLE IF NOT EXISTS event_hotels (
 -- Create event_people table
 CREATE TABLE IF NOT EXISTS event_people (
     event_id INTEGER NOT NULL REFERENCES events(event_id) ON DELETE CASCADE,
-    person_id INTEGER NOT NULL REFERENCES people(person_id) ON DELETE CASCADE,
+    person_id VARCHAR(100) NOT NULL REFERENCES people(person_id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
     PRIMARY KEY (event_id, person_id)
 );
@@ -332,7 +333,7 @@ VALUES (
 
 CREATE TABLE email_notifications (
     id SERIAL PRIMARY KEY,
-    guest_id INTEGER,
+    guest_id VARCHAR(100),
     event_id INTEGER NOT NULL,
     sent_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     notification_type VARCHAR(50) NOT NULL, 
@@ -345,3 +346,6 @@ CREATE TABLE email_notifications (
     FOREIGN KEY (guest_id) REFERENCES people(person_id),
     FOREIGN KEY (event_id) REFERENCES events(event_id)
 );
+
+-- Add source column to people table (for existing databases)
+ALTER TABLE people ADD COLUMN IF NOT EXISTS source VARCHAR(20) DEFAULT 'HubSpot' CHECK (source IN ('HubSpot', 'App'));

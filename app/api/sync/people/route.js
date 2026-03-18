@@ -52,7 +52,7 @@ export async function POST(request) {
         }
 
         // Synthetic person_id: event_id + external person_id so same external id across events is unique
-        const syntheticPersonId = parseInt(String(eventIdNum) + String(person.person_id), 10);
+        const syntheticPersonId = String(eventIdNum) + String(person.person_id);
 
         // Generate a single timestamp in UTC+0
         const timestampResult = await individualClient.query("SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AS current_time");
@@ -128,9 +128,10 @@ export async function POST(request) {
               checkout_date,
               comments,
               guest_type,
-              synced_at
+              synced_at,
+              source
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 'HubSpot')
             RETURNING *
           `;
 

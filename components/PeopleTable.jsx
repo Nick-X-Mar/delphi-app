@@ -194,7 +194,7 @@ export default function PeopleTable({ isViewOnly = false, selectedEvent = null, 
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e?.preventDefault) e.preventDefault();
     try {
       const response = await fetch(`/api/people-details/${editPerson.person_id}`, {
         method: 'PUT',
@@ -594,16 +594,25 @@ export default function PeopleTable({ isViewOnly = false, selectedEvent = null, 
       />
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-[85%] max-h-[90vh] overflow-y-auto border">
-            <div className="p-8">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-6">Edit Person Details</h2>
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
+          onKeyDown={(e) => { if (e.key === 'Escape') setShowModal(false); }}
+          tabIndex={-1}
+          ref={(el) => el?.focus()}
+        >
+          <div className="bg-white rounded-xl shadow-2xl w-[85%] max-h-[90vh] flex flex-col border">
+            <div className="p-8 pb-4">
+              <h2 className="text-2xl font-semibold text-gray-800">Edit Person Details</h2>
+            </div>
+            <div className="flex-1 overflow-y-auto px-8 pb-4">
               <PersonForm
                 person={editPerson}
                 formData={formData}
                 setFormData={setFormData}
                 onSubmit={handleSubmit}
                 onCancel={() => setShowModal(false)}
+                onDelete={() => { setShowModal(false); fetchPeople(); }}
                 isViewOnly={isViewOnly}
               />
             </div>

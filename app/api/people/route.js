@@ -36,6 +36,7 @@ export async function GET(request) {
         p.synced_at,
         p.company,
         p.job_title,
+        p.source,
         pd.room_size,
         pd.group_id,
         pd.notes,
@@ -169,9 +170,17 @@ export async function POST(request) {
     // Validate required fields
     if (!person.person_id || !person.first_name || !person.last_name || !person.email) {
       console.error('[Create] Validation error: Missing required fields');
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Missing required fields (person_id, first_name, last_name, email)' 
+      return NextResponse.json({
+        success: false,
+        error: 'Missing required fields (person_id, first_name, last_name, email)'
+      }, { status: 400 });
+    }
+
+    if (!person.event_id) {
+      console.error('[Create] Validation error: Missing event_id');
+      return NextResponse.json({
+        success: false,
+        error: 'Missing required field: event_id'
       }, { status: 400 });
     }
 
@@ -180,6 +189,22 @@ export async function POST(request) {
     // Generate a single timestamp in UTC+0
     const timestampResult = await client.query("SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AS current_time");
     const currentTimestamp = timestampResult.rows[0].current_time;
+
+    // Validate email format
+    if (person.email && !person.email.includes('@')) {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid email format'
+      }, { status: 400 });
+    }
+
+    // Validate mobile phone (digits, spaces, +, - only)
+    if (person.mobile_phone && !/^[\d\s+\-()]+$/.test(person.mobile_phone)) {
+      return NextResponse.json({
+        success: false,
+        error: 'Mobile phone must contain only digits, spaces, +, -, or parentheses'
+      }, { status: 400 });
+    }
 
     // Insert into people table
     const insertQuery = `
@@ -201,9 +226,10 @@ export async function POST(request) {
         app_synced,
         company,
         job_title,
-        synced_at
+        synced_at,
+        source
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
       RETURNING person_id, room_type
     `;
 
@@ -216,7 +242,7 @@ export async function POST(request) {
       person.mobile_phone,
       person.email,
       person.room_type,
-      person.full_name, // This seems to be used for companion_full_name
+      person.companion_full_name,
       person.companion_email,
       person.checkin_date,
       person.checkout_date,
@@ -225,58 +251,70 @@ export async function POST(request) {
       person.app_synced || false,
       person.company,
       person.job_title,
-      currentTimestamp
+      currentTimestamp,
+      'App'
     ];
 
     const { rows } = await client.query(insertQuery, values);
     const newPerson = rows[0];
-    
+
     // Determine room_size based on room_type
-    let roomSize = null;
-    if (newPerson.room_type) {
+    let roomSize = person.room_size || null;
+    if (!roomSize && newPerson.room_type) {
       if (newPerson.room_type === 'single') {
         roomSize = 1;
       } else if (newPerson.room_type === 'double') {
         roomSize = 2;
       }
     }
-    
+
     // Create entry in people_details table
     const detailsQuery = `
       INSERT INTO people_details (
         person_id,
         room_size,
+        notes,
+        group_id,
         updated_at
       )
-      VALUES ($1, $2, $3)
-      ON CONFLICT (person_id) 
-      DO UPDATE SET 
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (person_id)
+      DO UPDATE SET
         room_size = EXCLUDED.room_size,
-        updated_at = $3
+        notes = EXCLUDED.notes,
+        group_id = EXCLUDED.group_id,
+        updated_at = $5
     `;
-    
-    await client.query(detailsQuery, [newPerson.person_id, roomSize, currentTimestamp]);
-    
-    // Assign to event 1 by default
+
+    await client.query(detailsQuery, [
+      newPerson.person_id,
+      roomSize,
+      person.notes || null,
+      person.group_id || null,
+      currentTimestamp
+    ]);
+
+    // Assign to the specified event
     const assignToEventQuery = `
       INSERT INTO event_people (event_id, person_id)
-      VALUES (1, $1)
+      VALUES ($1, $2)
+      ON CONFLICT (event_id, person_id) DO NOTHING
     `;
-    await client.query(assignToEventQuery, [newPerson.person_id]);
+    await client.query(assignToEventQuery, [person.event_id, newPerson.person_id]);
 
     await client.query('COMMIT');
 
-    return NextResponse.json({ 
-      success: true, 
-      error: null 
+    return NextResponse.json({
+      success: true,
+      error: null
     }, { status: 201 });
 
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('[Create] Error:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: error.message 
+    return NextResponse.json({
+      success: false,
+      error: error.message
     }, { status: 500 });
   } finally {
     client.release();

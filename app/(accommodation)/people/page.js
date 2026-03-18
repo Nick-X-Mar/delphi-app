@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import PeopleTable from '@/components/PeopleTable';
 import { Toaster } from 'sonner';
 import { useViewOnlyMode, clearViewOnlyCache } from '@/lib/viewOnlyMode';
+import { PlusIcon } from '@heroicons/react/24/solid';
 
 export default function People() {
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -49,6 +51,14 @@ export default function People() {
       )}
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl font-bold text-gray-900">People Management</h1>
+        {!isViewOnly && (
+          <Link
+            href="/people/new"
+            className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-600 hover:bg-green-700 text-white transition-colors"
+          >
+            <PlusIcon className="h-5 w-5" />
+          </Link>
+        )}
       </div>
       <PeopleTable 
         isViewOnly={isViewOnly} 
