@@ -302,18 +302,19 @@ export default function OverviewPage() {
               </tr>
             </thead>
             <tbody>
-              {paginatedHotels.map((hotel) => {
+              {paginatedHotels.map((hotel, hotelIndex) => {
                 const roomTypes = hotel.room_types;
                 const showTotal = roomTypes.length > 1;
                 const totalRows = roomTypes.length + (showTotal ? 1 : 0);
+                const isLastHotel = hotelIndex === paginatedHotels.length - 1;
 
                 return (
                   <React.Fragment key={hotel.hotel_id}>
                     {roomTypes.map((roomType, index) => (
-                      <tr key={roomType.room_type_id} className="border-b">
+                      <tr key={roomType.room_type_id} className="border-b border-gray-200">
                         {index === 0 && (
                           <td
-                            rowSpan={totalRows}
+                            rowSpan={totalRows + (!isLastHotel ? 1 : 0)}
                             className="sticky left-0 bg-white z-10 border-r p-4 align-top"
                             style={{ width: '200px', minWidth: '200px' }}
                           >
@@ -354,7 +355,7 @@ export default function OverviewPage() {
                       </tr>
                     ))}
                     {showTotal && (
-                      <tr className="border-b bg-gray-50">
+                      <tr className="border-b border-gray-200 bg-gray-50">
                         <td
                           className="sticky left-[200px] bg-gray-50 z-10 border-r p-4 font-semibold text-sm"
                           style={{ width: '150px', minWidth: '150px' }}
@@ -370,6 +371,14 @@ export default function OverviewPage() {
                             {getHotelTotalForDate(hotel, date)}
                           </td>
                         ))}
+                      </tr>
+                    )}
+                    {!isLastHotel && (
+                      <tr>
+                        <td
+                          colSpan={dates.length + 1}
+                          className="p-0 h-1 bg-gray-300"
+                        />
                       </tr>
                     )}
                   </React.Fragment>
