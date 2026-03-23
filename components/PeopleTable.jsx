@@ -102,20 +102,19 @@ export default function PeopleTable({ isViewOnly = false, selectedEvent = null, 
     }
   }, [selectedEvent, filters.eventId, events]);
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await fetch('/api/people/categories');
-        if (!response.ok) throw new Error('Failed to fetch categories');
-        const data = await response.json();
-        setCategories(data);
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-        toast.error('Failed to load categories');
-        setCategories([]);
-      }
-    };
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/people/categories');
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      const data = await response.json();
+      setCategories(data);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      setCategories([]);
+    }
+  };
 
+  useEffect(() => {
     fetchCategories();
   }, []);
 
@@ -163,6 +162,7 @@ export default function PeopleTable({ isViewOnly = false, selectedEvent = null, 
       // Note: totalItems keeps the original total for pagination, filtering applies to current page only
       setTotalItems(data.pagination.total);
       setSelectedPeople(new Set()); // Clear selection when data changes
+      fetchCategories(); // Refresh guest type filter options
     } catch (error) {
       console.error('Error fetching people:', error);
       toast.error('Failed to fetch people');

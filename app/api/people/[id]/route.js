@@ -81,7 +81,10 @@ export async function DELETE(request, { params }) {
     // availability is calculated dynamically by subtracting active bookings)
     await client.query('DELETE FROM bookings WHERE person_id = $1', [id]);
 
-    // Delete from people (people_details and event_people cascade automatically)
+    // Delete from people_details and event_people before people
+    await client.query('DELETE FROM people_details WHERE person_id = $1', [id]);
+    await client.query('DELETE FROM event_people WHERE person_id = $1', [id]);
+
     await client.query('DELETE FROM people WHERE person_id = $1', [id]);
 
     await client.query('COMMIT');
