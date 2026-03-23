@@ -233,6 +233,9 @@ export async function DELETE(request, { params }) {
       }
     }
     
+    // Delete related email notifications first
+    await pool.query('DELETE FROM email_notifications WHERE booking_id = $1', [bookingId]);
+
     const query = `
       DELETE FROM bookings
       WHERE booking_id = $1
