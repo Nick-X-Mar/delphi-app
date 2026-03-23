@@ -49,12 +49,10 @@ async function seedPeople() {
   try {
     await client.query('BEGIN');
     
-    // Get the maximum person_id to start from
-    const maxIdResult = await client.query('SELECT COALESCE(MAX(person_id), 0) as max_id FROM people');
-    const maxId = parseInt(maxIdResult.rows[0].max_id) || 0;
-    const startId = Math.max(maxId + 1, 10000); // Start from 10000 or max+1, whichever is higher
-    
-    console.log(`Starting to insert ${samplePeople.length} people, starting from person_id ${startId}...`);
+    // Generate string-based seed IDs using timestamp prefix
+    const seedPrefix = 'SEED-' + Date.now().toString().slice(-6);
+
+    console.log(`Starting to insert ${samplePeople.length} people with prefix ${seedPrefix}...`);
     
     // Get current timestamp
     const timestampResult = await client.query("SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AS current_time");
@@ -68,7 +66,7 @@ async function seedPeople() {
     
     for (let i = 0; i < samplePeople.length; i++) {
       const person = samplePeople[i];
-      const personId = startId + i;
+      const personId = seedPrefix + '-' + String(i + 1).padStart(3, '0');
       const dates = getDates();
       
       // Insert into people table

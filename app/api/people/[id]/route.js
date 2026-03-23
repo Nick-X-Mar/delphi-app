@@ -50,23 +50,48 @@ export async function PUT(request, { params }) {
   }
 }
 
-// DELETE person
+// DELETE person (only App-sourced people)
 export async function DELETE(request, { params }) {
   const { id } = await params;
+  const client = await pool.connect();
   try {
-    // First delete from people_details if exists (due to foreign key)
-    await pool.query('DELETE FROM people_details WHERE person_id = $1', [id]);
-    
-    // Then delete from people
-    const { rows } = await pool.query('DELETE FROM people WHERE person_id = $1 RETURNING *', [id]);
-    
-    if (rows.length === 0) {
+    // Verify the person exists and is App-sourced
+    const personResult = await client.query(
+      'SELECT person_id, source FROM people WHERE person_id = $1',
+      [id]
+    );
+
+    if (personResult.rows.length === 0) {
       return NextResponse.json({ error: 'Person not found' }, { status: 404 });
     }
-    
-    return NextResponse.json({ message: 'Person deleted successfully' });
+
+    if (personResult.rows[0].source !== 'App') {
+      return NextResponse.json(
+        { error: 'Only App-created people can be deleted' },
+        { status: 403 }
+      );
+    }
+
+    await client.query('BEGIN');
+
+    // Delete email notifications referencing this person
+    await client.query('DELETE FROM email_notifications WHERE guest_id = $1', [id]);
+
+    // Delete bookings (this automatically frees room availability since
+    // availability is calculated dynamically by subtracting active bookings)
+    await client.query('DELETE FROM bookings WHERE person_id = $1', [id]);
+
+    // Delete from people (people_details and event_people cascade automatically)
+    await client.query('DELETE FROM people WHERE person_id = $1', [id]);
+
+    await client.query('COMMIT');
+
+    return NextResponse.json({ message: 'Person and associated bookings deleted successfully' });
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Delete error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
+  } finally {
+    client.release();
   }
 } 

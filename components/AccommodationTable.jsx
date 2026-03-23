@@ -10,6 +10,12 @@ import { formatDate, formatDateTime } from '@/utils/dateFormatters';
 import { sendEmail, getGuestsWithChanges, getLastEmailNotification, recordEmailNotification } from '@/lib/emailService';
 import { emailQueue } from '@/lib/emailQueue';
 
+const formatGuestAmount = (guestCost) => {
+  const cost = parseFloat(guestCost);
+  if (!cost || cost === 0) return 'COMPLIMENTARY';
+  return `€${cost.toFixed(2)}`;
+};
+
 const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = false }, ref) => {
   const [expandedHotels, setExpandedHotels] = useState(new Set());
   const [expandedRoomTypes, setExpandedRoomTypes] = useState(new Set());
@@ -209,6 +215,34 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
     }
   };
 
+  const handlePermanentDelete = async (booking, hotelName, roomTypeName) => {
+    const confirmMessage = `Are you sure you want to permanently delete this cancelled booking?\n\n` +
+      `Guest: ${booking.first_name} ${booking.last_name}\n` +
+      `Hotel: ${hotelName}\n` +
+      `Room: ${roomTypeName}\n\n` +
+      `This action cannot be undone.`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/bookings/${booking.booking_id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete booking');
+      }
+
+      toast.success('Booking deleted successfully');
+      fetchData();
+    } catch (error) {
+      console.error('Error deleting booking:', error);
+      toast.error('Failed to delete booking');
+    }
+  };
+
   const handleRoomSelection = async (selection) => {
     if (!editingBooking) return;
 
@@ -398,7 +432,9 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
         contact_information: hotel?.phone_number || hotel?.phone || '',
         hotel_website: hotel?.website_link || hotel?.website || '',
         checkin_date: formattedCheckinDate,
-        checkout_date: formattedCheckoutDate
+        checkout_date: formattedCheckoutDate,
+        company: booking.company || '',
+        guest_amount: formatGuestAmount(booking.guest_cost)
       });
 
       if (result.success) {
@@ -456,9 +492,11 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
             contact_information: booking.contact_information || '',
             hotel_website: booking.hotel_website || '',
             checkin_date: formattedCheckinDate,
-            checkout_date: formattedCheckoutDate
+            checkout_date: formattedCheckoutDate,
+            company: booking.company || '',
+            guest_amount: formatGuestAmount(booking.guest_cost)
           });
-          
+
           // Track pending bookings to update later
           if (booking.status === 'pending') {
             pendingBookings.push(booking);
@@ -613,7 +651,9 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
           contact_information: hotel.phone_number || hotel.phone || '',
           hotel_website: hotel.website_link || hotel.website || '',
           checkin_date: formattedCheckinDate,
-          checkout_date: formattedCheckoutDate
+          checkout_date: formattedCheckoutDate,
+          company: guest.company || '',
+          guest_amount: formatGuestAmount(guest.guest_cost)
         });
       }
 
@@ -844,7 +884,16 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
-                                {booking.status !== 'cancelled' && (
+                                {booking.status === 'cancelled' ? (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handlePermanentDelete(booking, hotel.name, roomType.name)}
+                                    disabled={isViewOnly}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                  </Button>
+                                ) : (
                                   <>
                                     <Button
                                       variant="ghost"

@@ -3,17 +3,28 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { format } from 'date-fns';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
-export default function AccommodationConfirmation({ 
-  person, 
+export default function AccommodationConfirmation({
+  person,
   selection,
   onConfirm,
   onCancel,
   isLoading,
   isViewOnly = false
 }) {
-  const [daysPaidByGuest, setDaysPaidByGuest] = useState(0);
+  const fundingType = person?.accommodation_funding_type || 'forum_covered';
+  const defaultDays = fundingType === 'self_funded' ? 1 : 0;
+  const [daysPaidByGuest, setDaysPaidByGuest] = useState(defaultDays);
+  const [showFundingWarning, setShowFundingWarning] = useState(false);
+
+  // Reset default when person changes
+  useEffect(() => {
+    const ft = person?.accommodation_funding_type || 'forum_covered';
+    const d = ft === 'self_funded' ? 1 : 0;
+    setDaysPaidByGuest(d);
+    setShowFundingWarning(false);
+  }, [person?.person_id, person?.accommodation_funding_type]);
 
   if (!person || !selection) return null;
 
@@ -49,11 +60,15 @@ export default function AccommodationConfirmation({
 
   const handleDaysPaidChange = (e) => {
     const value = parseInt(e.target.value, 10);
-    if (isNaN(value)) {
-      setDaysPaidByGuest(0);
+    const clamped = isNaN(value) ? 0 : Math.min(Math.max(0, value), nights);
+
+    if (fundingType === 'self_funded' && clamped === 0) {
+      setShowFundingWarning(true);
     } else {
-      setDaysPaidByGuest(Math.min(Math.max(0, value), nights));
+      setShowFundingWarning(false);
     }
+
+    setDaysPaidByGuest(clamped);
   };
 
   const handleConfirm = () => {
@@ -70,6 +85,13 @@ export default function AccommodationConfirmation({
             <p>Email: {person.email}</p>
             <p>Company: {person.company}</p>
             <p>Job Title: {person.job_title}</p>
+            {fundingType && (
+              <p>Funding: <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                fundingType === 'forum_covered' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+              }`}>
+                {fundingType === 'forum_covered' ? 'Forum Covered' : 'Self Funded'}
+              </span></p>
+            )}
           </div>
         </div>
 
@@ -113,6 +135,13 @@ export default function AccommodationConfirmation({
                 />
                 <span className="text-sm text-gray-500">/ {nights} nights</span>
               </div>
+              {showFundingWarning && (
+                <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800">
+                    <strong>Warning:</strong> This guest is marked as <strong>self funded</strong>. Are you sure you want the forum to cover the entire stay?
+                  </p>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <p>DEF cost ({nights - daysPaidByGuest} nights): <span className="font-medium">€{defCost.toFixed(2)}</span></p>
                 <p>Guest cost ({daysPaidByGuest} nights): <span className="font-medium">€{guestCost.toFixed(2)}</span></p>

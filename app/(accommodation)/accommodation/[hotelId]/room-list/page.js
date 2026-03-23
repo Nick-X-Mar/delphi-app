@@ -5,7 +5,8 @@ import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { FileDown } from 'lucide-react';
+import { FileDown, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -100,6 +101,38 @@ export default function HotelPdfView({ params }) {
 
     fetchHotelData();
   }, [params.hotelId]);
+
+  const handlePermanentDelete = async (booking, roomTypeName) => {
+    const confirmMessage = `Are you sure you want to permanently delete this cancelled booking?\n\n` +
+      `Guest: ${booking.first_name} ${booking.last_name}\n` +
+      `Hotel: ${hotelData.name}\n` +
+      `Room: ${roomTypeName}\n\n` +
+      `This action cannot be undone.`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/bookings/${booking.booking_id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete booking');
+      }
+
+      toast.success('Booking deleted successfully');
+      // Refresh data
+      const res = await fetch(`/api/hotels/${params.hotelId}/room-list-data`);
+      if (res.ok) {
+        setHotelData(await res.json());
+      }
+    } catch (error) {
+      console.error('Error deleting booking:', error);
+      toast.error('Failed to delete booking');
+    }
+  };
 
   const calculateTotalDays = () => {
     return hotelData.room_types.reduce((total, roomType) => {
@@ -356,6 +389,7 @@ export default function HotelPdfView({ params }) {
                     <TableHead>Status</TableHead>
                     <TableHead>Notes</TableHead>
                     <TableHead>Updated At</TableHead>
+                    <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -395,6 +429,17 @@ export default function HotelPdfView({ params }) {
                       </TableCell>
                       <TableCell>
                         {getModificationText(booking)}
+                      </TableCell>
+                      <TableCell>
+                        {(booking.status === 'cancelled' || booking.status === 'invalidated') && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handlePermanentDelete(booking, roomType.name)}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
