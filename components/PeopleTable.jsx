@@ -108,6 +108,13 @@ export default function PeopleTable({ isViewOnly = false, selectedEvent = null, 
       if (!response.ok) throw new Error('Failed to fetch categories');
       const data = await response.json();
       setCategories(data);
+      // Reset filter if selected guest type no longer exists
+      setFilters(prev => {
+        if (prev.guestType !== 'all' && !data.includes(prev.guestType)) {
+          return { ...prev, guestType: 'all' };
+        }
+        return prev;
+      });
     } catch (error) {
       console.error('Error fetching categories:', error);
       setCategories([]);
