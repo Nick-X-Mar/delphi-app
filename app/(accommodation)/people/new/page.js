@@ -237,14 +237,14 @@ export default function NewPersonPage() {
     const newErrors = {};
     if (!formData.first_name) newErrors.first_name = 'First name is required';
     if (!formData.last_name) newErrors.last_name = 'Last name is required';
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!formData.email.includes('@')) {
+    if (formData.email && !formData.email.includes('@')) {
       newErrors.email = 'Invalid email format';
     }
     if (formData.mobile_phone && !/^[\d\s+\-()]+$/.test(formData.mobile_phone)) {
       newErrors.mobile_phone = 'Only digits, spaces, +, -, () allowed';
     }
+    const guestType = showCustomGuestType ? formData.custom_guest_type : formData.guest_type;
+    if (!guestType) newErrors.guest_type = 'Guest type is required';
     if (!selectedEventId) newErrors.event = 'Event selection is required';
 
     // Date validation
@@ -396,7 +396,7 @@ export default function NewPersonPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Email *
+                  Email
                   {errors.email && <span className="text-red-500 text-xs ml-1">{errors.email}</span>}
                 </label>
                 <Input
@@ -404,8 +404,7 @@ export default function NewPersonPage() {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  required
-                  placeholder="Email address"
+                  placeholder="Email address (optional)"
                   className={errors.email ? 'border-red-500' : ''}
                 />
               </div>
@@ -461,7 +460,10 @@ export default function NewPersonPage() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Guest Type</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Guest Type *
+                  {errors.guest_type && <span className="text-red-500 text-xs ml-1">{errors.guest_type}</span>}
+                </label>
                 {showCustomGuestType ? (
                   <div className="flex gap-2">
                     <Input

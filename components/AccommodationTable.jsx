@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ChevronDown, ChevronRight, Pencil, Trash2, X, Minimize2, Maximize2, FileText, Mail } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pencil, Trash2, X, Minimize2, Maximize2, FileText, Mail, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import AccommodationHotelList from './AccommodationHotelList';
@@ -402,6 +402,11 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
 
   const handleSendEmail = async (booking, hotelName, roomTypeName, hotel) => {
     try {
+      if (!booking.email) {
+        toast.warning(`Cannot send email: ${booking.first_name} ${booking.last_name} has no email address`);
+        return;
+      }
+
       // Add confirmation dialog
       const confirmMessage = `Are you sure you want to send a booking confirmation email to ${booking.first_name} ${booking.last_name} (${booking.email})?\n\n` +
         `Hotel: ${hotelName}\n` +
@@ -504,10 +509,23 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
         }
       }
 
+      // Filter out guests without email (they cannot receive emails or be confirmed)
+      const noEmailCount = emailsToSend.filter(e => !e.to).length;
+      const noEmailBookingIds = new Set(emailsToSend.filter(e => !e.to).map(e => e.bookingId));
+      emailsToSend = emailsToSend.filter(e => e.to);
+      pendingBookings = pendingBookings.filter(b => !noEmailBookingIds.has(b.booking_id));
+
+      if (emailsToSend.length === 0) {
+        toast.warning('No guests have email addresses. Cannot send any emails.');
+        setIsSendingEmail(false);
+        return;
+      }
+
       // Add confirmation dialog
+      const noEmailWarning = noEmailCount > 0 ? `\n\n⚠️ ${noEmailCount} guest(s) will be skipped (no email address).` : '';
       const confirmMessage = `Are you sure you want to send booking confirmation emails to ALL guests?\n\n` +
         `This will send ${emailsToSend.length} email(s).\n` +
-        `${pendingBookings.length} pending booking(s) will be updated to confirmed status.`;
+        `${pendingBookings.length} pending booking(s) will be updated to confirmed status.${noEmailWarning}`;
 
       if (!confirm(confirmMessage)) {
         setIsSendingEmail(false);
@@ -606,10 +624,21 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
         return;
       }
 
+      // Check for guests without email
+      const guestsWithEmail = guests.filter(g => g.email);
+      const noEmailCount = guests.length - guestsWithEmail.length;
+
+      if (guestsWithEmail.length === 0) {
+        toast.warning('No guests with changes have email addresses. Cannot send any emails.');
+        setIsSendingEmail(false);
+        return;
+      }
+
       // Add confirmation dialog
+      const noEmailWarning = noEmailCount > 0 ? `\n\n⚠️ ${noEmailCount} guest(s) will be skipped (no email address).` : '';
       const confirmMessage = `Are you sure you want to send booking update emails to guests with changes?\n\n` +
-        `This will send ${guests.length} email(s) for bookings that have changed since the last bulk email.\n` +
-        `Pending bookings will be updated to confirmed status.`;
+        `This will send ${guestsWithEmail.length} email(s) for bookings that have changed since the last bulk email.\n` +
+        `Pending bookings will be updated to confirmed status.${noEmailWarning}`;
 
       if (!confirm(confirmMessage)) {
         setIsSendingEmail(false);
@@ -627,9 +656,9 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
         hotelMap.set(hotel.hotel_id, hotel);
       });
 
-      // Prepare all emails
+      // Prepare all emails (only for guests with email)
       const emailsToSend = [];
-      for (const guest of guests) {
+      for (const guest of guestsWithEmail) {
         // Find hotel details using the hotel_id from the guest data
         const hotel = hotelMap.get(guest.hotel_id) || {};
         
@@ -673,8 +702,8 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
         .onComplete(async result => {
           toast.dismiss(progressToast);
           
-          // Update any pending bookings to confirmed
-          for (const guest of guests) {
+          // Update any pending bookings to confirmed (only those who received email)
+          for (const guest of guestsWithEmail) {
             if (guest.status === 'pending') {
               try {
                 await fetch(`/api/bookings/${guest.booking_id}`, {
@@ -818,7 +847,21 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
                 <TableCell className="font-medium">{hotel.name}</TableCell>
                 <TableCell>{hotel.category}</TableCell>
                 <TableCell>{hotel.area}</TableCell>
-                <TableCell>{hotel.total_bookings || 0} bookings</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    {hotel.total_bookings || 0} bookings
+                    {(() => {
+                      const noEmailCount = hotel.room_types?.reduce((count, rt) =>
+                        count + (rt.bookings?.filter(b => !b.email && b.status !== 'cancelled').length || 0), 0) || 0;
+                      return noEmailCount > 0 ? (
+                        <span title={`${noEmailCount} guest${noEmailCount > 1 ? 's' : ''} without email`}>
+                          <AlertTriangle className="h-4 w-4 text-amber-500 inline" />
+                          <span className="text-xs text-amber-600 ml-0.5">{noEmailCount}</span>
+                        </span>
+                      ) : null;
+                    })()}
+                  </div>
+                </TableCell>
                 <TableCell className="text-right">
                   <Button
                     variant="ghost"
@@ -847,7 +890,18 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
                         </Button>
                       </TableCell>
                       <TableCell className="font-medium" colSpan={4}>
-                        {roomType.name} - {roomType.active_bookings_count || 0} bookings
+                        <div className="flex items-center gap-2">
+                          {roomType.name} - {roomType.active_bookings_count || 0} bookings
+                          {(() => {
+                            const noEmailCount = roomType.bookings?.filter(b => !b.email && b.status !== 'cancelled').length || 0;
+                            return noEmailCount > 0 ? (
+                              <span title={`${noEmailCount} guest${noEmailCount > 1 ? 's' : ''} without email`}>
+                                <AlertTriangle className="h-4 w-4 text-amber-500 inline" />
+                                <span className="text-xs text-amber-600 ml-0.5">{noEmailCount}</span>
+                              </span>
+                            ) : null;
+                          })()}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         €{roomType.base_price_per_night}/night
@@ -859,9 +913,16 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
                           <TableRow className="bg-gray-100 hover:bg-gray-200">
                             <TableCell className="pl-12"></TableCell>
                             <TableCell className="font-medium">
-                              {booking.first_name} {booking.last_name}
+                              <div className="flex items-center gap-1">
+                                {booking.first_name} {booking.last_name}
+                                {!booking.email && (
+                                  <span title="No email address">
+                                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                  </span>
+                                )}
+                              </div>
                               <div className="text-sm text-gray-500">
-                                {booking.email}
+                                {booking.email || <span className="text-amber-500 italic">No email</span>}
                               </div>
                             </TableCell>
                             <TableCell>
@@ -899,9 +960,10 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
                                       variant="ghost"
                                       size="sm"
                                       onClick={() => handleSendEmail(booking, hotel.name, roomType.name, hotel)}
-                                      disabled={isSendingEmail || isViewOnly}
+                                      disabled={isSendingEmail || isViewOnly || !booking.email}
+                                      title={!booking.email ? 'No email address' : 'Send email'}
                                     >
-                                      <Mail className="h-4 w-4" />
+                                      <Mail className={`h-4 w-4 ${!booking.email ? 'text-gray-300' : ''}`} />
                                     </Button>
                                     {editingBooking?.booking_id === booking.booking_id ? (
                                       <Button

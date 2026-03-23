@@ -169,11 +169,11 @@ export async function POST(request) {
     console.log(`[Create] Processing new person with data:`, person);
 
     // Validate required fields
-    if (!person.person_id || !person.first_name || !person.last_name || !person.email) {
+    if (!person.person_id || !person.first_name || !person.last_name) {
       console.error('[Create] Validation error: Missing required fields');
       return NextResponse.json({
         success: false,
-        error: 'Missing required fields (person_id, first_name, last_name, email)'
+        error: 'Missing required fields (person_id, first_name, last_name)'
       }, { status: 400 });
     }
 
