@@ -43,6 +43,7 @@ export default function NewPersonPage() {
   const [errors, setErrors] = useState({});
   const [isClient, setIsClient] = useState(false);
   const [showCustomGuestType, setShowCustomGuestType] = useState(false);
+  const [guestTypes, setGuestTypes] = useState([]);
 
   // Stay Together Group state
   const [groupOpen, setGroupOpen] = useState(false);
@@ -84,6 +85,21 @@ export default function NewPersonPage() {
       router.push('/people');
     }
   }, [isViewOnly, isLoadingViewOnly, router]);
+
+  // Fetch guest types
+  useEffect(() => {
+    async function fetchGuestTypes() {
+      try {
+        const response = await fetch('/api/people/categories');
+        if (!response.ok) throw new Error('Failed to fetch guest types');
+        const data = await response.json();
+        setGuestTypes(data);
+      } catch (error) {
+        console.error('Error fetching guest types:', error);
+      }
+    }
+    fetchGuestTypes();
+  }, []);
 
   // Fetch events
   useEffect(() => {
@@ -473,9 +489,11 @@ export default function NewPersonPage() {
                       <SelectValue placeholder="Select guest type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="speaker">Speaker</SelectItem>
-                      <SelectItem value="press">Press</SelectItem>
-                      <SelectItem value="guest">Guest</SelectItem>
+                      {[...new Set(['speaker', 'press', 'guest', ...guestTypes])].map(type => (
+                        <SelectItem key={type} value={type}>
+                          {type.charAt(0).toUpperCase() + type.slice(1)}
+                        </SelectItem>
+                      ))}
                       <SelectItem value="__other__">Other...</SelectItem>
                     </SelectContent>
                   </Select>
