@@ -12,7 +12,7 @@ import { emailQueue } from '@/lib/emailQueue';
 
 const formatGuestAmount = (guestCost) => {
   const cost = parseFloat(guestCost);
-  if (!cost || cost === 0) return 'Complimentary';
+  if (!cost || cost === 0) return 'COMPLIMENTARY';
   return `€${cost.toFixed(2)}`;
 };
 
