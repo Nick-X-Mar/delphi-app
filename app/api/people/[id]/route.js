@@ -24,20 +24,20 @@ export async function PUT(request, { params }) {
     const { first_name, last_name, email } = await request.json();
     
     // Validate required fields
-    if (!first_name || !last_name || !email) {
-      return NextResponse.json({ 
-        error: 'First name, last name, and email are required' 
+    if (!first_name || !last_name) {
+      return NextResponse.json({
+        error: 'First name and last name are required'
       }, { status: 400 });
     }
 
     const query = `
-      UPDATE people 
-      SET first_name = $1, last_name = $2, email = $3 
-      WHERE person_id = $4 
+      UPDATE people
+      SET first_name = $1, last_name = $2, email = $3
+      WHERE person_id = $4
       RETURNING *
     `;
-    
-    const { rows } = await pool.query(query, [first_name, last_name, email, id]);
+
+    const { rows } = await pool.query(query, [first_name, last_name, email || null, id]);
     
     if (rows.length === 0) {
       return NextResponse.json({ error: 'Person not found' }, { status: 404 });
