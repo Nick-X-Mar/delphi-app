@@ -1,10 +1,30 @@
 import { NextResponse } from 'next/server';
-import { getWorkingEventIdFromRequest, checkEventViewOnly } from '@/lib/apiViewOnlyCheck';
+import { checkEventViewOnly } from '@/lib/apiViewOnlyCheck';
 
 export async function POST(request) {
   try {
+    // Parse body first (can only be consumed once)
+    const body = await request.json();
+    const {
+      to,
+      subject,
+      lastName,
+      salutation,
+      hotel_name,
+      hotel_address,
+      contact_information,
+      hotel_website,
+      checkin_date,
+      checkout_date,
+      company,
+      guest_amount,
+      eventId: bodyEventId
+    } = body;
+
     // Check if event has passed (view-only mode)
-    const eventId = await getWorkingEventIdFromRequest(request);
+    const url = new URL(request.url);
+    const eventId = url.searchParams.get('eventId') || url.searchParams.get('event_id')
+      || bodyEventId || request.headers.get('x-working-event-id');
     if (eventId) {
       const { isViewOnly } = await checkEventViewOnly(eventId);
       if (isViewOnly) {
@@ -13,20 +33,6 @@ export async function POST(request) {
         }, { status: 403 });
       }
     }
-
-    // Get the request body
-    const { 
-      to, 
-      subject, 
-      lastName, 
-      salutation,
-      hotel_name,
-      hotel_address,
-      contact_information,
-      hotel_website,
-      checkin_date,
-      checkout_date
-    } = await request.json();
     
     // Check if HubSpot API key exists
     const hubspotApiKey = process.env.HUBSPOT_API_KEY;
@@ -55,7 +61,9 @@ export async function POST(request) {
         contact_information: contact_information || '',
         hotel_website: hotel_website || '',
         checkin_date: checkin_date || '',
-        checkout_date: checkout_date || ''
+        checkout_date: checkout_date || '',
+        company: company || '',
+        guest_amount: guest_amount || ''
       }
     };
 

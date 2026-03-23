@@ -194,7 +194,7 @@ export default function PeopleTable({ isViewOnly = false, selectedEvent = null, 
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e?.preventDefault) e.preventDefault();
     try {
       const response = await fetch(`/api/people-details/${editPerson.person_id}`, {
         method: 'PUT',
@@ -494,13 +494,7 @@ export default function PeopleTable({ isViewOnly = false, selectedEvent = null, 
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[50px]">
-              <Checkbox
-                checked={selectedPeople.size === people.length && people.length > 0}
-                onCheckedChange={handleSelectAll}
-                disabled={true}
-              />
-            </TableHead>
+            <TableHead className="w-[80px]">Allocated</TableHead>
             <TableHead>Synced at</TableHead>
             <TableHead>First Name</TableHead>
             <TableHead>Last Name</TableHead>
@@ -529,9 +523,9 @@ export default function PeopleTable({ isViewOnly = false, selectedEvent = null, 
             >
               <TableCell>
                 <Checkbox
-                  checked={selectedPeople.has(person.person_id)}
-                  onCheckedChange={() => handleSelectPerson(person.person_id)}
-                  disabled={true || isViewOnly}
+                  checked={!!person.booking_id}
+                  disabled={true}
+                  className={person.will_not_attend ? 'opacity-30' : ''}
                 />
               </TableCell>
               <TableCell>{formatDateTime(person.synced_at)}</TableCell>
@@ -594,16 +588,25 @@ export default function PeopleTable({ isViewOnly = false, selectedEvent = null, 
       />
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-[85%] max-h-[90vh] overflow-y-auto border">
-            <div className="p-8">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-6">Edit Person Details</h2>
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
+          onKeyDown={(e) => { if (e.key === 'Escape') setShowModal(false); }}
+          tabIndex={-1}
+          ref={(el) => el?.focus()}
+        >
+          <div className="bg-white rounded-xl shadow-2xl w-[85%] max-h-[90vh] flex flex-col border">
+            <div className="p-8 pb-4">
+              <h2 className="text-2xl font-semibold text-gray-800">Edit Person Details</h2>
+            </div>
+            <div className="flex-1 overflow-y-auto px-8 pb-4">
               <PersonForm
                 person={editPerson}
                 formData={formData}
                 setFormData={setFormData}
                 onSubmit={handleSubmit}
                 onCancel={() => setShowModal(false)}
+                onDelete={() => { setShowModal(false); fetchPeople(); }}
                 isViewOnly={isViewOnly}
               />
             </div>

@@ -48,16 +48,15 @@ export async function GET(request, { params }) {
         LEFT JOIN people_details pd ON p.person_id = pd.person_id
         WHERE b.room_type_id = rt.room_type_id
         AND b.event_id = $1
-        AND b.status NOT IN ('cancelled', 'invalidated')
         ${peopleFilterClause}
         ORDER BY b.check_in_date
       ) booking_info
     `;
-    
+
     const allBookingsQuery = `
       SELECT json_agg(booking_info)
       FROM (
-        SELECT 
+        SELECT
           b.*,
           p.first_name,
           p.last_name,
@@ -70,21 +69,19 @@ export async function GET(request, { params }) {
         LEFT JOIN people_details pd ON p.person_id = pd.person_id
         WHERE b.room_type_id = rt.room_type_id
         AND b.event_id = $1
-        AND b.status NOT IN ('cancelled', 'invalidated')
         ORDER BY b.check_in_date
       ) booking_info
     `;
-    
+
     let query = `
       WITH filtered_bookings AS (
-        SELECT 
+        SELECT
           b.*,
           rt.hotel_id
         FROM bookings b
         INNER JOIN people p ON b.person_id = p.person_id
         INNER JOIN room_types rt ON b.room_type_id = rt.room_type_id
         WHERE b.event_id = $1
-        AND b.status NOT IN ('cancelled', 'invalidated')
         ${peopleFilterClause}
       ),
       hotels_with_matches AS (

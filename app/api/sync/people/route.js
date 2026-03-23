@@ -52,7 +52,7 @@ export async function POST(request) {
         }
 
         // Synthetic person_id: event_id + external person_id so same external id across events is unique
-        const syntheticPersonId = parseInt(String(eventIdNum) + String(person.person_id), 10);
+        const syntheticPersonId = String(eventIdNum) + String(person.person_id);
 
         // Generate a single timestamp in UTC+0
         const timestampResult = await individualClient.query("SELECT CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AS current_time");
@@ -78,7 +78,8 @@ export async function POST(request) {
             checkout_date = $14,
             comments = $15,
             guest_type = $16,
-            synced_at = $17
+            synced_at = $17,
+            accommodation_funding_type = $18
           WHERE person_id = $10
           RETURNING *
         `;
@@ -100,7 +101,8 @@ export async function POST(request) {
           person.checkout_date || null,
           person.comments || null,
           person.guest_type || null,
-          currentTimestamp
+          currentTimestamp,
+          person.accommodation_funding_type || null
         ];
 
         console.log(`[Sync] Update values for person_id ${syntheticPersonId}:`, values);
@@ -128,9 +130,11 @@ export async function POST(request) {
               checkout_date,
               comments,
               guest_type,
-              synced_at
+              synced_at,
+              source,
+              accommodation_funding_type
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 'HubSpot', $18)
             RETURNING *
           `;
 
@@ -151,7 +155,8 @@ export async function POST(request) {
             person.checkout_date || null,
             person.comments || null,
             person.guest_type || null,
-            currentTimestamp
+            currentTimestamp,
+            person.accommodation_funding_type || null
           ];
 
           console.log(`[Sync] Insert values for person_id ${syntheticPersonId}:`, insertValues);

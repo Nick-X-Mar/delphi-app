@@ -24,7 +24,8 @@ export async function GET(request, { params }) {
         h.address AS hotel_address,
         h.phone_number AS contact_information,
         h.website_link AS hotel_website,
-        rt.name AS room_type_name
+        rt.name AS room_type_name,
+        b.guest_cost
       FROM 
         bookings b
       JOIN 

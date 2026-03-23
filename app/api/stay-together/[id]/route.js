@@ -52,7 +52,7 @@ export async function PUT(request, { params }) {
       await client.query(
         `UPDATE people_details 
          SET group_id = $1 
-         WHERE person_id = ANY($2::int[])`,
+         WHERE person_id = ANY($2::text[])`,
         [groupId, personIds]
       );
 
@@ -100,7 +100,7 @@ export async function DELETE(request, { params }) {
     await pool.query(
       `UPDATE people_details 
        SET group_id = NULL 
-       WHERE person_id = ANY($1::int[])`,
+       WHERE person_id = ANY($1::text[])`,
       [personIds]
     );
 

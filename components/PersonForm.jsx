@@ -3,14 +3,14 @@ import { Label } from "@radix-ui/react-label";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { X, Check, ChevronsUpDown, Plus } from "lucide-react";
+import { X, Check, ChevronsUpDown, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { formatDateTime, toDateInputValue } from "@/utils/dateFormatters";
 
-export default function PersonForm({ person, formData, setFormData, onSubmit, onCancel, isViewOnly = false }) {
+export default function PersonForm({ person, formData, setFormData, onSubmit, onCancel, onDelete, isViewOnly = false, onPersonUpdate }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [open, setOpen] = useState(false);
   const [existingGroups, setExistingGroups] = useState([]);
@@ -21,6 +21,12 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
   const [isSourceExpanded, setIsSourceExpanded] = useState(false);
   const [editPerson, setEditPerson] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const isAppSource = person?.source === 'App';
+
+  // Source fields state (editable only for App-created people)
+  const [sourceFields, setSourceFields] = useState({});
 
   // Initialize formData with person's data when component mounts
   useEffect(() => {
@@ -30,15 +36,45 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
       if (!roomSize && person.room_type) {
         roomSize = person.room_type === 'single' ? '1' : person.room_type === 'double' ? '2' : '';
       }
-      
+
       setFormData({
         room_size: roomSize,
         group_id: person.group_id || '',
         notes: person.notes || '',
         will_not_attend: person.will_not_attend || false
       });
+
+      // Initialize source fields for App-created people
+      if (person.source === 'App') {
+        setSourceFields({
+          salutation: person.salutation || '',
+          first_name: person.first_name || '',
+          last_name: person.last_name || '',
+          email: person.email || '',
+          mobile_phone: person.mobile_phone || '',
+          company: person.company || '',
+          job_title: person.job_title || '',
+          room_type: person.room_type || '',
+          guest_type: person.guest_type || '',
+          nationality: person.nationality || '',
+          companion_full_name: person.companion_full_name || '',
+          companion_email: person.companion_email || '',
+          checkin_date: person.checkin_date || '',
+          checkout_date: person.checkout_date || '',
+          comments: person.comments || '',
+          accommodation_funding_type: person.accommodation_funding_type || '',
+        });
+      }
     }
   }, [person, setFormData]);
+
+  const handleSourceFieldChange = (e) => {
+    const { name, value } = e.target;
+    setSourceFields(prev => ({ ...prev, [name]: value }));
+    if (errors[`source_${name}`]) {
+      setErrors(prev => ({ ...prev, [`source_${name}`]: null }));
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -81,13 +117,32 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
       }
     }
 
+    // Validate source fields for App-created people
+    if (isAppSource) {
+      if (sourceFields.email && !sourceFields.email.includes('@')) {
+        setErrors(prev => ({ ...prev, source_email: 'Invalid email format' }));
+        toast.error('Invalid email format');
+        return;
+      }
+      if (sourceFields.mobile_phone && !/^[\d\s+\-()]+$/.test(sourceFields.mobile_phone)) {
+        setErrors(prev => ({ ...prev, source_mobile_phone: 'Only digits, spaces, +, -, () allowed' }));
+        toast.error('Invalid mobile phone format');
+        return;
+      }
+    }
+
     try {
+      const payload = { ...formData };
+      if (isAppSource) {
+        payload.source_fields = sourceFields;
+      }
+
       const response = await fetch(`/api/people-details/${person.person_id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -159,6 +214,53 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
     setShowModal(true);
   };
 
+  const handleDelete = async () => {
+    if (!person || !person.person_id) return;
+
+    // Check for active bookings to warn the user with details
+    try {
+      const bookingsRes = await fetch(`/api/people-details/${person.person_id}/bookings?detailed=true`);
+      if (bookingsRes.ok) {
+        const { activeBookings, bookings } = await bookingsRes.json();
+        let bookingWarning = '';
+        if (activeBookings > 0 && bookings) {
+          const bookingLines = bookings.map(b =>
+            `  - ${b.hotel_name} (${b.room_type_name}): ${b.check_in_date} to ${b.check_out_date} [${b.status}]`
+          ).join('\n');
+          bookingWarning = `\n\nThe following ${activeBookings} booking(s) will also be deleted and the rooms will be made available again:\n${bookingLines}`;
+        }
+        if (!confirm(`Are you sure you want to permanently delete ${person.first_name} ${person.last_name}?${bookingWarning}\n\nThis action cannot be undone.`)) {
+          return;
+        }
+      }
+    } catch {
+      if (!confirm(`Are you sure you want to permanently delete ${person.first_name} ${person.last_name}?\n\nThis action cannot be undone.`)) {
+        return;
+      }
+    }
+
+    try {
+      setIsDeleting(true);
+      const response = await fetch(`/api/people/${person.person_id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete person');
+      }
+
+      toast.success('Person deleted successfully');
+      if (onDelete) onDelete();
+      else if (onCancel) onCancel();
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error(error.message || 'Failed to delete person');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       {/* Source fields section */}
@@ -179,151 +281,260 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
         
         {isSourceExpanded && (
           <div className="grid grid-cols-3 gap-6 mt-4">
+            {isAppSource && (
+              <div className="col-span-3 mb-2">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  Source: App — fields are editable
+                </span>
+              </div>
+            )}
+            {!isAppSource && person?.source && (
+              <div className="col-span-3 mb-2">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  Source: {person.source} — fields are read-only
+                </span>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">Salutation</Label>
-              <input 
+              <input
                 type="text"
-                value={person?.salutation || ''} 
-                disabled
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+                name="salutation"
+                value={isAppSource ? (sourceFields.salutation || '') : (person?.salutation || '')}
+                onChange={isAppSource ? handleSourceFieldChange : undefined}
+                disabled={!isAppSource || isViewOnly}
+                className={cn(
+                  "w-full px-3 py-2 bg-white border border-gray-200 rounded-lg",
+                  !isAppSource || isViewOnly ? "text-gray-500 disabled:bg-gray-50" : "focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                )}
               />
             </div>
 
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">First Name</Label>
-              <input 
+              <input
                 type="text"
-                value={person?.first_name || ''} 
-                disabled
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+                name="first_name"
+                value={isAppSource ? (sourceFields.first_name || '') : (person?.first_name || '')}
+                onChange={isAppSource ? handleSourceFieldChange : undefined}
+                disabled={!isAppSource || isViewOnly}
+                className={cn(
+                  "w-full px-3 py-2 bg-white border border-gray-200 rounded-lg",
+                  !isAppSource || isViewOnly ? "text-gray-500 disabled:bg-gray-50" : "focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                )}
               />
             </div>
 
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">Last Name</Label>
-              <input 
+              <input
                 type="text"
-                value={person?.last_name || ''} 
-                disabled
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+                name="last_name"
+                value={isAppSource ? (sourceFields.last_name || '') : (person?.last_name || '')}
+                onChange={isAppSource ? handleSourceFieldChange : undefined}
+                disabled={!isAppSource || isViewOnly}
+                className={cn(
+                  "w-full px-3 py-2 bg-white border border-gray-200 rounded-lg",
+                  !isAppSource || isViewOnly ? "text-gray-500 disabled:bg-gray-50" : "focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                )}
               />
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700">Email</Label>
-              <input 
+              <Label className="text-sm font-medium text-gray-700">
+                Email
+                {errors.source_email && <span className="text-red-500 text-xs ml-1">{errors.source_email}</span>}
+              </Label>
+              <input
                 type="email"
-                value={person?.email || ''} 
-                disabled
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+                name="email"
+                value={isAppSource ? (sourceFields.email || '') : (person?.email || '')}
+                onChange={isAppSource ? handleSourceFieldChange : undefined}
+                disabled={!isAppSource || isViewOnly}
+                className={cn(
+                  "w-full px-3 py-2 bg-white border rounded-lg",
+                  errors.source_email ? "border-red-500" : "border-gray-200",
+                  !isAppSource || isViewOnly ? "text-gray-500 disabled:bg-gray-50" : "focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                )}
               />
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700">Mobile Phone</Label>
-              <input 
+              <Label className="text-sm font-medium text-gray-700">
+                Mobile Phone
+                {errors.source_mobile_phone && <span className="text-red-500 text-xs ml-1">{errors.source_mobile_phone}</span>}
+              </Label>
+              <input
                 type="text"
-                value={person?.mobile_phone || ''} 
-                disabled
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+                name="mobile_phone"
+                value={isAppSource ? (sourceFields.mobile_phone || '') : (person?.mobile_phone || '')}
+                onChange={isAppSource ? handleSourceFieldChange : undefined}
+                disabled={!isAppSource || isViewOnly}
+                className={cn(
+                  "w-full px-3 py-2 bg-white border rounded-lg",
+                  errors.source_mobile_phone ? "border-red-500" : "border-gray-200",
+                  !isAppSource || isViewOnly ? "text-gray-500 disabled:bg-gray-50" : "focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                )}
               />
             </div>
 
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">Company</Label>
-              <input 
+              <input
                 type="text"
-                value={person?.company || ''} 
-                disabled
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+                name="company"
+                value={isAppSource ? (sourceFields.company || '') : (person?.company || '')}
+                onChange={isAppSource ? handleSourceFieldChange : undefined}
+                disabled={!isAppSource || isViewOnly}
+                className={cn(
+                  "w-full px-3 py-2 bg-white border border-gray-200 rounded-lg",
+                  !isAppSource || isViewOnly ? "text-gray-500 disabled:bg-gray-50" : "focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                )}
               />
             </div>
 
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">Job Title</Label>
-              <input 
+              <input
                 type="text"
-                value={person?.job_title || ''} 
-                disabled
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+                name="job_title"
+                value={isAppSource ? (sourceFields.job_title || '') : (person?.job_title || '')}
+                onChange={isAppSource ? handleSourceFieldChange : undefined}
+                disabled={!isAppSource || isViewOnly}
+                className={cn(
+                  "w-full px-3 py-2 bg-white border border-gray-200 rounded-lg",
+                  !isAppSource || isViewOnly ? "text-gray-500 disabled:bg-gray-50" : "focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                )}
               />
             </div>
 
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">Room Type</Label>
-              <input 
+              <input
                 type="text"
-                value={person?.room_type || ''} 
-                disabled
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+                name="room_type"
+                value={isAppSource ? (sourceFields.room_type || '') : (person?.room_type || '')}
+                onChange={isAppSource ? handleSourceFieldChange : undefined}
+                disabled={!isAppSource || isViewOnly}
+                className={cn(
+                  "w-full px-3 py-2 bg-white border border-gray-200 rounded-lg",
+                  !isAppSource || isViewOnly ? "text-gray-500 disabled:bg-gray-50" : "focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                )}
               />
             </div>
 
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">Guest Type</Label>
-              <input 
+              <input
                 type="text"
-                value={person?.guest_type || ''} 
-                disabled
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+                name="guest_type"
+                value={isAppSource ? (sourceFields.guest_type || '') : (person?.guest_type || '')}
+                onChange={isAppSource ? handleSourceFieldChange : undefined}
+                disabled={!isAppSource || isViewOnly}
+                className={cn(
+                  "w-full px-3 py-2 bg-white border border-gray-200 rounded-lg",
+                  !isAppSource || isViewOnly ? "text-gray-500 disabled:bg-gray-50" : "focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                )}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Accommodation Funding</Label>
+              <input
+                type="text"
+                name="accommodation_funding_type"
+                value={isAppSource ? (sourceFields.accommodation_funding_type || '') : (person?.accommodation_funding_type || '')}
+                onChange={isAppSource ? handleSourceFieldChange : undefined}
+                disabled={!isAppSource || isViewOnly}
+                placeholder="self_funded or forum_covered"
+                className={cn(
+                  "w-full px-3 py-2 bg-white border border-gray-200 rounded-lg",
+                  !isAppSource || isViewOnly ? "text-gray-500 disabled:bg-gray-50" : "focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                )}
               />
             </div>
 
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">Nationality</Label>
-              <input 
+              <input
                 type="text"
-                value={person?.nationality || ''} 
-                disabled
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+                name="nationality"
+                value={isAppSource ? (sourceFields.nationality || '') : (person?.nationality || '')}
+                onChange={isAppSource ? handleSourceFieldChange : undefined}
+                disabled={!isAppSource || isViewOnly}
+                className={cn(
+                  "w-full px-3 py-2 bg-white border border-gray-200 rounded-lg",
+                  !isAppSource || isViewOnly ? "text-gray-500 disabled:bg-gray-50" : "focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                )}
               />
             </div>
 
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">Companion Full Name</Label>
-              <input 
+              <input
                 type="text"
-                value={person?.companion_full_name || ''} 
-                disabled
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+                name="companion_full_name"
+                value={isAppSource ? (sourceFields.companion_full_name || '') : (person?.companion_full_name || '')}
+                onChange={isAppSource ? handleSourceFieldChange : undefined}
+                disabled={!isAppSource || isViewOnly}
+                className={cn(
+                  "w-full px-3 py-2 bg-white border border-gray-200 rounded-lg",
+                  !isAppSource || isViewOnly ? "text-gray-500 disabled:bg-gray-50" : "focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                )}
               />
             </div>
 
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">Companion Email</Label>
-              <input 
+              <input
                 type="email"
-                value={person?.companion_email || ''} 
-                disabled
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+                name="companion_email"
+                value={isAppSource ? (sourceFields.companion_email || '') : (person?.companion_email || '')}
+                onChange={isAppSource ? handleSourceFieldChange : undefined}
+                disabled={!isAppSource || isViewOnly}
+                className={cn(
+                  "w-full px-3 py-2 bg-white border border-gray-200 rounded-lg",
+                  !isAppSource || isViewOnly ? "text-gray-500 disabled:bg-gray-50" : "focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                )}
               />
             </div>
 
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">Check In</Label>
-              <input 
+              <input
                 type="date"
-                value={toDateInputValue(person?.checkin_date)} 
-                disabled
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+                name="checkin_date"
+                value={isAppSource ? (sourceFields.checkin_date || '') : toDateInputValue(person?.checkin_date)}
+                onChange={isAppSource ? handleSourceFieldChange : undefined}
+                disabled={!isAppSource || isViewOnly}
+                className={cn(
+                  "w-full px-3 py-2 bg-white border border-gray-200 rounded-lg",
+                  !isAppSource || isViewOnly ? "text-gray-500 disabled:bg-gray-50" : "focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                )}
               />
             </div>
 
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">Check Out</Label>
-              <input 
+              <input
                 type="date"
-                value={toDateInputValue(person?.checkout_date)} 
-                disabled
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+                name="checkout_date"
+                value={isAppSource ? (sourceFields.checkout_date || '') : toDateInputValue(person?.checkout_date)}
+                onChange={isAppSource ? handleSourceFieldChange : undefined}
+                disabled={!isAppSource || isViewOnly}
+                className={cn(
+                  "w-full px-3 py-2 bg-white border border-gray-200 rounded-lg",
+                  !isAppSource || isViewOnly ? "text-gray-500 disabled:bg-gray-50" : "focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                )}
               />
             </div>
 
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">Synced at</Label>
-              <input 
+              <input
                 type="text"
-                value={person?.synced_at ? formatDateTime(person.synced_at) : 'Never'} 
+                value={person?.synced_at ? formatDateTime(person.synced_at) : 'Never'}
                 disabled
                 className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
               />
@@ -331,11 +542,16 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
 
             <div className="col-span-3 space-y-2">
               <Label className="text-sm font-medium text-gray-700">Comments</Label>
-              <textarea 
-                value={person?.comments || ''} 
-                disabled
+              <textarea
+                name="comments"
+                value={isAppSource ? (sourceFields.comments || '') : (person?.comments || '')}
+                onChange={isAppSource ? handleSourceFieldChange : undefined}
+                disabled={!isAppSource || isViewOnly}
                 rows={3}
-                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-500 disabled:bg-gray-50"
+                className={cn(
+                  "w-full px-3 py-2 bg-white border border-gray-200 rounded-lg",
+                  !isAppSource || isViewOnly ? "text-gray-500 disabled:bg-gray-50" : "focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                )}
               />
             </div>
           </div>
@@ -534,28 +750,43 @@ export default function PersonForm({ person, formData, setFormData, onSubmit, on
         </div>
       </div>
 
-      {/* Action buttons */}
-      <div className="flex flex-col gap-3 pt-6 border-t border-gray-200">
+      {/* Action buttons — sticky at bottom of modal */}
+      <div className="sticky bottom-0 bg-white flex flex-col gap-3 pt-4 pb-2 border-t border-gray-200">
         {submitError && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
             {submitError}
           </div>
         )}
-        <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 font-medium text-gray-600 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={isViewOnly}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Save Changes
-          </button>
+        <div className="flex justify-between">
+          {isAppSource && !isViewOnly ? (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Trash2 className="h-4 w-4" />
+              {isDeleting ? 'Deleting...' : 'Delete Person'}
+            </button>
+          ) : (
+            <div />
+          )}
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 font-medium text-gray-600 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isViewOnly}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Save Changes
+            </button>
+          </div>
         </div>
       </div>
     </form>

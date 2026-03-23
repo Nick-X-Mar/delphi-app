@@ -1,97 +1,107 @@
-### Sync people (Amplify)
+### Sync people (Amplify) - forum_covered
 POST https://main.d2nen9gnvvgqeo.amplifyapp.com/api/sync/people
 Content-Type: application/json
 
 [
     {
-        "person_id": 402848525526,
-        "salutation": "Mr.",
-        "first_name": "MILOS",
-        "last_name": "MILJKOVIC",
+        "person_id": 501234567890,
+        "salutation": "Ms.",
+        "first_name": "ELENA",
+        "last_name": "PAPADIMITRIOU",
         "nationality": "Greece",
-        "mobile_phone": "6971582629",
-        "email": "miljkovicmisa@gmail.com",
-        "room_type": "double",
-        "companion_full_name": "Maria Perdikaki",
-        "companion_email": "perdikakimary@gmail.com",
-        "checkin_date": "2026-04-22",
-        "checkout_date": "2026-04-24",
-        "comments": "test comment",
-        "guest_type": "guest",
-        "company": "Whitehat - Μακρής Αλκιβιάδης",
-        "job_title": " Dev"
+        "mobile_phone": "6945123456",
+        "email": "elena.papadimitriou@example.com",
+        "room_type": "single",
+        "companion_full_name": "",
+        "companion_email": "",
+        "checkin_date": "2026-04-21",
+        "checkout_date": "2026-04-25",
+        "comments": "VIP speaker - needs quiet room",
+        "guest_type": "speaker",
+        "company": "National Bank of Greece",
+        "job_title": "Chief Economist",
+        "accommodation_funding_type": "forum_covered"
     }
 ]
 
 
-### Sync people (Amplify)
+### Sync people (Amplify) - self_funded
 POST https://main.d2nen9gnvvgqeo.amplifyapp.com/api/sync/people
 Content-Type: application/json
 
 {
-  "email": "g.markantonatos@tsomokos.gr",
-  "company": "Tsomokos Communications",
-  "comments": "Test comment 1",
-  "job_title": "Digital Operations Manager",
-  "last_name": "Markantonatos",
-  "person_id": 2402999758033,
-  "room_type": "double",
-  "first_name": "George",
-  "guest_type": "guest",
+  "person_id": 601987654321,
   "salutation": "Mr.",
-  "nationality": "Greece",
-  "checkin_date": "2026-04-23",
-  "mobile_phone": 2107289000,
-  "checkout_date": "2026-04-24",
-  "companion_email": "m.pylarinos@tsomokos.gr",
-  "companion_full_name": "Michalis Pylarinos"
+  "first_name": "Alexandros",
+  "last_name": "Dimitriou",
+  "nationality": "Cyprus",
+  "mobile_phone": "6978654321",
+  "email": "a.dimitriou@example.com",
+  "room_type": "double",
+  "companion_full_name": "Sofia Dimitriou",
+  "companion_email": "sofia.d@example.com",
+  "checkin_date": "2026-04-22",
+  "checkout_date": "2026-04-25",
+  "comments": "Attending with spouse",
+  "guest_type": "guest",
+  "company": "Mediterranean Investments",
+  "job_title": "Managing Director",
+  "accommodation_funding_type": "self_funded"
 }
 
-### Sync people (local)
+### Sync people (local) - forum_covered
 POST http://localhost:3000/api/sync/people
 Content-Type: application/json
 
 [
     {
-        "person_id": 402848525526,
-        "salutation": "Mr.",
-        "first_name": "MILOS",
-        "last_name": "MILJKOVIC",
+        "person_id": 701456789012,
+        "salutation": "Prof.",
+        "first_name": "Katerina",
+        "last_name": "Vlachou",
         "nationality": "Greece",
-        "mobile_phone": "6971582629",
-        "email": "miljkovicmisa@gmail.com",
-        "room_type": "double",
-        "companion_full_name": "Maria Perdikaki",
-        "companion_email": "perdikakimary@gmail.com",
-        "checkin_date": "2026-04-22",
+        "mobile_phone": "6932789012",
+        "email": "k.vlachou@example.com",
+        "room_type": "single",
+        "companion_full_name": "",
+        "companion_email": "",
+        "checkin_date": "2026-04-20",
         "checkout_date": "2026-04-24",
-        "comments": "test comment",
-        "guest_type": "guest",
-        "company": "Whitehat - Μακρής Αλκιβιάδης",
-        "job_title": " Dev"
+        "comments": "Keynote speaker day 2",
+        "guest_type": "speaker",
+        "company": "Athens University of Economics",
+        "job_title": "Professor of Finance",
+        "accommodation_funding_type": "forum_covered"
     }
 ]
 
 
-### Sync people (local)
+### Sync people (local) - self_funded
 POST http://localhost:3000/api/sync/people
 Content-Type: application/json
 
 {
-  "email": "n.marianos@tsomokos.gr",
-  "company": "Tsomokos Communications",
-  "comments": "Test comment 1",
-  "job_title": "Digital Operations Manager",
-  "last_name": "Marianos",
-  "person_id": 403546085999,
-  "room_type": "double",
-  "first_name": "Nikos",
-  "guest_type": "guest",
-  "salutation": "Mr.",
+  "person_id": 801321654987,
+  "salutation": "Ms.",
+  "first_name": "Irini",
+  "last_name": "Konstantinou",
   "nationality": "Greece",
-  "checkin_date": "2026-04-20",
-  "mobile_phone": 2107289000,
+  "mobile_phone": "6911234567",
+  "email": "irini.k@example.com",
+  "room_type": "double",
+  "companion_full_name": "Petros Konstantinou",
+  "companion_email": "petros.k@example.com",
+  "checkin_date": "2026-04-21",
   "checkout_date": "2026-04-26",
-  "companion_email": "mmmmmm@tsomokos.gr",
-  "companion_full_name": "o deuteros"
+  "comments": "Press credentials required",
+  "guest_type": "press",
+  "company": "Kathimerini",
+  "job_title": "Senior Editor",
+  "accommodation_funding_type": "self_funded"
 }
+
+### Confirm booking
+@BOOKING_ID=47
+curl -X PUT 'http://localhost:3000/api/bookings/{{BOOKING_ID}}' \
+  -H 'Content-Type: application/json' \
+  -d '{"status": "confirmed"}'

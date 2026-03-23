@@ -39,6 +39,7 @@ export async function GET(request, { params }) {
         p.checkout_date,
         p.comments,
         p.companion_full_name,
+        p.accommodation_funding_type,
         pd.will_not_attend,
         pd.room_size,
         pd.notes,
@@ -150,21 +151,22 @@ export async function POST(request, { params }) {
       await client.query('BEGIN');
 
       if (action === 'add') {
-        // Insert new associations
+        // Insert new associations using parameterized queries
         if (personIds.length > 0) {
-          const values = personIds.map((personId) => `(${eventId}, ${personId})`).join(',');
-          await client.query(`
-            INSERT INTO event_people (event_id, person_id)
-            VALUES ${values}
-            ON CONFLICT (event_id, person_id) DO NOTHING
-          `);
+          for (const personId of personIds) {
+            await client.query(`
+              INSERT INTO event_people (event_id, person_id)
+              VALUES ($1, $2)
+              ON CONFLICT (event_id, person_id) DO NOTHING
+            `, [eventId, personId]);
+          }
         }
       } else {
         // Remove associations
         if (personIds.length > 0) {
           await client.query(`
-            DELETE FROM event_people 
-            WHERE event_id = $1 AND person_id = ANY($2::int[])
+            DELETE FROM event_people
+            WHERE event_id = $1 AND person_id = ANY($2::text[])
           `, [eventId, personIds]);
         }
       }
