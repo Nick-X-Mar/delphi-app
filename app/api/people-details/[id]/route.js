@@ -68,8 +68,8 @@ export async function PUT(request, { params }) {
 
     const values = [
       personId,
-      data.room_size,
-      data.group_id,
+      data.room_size === '' ? null : data.room_size,
+      data.group_id === '' ? null : data.group_id,
       data.notes,
       data.will_not_attend
     ];
