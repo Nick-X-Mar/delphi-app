@@ -207,6 +207,8 @@ export default function HotelPdfView({ params }) {
 
       const tableHeaders = [
         'Full Name',
+        'Position',
+        'Company',
         'Companion',
         'Pax',
         'Check In',
@@ -237,6 +239,8 @@ export default function HotelPdfView({ params }) {
 
         const tableData = roomType.bookings.map((booking) => [
           `${booking.first_name} ${booking.last_name}`,
+          booking.job_title || '-',
+          booking.company || '-',
           booking.companion_full_name || '-',
           booking.num_pax ?? '-',
           format(new Date(booking.check_in_date), 'dd/MM/yy'),
@@ -271,23 +275,25 @@ export default function HotelPdfView({ params }) {
             cellPadding: 2,
           },
           columnStyles: {
-            0: { cellWidth: 28 },
-            1: { cellWidth: 25 },
-            2: { cellWidth: 10, halign: 'center' },
-            3: { cellWidth: 18 },
-            4: { cellWidth: 18 },
-            5: { cellWidth: 22 },
-            6: { cellWidth: 18, halign: 'right' },
-            7: { cellWidth: 18, halign: 'right' },
-            8: { cellWidth: 18, halign: 'right' },
-            9: { cellWidth: 15, halign: 'center' },
-            10: { cellWidth: 20 },
-            11: { cellWidth: 35 },
-            12: { cellWidth: 22 },
+            0: { cellWidth: 26 },  // Full Name
+            1: { cellWidth: 22 },  // Position
+            2: { cellWidth: 22 },  // Company
+            3: { cellWidth: 22 },  // Companion
+            4: { cellWidth: 10, halign: 'center' },  // Pax
+            5: { cellWidth: 16 },  // Check In
+            6: { cellWidth: 16 },  // Check Out
+            7: { cellWidth: 20 },  // Room Type
+            8: { cellWidth: 16, halign: 'right' },  // Total
+            9: { cellWidth: 16, halign: 'right' },  // DEF
+            10: { cellWidth: 16, halign: 'right' },  // Guest
+            11: { cellWidth: 13, halign: 'center' },  // Guest Days
+            12: { cellWidth: 18 },  // Status
+            13: { cellWidth: 22 },  // Notes
+            14: { cellWidth: 18 },  // Updated
           },
           margin: { left: margin, right: margin },
           didParseCell: function(data) {
-            if (data.section === 'body' && data.column.index === 10) {
+            if (data.section === 'body' && data.column.index === 12) {
               const booking = roomType.bookings[data.row.index];
               if (booking) {
                 data.cell.styles.textColor = getStatusPdfColor(booking);
@@ -377,6 +383,8 @@ export default function HotelPdfView({ params }) {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Full Name</TableHead>
+                    <TableHead>Position</TableHead>
+                    <TableHead>Company</TableHead>
                     <TableHead>Companion Full Name</TableHead>
                     <TableHead>Number of pax</TableHead>
                     <TableHead>Check In</TableHead>
@@ -398,6 +406,8 @@ export default function HotelPdfView({ params }) {
                       <TableCell>
                         {booking.first_name} {booking.last_name}
                       </TableCell>
+                      <TableCell>{booking.job_title || '-'}</TableCell>
+                      <TableCell>{booking.company || '-'}</TableCell>
                       <TableCell>{booking.companion_full_name || '-'}</TableCell>
                       <TableCell>{booking.num_pax ?? '-'}</TableCell>
                       <TableCell>

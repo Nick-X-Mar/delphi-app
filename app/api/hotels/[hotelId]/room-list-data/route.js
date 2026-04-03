@@ -65,6 +65,7 @@ export async function GET(request, { params }) {
         p.email,
         p.mobile_phone,
         p.company,
+        p.job_title,
         p.salutation
       FROM room_types rt
       LEFT JOIN bookings b ON rt.room_type_id = b.room_type_id
@@ -112,6 +113,7 @@ export async function GET(request, { params }) {
           companion_email: row.companion_email,
           notes: row.notes,
           company: row.company,
+          job_title: row.job_title,
           salutation: row.salutation
         });
       }
