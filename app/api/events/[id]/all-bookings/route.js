@@ -19,6 +19,8 @@ export async function GET(request, { params }) {
         p.guest_type,
         p.company,
         p.salutation,
+        p.room_type,
+        p.companion_full_name,
         h.hotel_id,
         h.name AS hotel_name,
         h.address AS hotel_address,

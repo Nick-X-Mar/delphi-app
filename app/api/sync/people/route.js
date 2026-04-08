@@ -3,7 +3,6 @@ import pool from '@/lib/db';
 
 // POST endpoint to sync people from external system
 export async function POST(request) {
-  const client = await pool.connect();
   try {
     // Get event_id from environment variable
     const eventId = process.env.EVENT_ID;
