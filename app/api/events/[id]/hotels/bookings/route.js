@@ -42,7 +42,9 @@ export async function GET(request, { params }) {
           p.email,
           p.guest_type,
           p.company,
-          p.salutation
+          p.salutation,
+          p.room_type,
+          p.companion_full_name
         FROM bookings b
         INNER JOIN people p ON b.person_id = p.person_id
         LEFT JOIN people_details pd ON p.person_id = pd.person_id
@@ -63,7 +65,9 @@ export async function GET(request, { params }) {
           p.email,
           p.guest_type,
           p.company,
-          p.salutation
+          p.salutation,
+          p.room_type,
+          p.companion_full_name
         FROM bookings b
         INNER JOIN people p ON b.person_id = p.person_id
         LEFT JOIN people_details pd ON p.person_id = pd.person_id

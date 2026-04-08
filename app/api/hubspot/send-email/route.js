@@ -18,6 +18,8 @@ export async function POST(request) {
       checkout_date,
       company,
       guest_amount,
+      room_type,
+      companion_full_name,
       eventId: bodyEventId
     } = body;
 
@@ -63,7 +65,9 @@ export async function POST(request) {
         checkin_date: checkin_date || '',
         checkout_date: checkout_date || '',
         company: company || '',
-        guest_amount: guest_amount || ''
+        guest_amount: guest_amount || '',
+        room_type: room_type || '',
+        companion_full_name: (room_type === 'single' ? 'None' : (companion_full_name || ''))
       }
     };
 

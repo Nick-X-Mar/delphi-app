@@ -439,7 +439,9 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
         checkin_date: formattedCheckinDate,
         checkout_date: formattedCheckoutDate,
         company: booking.company || '',
-        guest_amount: formatGuestAmount(booking.guest_cost)
+        guest_amount: formatGuestAmount(booking.guest_cost),
+        room_type: booking.room_type || '',
+        companion_full_name: booking.room_type === 'single' ? 'None' : (booking.companion_full_name || '')
       });
 
       if (result.success) {
@@ -499,7 +501,9 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
             checkin_date: formattedCheckinDate,
             checkout_date: formattedCheckoutDate,
             company: booking.company || '',
-            guest_amount: formatGuestAmount(booking.guest_cost)
+            guest_amount: formatGuestAmount(booking.guest_cost),
+            room_type: booking.room_type || '',
+            companion_full_name: booking.room_type === 'single' ? 'None' : (booking.companion_full_name || '')
           });
 
           // Track pending bookings to update later
@@ -682,7 +686,9 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
           checkin_date: formattedCheckinDate,
           checkout_date: formattedCheckoutDate,
           company: guest.company || '',
-          guest_amount: formatGuestAmount(guest.guest_cost)
+          guest_amount: formatGuestAmount(guest.guest_cost),
+          room_type: guest.room_type || '',
+          companion_full_name: guest.room_type === 'single' ? 'None' : (guest.companion_full_name || '')
         });
       }
 
