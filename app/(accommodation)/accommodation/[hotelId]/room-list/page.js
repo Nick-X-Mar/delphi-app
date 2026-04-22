@@ -183,6 +183,7 @@ export default function HotelPdfView({ params }) {
         ['Name', hotelData.name, 'Event', hotelData.event_name],
         ['Total Active Bookings', String(hotelData.total_bookings), 'Total Days Booked', String(totalDays)],
         ['DEF Amount', `€${Number(hotelData.def_amount ?? 0).toFixed(2)}`, 'Guest Amount', `€${Number(hotelData.guest_amount ?? 0).toFixed(2)}`],
+        ['DEF No Booking Amount', `€${Number(hotelData.def_no_booking_amount ?? 0).toFixed(2)}`, '', ''],
       ];
 
       autoTable(pdf, {
@@ -370,6 +371,10 @@ export default function HotelPdfView({ params }) {
             <div>
               <p className="text-gray-600">Guest amount</p>
               <p className="font-medium">€{Number(hotelData.guest_amount ?? 0).toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-gray-600">DEF no booking amount</p>
+              <p className="font-medium">€{Number(hotelData.def_no_booking_amount ?? 0).toFixed(2)}</p>
             </div>
           </div>
         </Card>
