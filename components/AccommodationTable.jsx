@@ -134,6 +134,55 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
     fetchLastBulkEmailTime();
   }, [eventId]);
 
+  // Warn the user before unload/refresh/in-app navigation while a bulk email
+  // send is in progress. Email sending currently runs client-side; leaving the
+  // page kills the loop and remaining emails never go out.
+  useEffect(() => {
+    if (!isSendingEmail) return;
+
+    const warningMessage = 'Emails are still being sent. If you leave this page, the remaining emails will NOT be sent.';
+
+    // Covers refresh, tab close, external navigation
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = warningMessage;
+      return e.returnValue;
+    };
+
+    // Covers in-app navigation (Next.js <Link> renders as <a> + client-side routing)
+    const handleLinkClick = (e) => {
+      const link = e.target.closest('a');
+      if (!link) return;
+      const href = link.getAttribute('href');
+      if (!href) return;
+      if (link.target === '_blank') return;
+      if (href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) return;
+      if (!window.confirm(`${warningMessage}\n\nAre you sure you want to leave this page?`)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    // Covers browser back/forward buttons
+    const handlePopState = (e) => {
+      if (!window.confirm(`${warningMessage}\n\nAre you sure you want to leave this page?`)) {
+        window.history.pushState(null, '', window.location.href);
+      }
+    };
+    // Push a history entry so popstate fires on back
+    window.history.pushState(null, '', window.location.href);
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('click', handleLinkClick, true);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('click', handleLinkClick, true);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [isSendingEmail]);
+
   // Filter hotels based on search and category
   const filteredHotels = useMemo(() => {
     return hotels.filter(hotel => {
@@ -461,7 +510,7 @@ const AccommodationTable = React.forwardRef(({ eventId, filters, isViewOnly = fa
   const handleSendBulkEmails = async () => {
     try {
       setIsSendingEmail(true);
-      
+
       // Fetch ALL bookings for this event, not just the ones on the current page
       const response = await fetch(`/api/events/${eventId}/all-bookings`);
       if (!response.ok) throw new Error('Failed to fetch all bookings');
